@@ -4,10 +4,10 @@
 import { ipcRenderer } from 'electron';
 
 import { explodePromise } from './util/explodePromise';
+import { SECOND } from './util/durations';
+import * as log from './logging/log';
 
 type ResolveType = (data: unknown) => void;
-
-export const electronRequire = require;
 
 export class CI {
   private readonly eventListeners = new Map<string, Array<ResolveType>>();
@@ -20,11 +20,14 @@ export class CI {
     });
   }
 
-  public async waitForEvent(event: string): Promise<unknown> {
+  public async waitForEvent(
+    event: string,
+    timeout = 60 * SECOND
+  ): Promise<unknown> {
     const pendingCompleted = this.completedEvents.get(event) || [];
     const pending = pendingCompleted.shift();
     if (pending) {
-      window.log.info(`CI: resolving pending result for ${event}`, pending);
+      log.info(`CI: resolving pending result for ${event}`, pending);
 
       if (pendingCompleted.length === 0) {
         this.completedEvents.delete(event);
@@ -33,8 +36,12 @@ export class CI {
       return pending;
     }
 
-    window.log.info(`CI: waiting for event ${event}`);
-    const { resolve, promise } = explodePromise();
+    log.info(`CI: waiting for event ${event}`);
+    const { resolve, reject, promise } = explodePromise();
+
+    const timer = setTimeout(() => {
+      reject(new Error('Timed out'));
+    }, timeout);
 
     let list = this.eventListeners.get(event);
     if (!list) {
@@ -42,7 +49,10 @@ export class CI {
       this.eventListeners.set(event, list);
     }
 
-    list.push(resolve);
+    list.push((value: unknown) => {
+      clearTimeout(timer);
+      resolve(value);
+    });
 
     return promise;
   }
@@ -60,12 +70,12 @@ export class CI {
         this.eventListeners.delete(event);
       }
 
-      window.log.info(`CI: got event ${event} with data`, data);
+      log.info(`CI: got event ${event} with data`, data);
       resolve(data);
       return;
     }
 
-    window.log.info(`CI: postponing event ${event}`);
+    log.info(`CI: postponing event ${event}`);
 
     let resultList = this.completedEvents.get(event);
     if (!resultList) {

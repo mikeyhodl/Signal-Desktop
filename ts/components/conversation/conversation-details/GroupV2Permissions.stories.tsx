@@ -6,10 +6,11 @@ import * as React from 'react';
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import { setupI18n } from '../../../util/setupI18n';
 import enMessages from '../../../../_locales/en/messages.json';
-import { GroupV2Permissions, PropsType } from './GroupV2Permissions';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { PropsType } from './GroupV2Permissions';
+import { GroupV2Permissions } from './GroupV2Permissions';
+import type { ConversationType } from '../../../state/ducks/conversations';
 import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
 
 const i18n = setupI18n('en', enMessages);

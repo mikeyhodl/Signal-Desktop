@@ -1,14 +1,21 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import type { SignalService as Proto } from '../protobuf';
 import type { IncomingWebSocketRequest } from './WebsocketResources';
+import type { UUID } from '../types/UUID';
+import type { TextAttachmentType } from '../types/Attachment';
 
 export {
   IdentityKeyType,
+  IdentityKeyIdType,
+  PreKeyIdType,
   PreKeyType,
+  SenderKeyIdType,
   SenderKeyType,
+  SessionIdType,
   SessionType,
+  SignedPreKeyIdType,
   SignedPreKeyType,
   UnprocessedType,
   UnprocessedUpdateType,
@@ -40,7 +47,7 @@ export type DeviceType = {
 export type CompatSignedPreKeyType = {
   keyId: number;
   keyPair: KeyPairType;
-  signature: ArrayBuffer;
+  signature: Uint8Array;
 };
 
 export type CompatPreKeyType = {
@@ -51,8 +58,8 @@ export type CompatPreKeyType = {
 // How we work with these types thereafter
 
 export type KeyPairType = {
-  privKey: ArrayBuffer;
-  pubKey: ArrayBuffer;
+  privKey: Uint8Array;
+  pubKey: Uint8Array;
 };
 
 export type OuterSignedPrekeyType = {
@@ -60,8 +67,8 @@ export type OuterSignedPrekeyType = {
   // eslint-disable-next-line camelcase
   created_at: number;
   keyId: number;
-  privKey: ArrayBuffer;
-  pubKey: ArrayBuffer;
+  privKey: Uint8Array;
+  pubKey: Uint8Array;
 };
 
 export type SessionResetsType = Record<string, number>;
@@ -77,8 +84,8 @@ export type ProcessedEnvelope = Readonly<{
   source?: string;
   sourceUuid?: string;
   sourceDevice?: number;
+  destinationUuid: UUID;
   timestamp: number;
-  legacyMessage?: Uint8Array;
   content?: Uint8Array;
   serverGuid: string;
   serverTimestamp: number;
@@ -99,6 +106,7 @@ export type ProcessedAttachment = {
   caption?: string;
   blurHash?: string;
   cdnNumber?: number;
+  textAttachment?: TextAttachmentType;
 };
 
 export type ProcessedGroupContext = {
@@ -176,6 +184,8 @@ export type ProcessedBodyRange = Proto.DataMessage.IBodyRange;
 
 export type ProcessedGroupCallUpdate = Proto.DataMessage.IGroupCallUpdate;
 
+export type ProcessedStoryContext = Proto.DataMessage.IStoryContext;
+
 export type ProcessedDataMessage = {
   body?: string;
   attachments: ReadonlyArray<ProcessedAttachment>;
@@ -190,11 +200,13 @@ export type ProcessedDataMessage = {
   preview?: ReadonlyArray<ProcessedPreview>;
   sticker?: ProcessedSticker;
   requiredProtocolVersion?: number;
+  isStory?: boolean;
   isViewOnce: boolean;
   reaction?: ProcessedReaction;
   delete?: ProcessedDelete;
   bodyRanges?: ReadonlyArray<ProcessedBodyRange>;
   groupCallUpdate?: ProcessedGroupCallUpdate;
+  storyContext?: ProcessedStoryContext;
 };
 
 export type ProcessedUnidentifiedDeliveryStatus = Omit<
@@ -226,9 +238,9 @@ export interface CallbackResultType {
   failoverIdentifiers?: Array<string>;
   errors?: Array<CustomError>;
   unidentifiedDeliveries?: Array<string>;
-  dataMessage?: ArrayBuffer;
+  dataMessage?: Uint8Array;
 
-  // Fields necesary for send log save
+  // Fields necessary for send log save
   contentHint?: number;
   contentProto?: Uint8Array;
   timestamp?: number;

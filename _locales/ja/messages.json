@@ -152,11 +152,11 @@
         "description": "View menu command to show or hide the developer tools"
     },
     "menuSetupAsNewDevice": {
-        "message": "新しいデバイスとして設定",
+        "message": "新規の端末として設定",
         "description": "When the application is not yet set up, menu option to start up the set up as fresh device"
     },
     "menuSetupAsStandalone": {
-        "message": "独立したデバイスとして設定",
+        "message": "単体の端末として設定",
         "description": "Only available on development modes, menu option to open up the standalone device setup sequence"
     },
     "messageContextMenuButton": {
@@ -172,20 +172,20 @@
         "description": "Shown in the context menu for an image to indicate that the user can copy the image"
     },
     "contextMenuNoSuggestions": {
-        "message": "提案がありません",
+        "message": "候補はありません",
         "description": "Shown in the context menu for a misspelled word to indicate that there are no suggestions to replace the misspelled word"
     },
     "avatarMenuViewArchive": {
         "message": "アーカイブを表示",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuChatColors": {
         "message": "チャットの色",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuUpdateAvailable": {
         "message": "Signalをアップデートする",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "loading": {
         "message": "読み込んでいます…",
@@ -196,7 +196,7 @@
         "description": "Message shown on the loading screen while we are doing application optimizations"
     },
     "migratingToSQLCipher": {
-        "message": "メッセージを最適化中... $status$完了した。",
+        "message": "メッセージを最適化してます… $status$",
         "description": "Message shown on the loading screen while we are doing application optimizations",
         "placeholders": {
             "status": {
@@ -221,6 +221,10 @@
         "message": "これらのチャットはアーカイブされ、新しいメッセージを受信した場合のみ受信トレイに表示されます。",
         "description": "Shown at the top of the archived conversations list in the left pane"
     },
+    "noArchivedConversations": {
+        "message": "アーカイブ済みのチャットはありません。",
+        "description": "Shown at the top of the archived conversations list in the left pane if there is no any archived conversation"
+    },
     "archiveConversation": {
         "message": "アーカイブする",
         "description": "Shown in menu for conversation, and moves conversation out of main conversation list"
@@ -230,7 +234,7 @@
         "description": "Shown in menu for conversation, and marks conversation as unread"
     },
     "moveConversationToInbox": {
-        "message": "受信箱に戻す",
+        "message": "アーカイブ解除",
         "description": "Undoes Archive Conversation action, and moves archived conversation back to the main conversation list"
     },
     "pinConversation": {
@@ -243,7 +247,7 @@
     },
     "pinnedConversationsFull": {
         "message": "ピン留めできるチャットは4件までです。",
-        "description": ""
+        "description": "Shown in a toast when a user attempts to pin more than the maximum number of chats"
     },
     "chooseDirectory": {
         "message": "フォルダを選択",
@@ -266,11 +270,11 @@
         "description": "Title of the popup window used to select data previously exported"
     },
     "importErrorHeader": {
-        "message": "エラーが発生しました。",
+        "message": "エラーが発生しました！",
         "description": "Header of the error screen after a failed import"
     },
     "importingHeader": {
-        "message": "連絡先とメッセージを読み込み中",
+        "message": "連絡先とメッセージを読み込んでいます",
         "description": "Header of screen shown as data is import"
     },
     "importErrorFirst": {
@@ -282,15 +286,15 @@
         "description": "Message shown if the import went wrong; second paragraph"
     },
     "importAgain": {
-        "message": "フォルダーを選択して再度お試しください。",
+        "message": "フォルダーを選択して再度試す",
         "description": "Button shown if the user runs into an error during import, allowing them to start over"
     },
     "importCompleteHeader": {
-        "message": "成功しました!",
+        "message": "成功しました！",
         "description": "Header shown on the screen at the end of a successful import process"
     },
     "importCompleteStartButton": {
-        "message": "Signal Desktopを使い始める",
+        "message": "Signal Desktopを使用開始",
         "description": "Button shown at end of successful import process, nothing left but a restart"
     },
     "importCompleteLinkButton": {
@@ -340,7 +344,7 @@
         "description": "Text for unread message separator, just one message"
     },
     "unreadMessages": {
-        "message": "$count$ 件の未読メッセージ",
+        "message": "$count$件の未読メッセージ",
         "description": "Text for unread message separator, with count",
         "placeholders": {
             "count": {
@@ -415,6 +419,10 @@
         "message": "以下の方はアプリを再インストールしたか端末を変更した可能性があります。プライバシーを保証するために安全番号を検証してください。",
         "description": "Shown on confirmation dialog when user attempts to send a message"
     },
+    "safetyNumberChangeDialog__pending-messages": {
+        "message": "保留中のメッセージを送信します",
+        "description": "Shown on confirmation dialog when user attempts to send a message in the outbox"
+    },
     "identityKeyErrorOnSend": {
         "message": "$name1$ に対する安全番号が変更されました。だれかが通信を傍受しようとしているかも知れませんし、$name2$ がSignalを再インストールしただけかも知れません。この連絡先に対する安全番号を検証することをお勧めします。",
         "description": "Shown when user clicks on a failed recipient in the message detail view after an identity key change",
@@ -456,35 +464,47 @@
         "description": "Shown in conversation banner when more than one group member's safety number has changed, but they were previously verified."
     },
     "debugLogExplanation": {
-        "message": "このログはネット上に公開され，開発者が閲覧します。提出前に編集することができます。",
-        "description": ""
+        "message": "「送信する」をクリックすると、このログがユニークな未公開のURLで30日間見られるようになります。\n「保存」をクリックすると、送信する前にあなたの端末にログを保存しておくこともできます。",
+        "description": "Description of what will happen with your debug log"
     },
     "debugLogError": {
-        "message": "アップロードには失敗ありました！手入力でログをバグ報告に付けることを考慮して下さい。",
-        "description": ""
+        "message": "アップロードできませんでした！ログのテキストファイルを support@signal.org にメールでお送りください。",
+        "description": "Error message a recommendations if debug log upload fails"
     },
-    "debugLogCopy": {
-        "message": "コピー",
+    "debugLogSuccess": {
+        "message": "デバッグログを送信しました",
+        "description": "Title of the success page for submitting a debug log"
+    },
+    "debugLogSuccessNextSteps": {
+        "message": "デバッグログを送信しました。サポートへお問い合わせの際には、以下のURLをコピーしてお送りください。また、不具合の内容とその不具合を再現する手順も添えてください。",
+        "description": "Explanation of next steps to take when submitting debug log"
+    },
+    "debugLogLogIsIncomplete": {
+        "message": "... to see the full log, click Save",
         "description": "Shown as the text for the copy button on the debug log screen"
     },
-    "debugLogCopyAlt": {
-        "message": "クリップボードにリンクをコピー",
-        "description": "Shown as the alt text for the copy button on the debug log screen"
+    "debugLogCopy": {
+        "message": "リンクをコピー",
+        "description": "Shown as the text for the copy button on the debug log screen"
+    },
+    "debugLogSave": {
+        "message": "保存",
+        "description": "Shown as the text for the download button on the debug log screen"
     },
     "debugLogLinkCopied": {
         "message": "リンクをクリップボードにコピーしました",
         "description": "Shown in a toast to let the user know that the link to the debug log has been copied to their clipboard"
     },
     "reportIssue": {
-        "message": "問題を報告",
+        "message": "サポートに問い合わせる",
         "description": "Link to open the issue tracker"
     },
     "gotIt": {
-        "message": "了解",
+        "message": "わかりました",
         "description": "Label for a button that dismisses a dialog. The user clicks it to confirm that they understand the message in the dialog."
     },
     "submit": {
-        "message": "提出",
+        "message": "送信する",
         "description": ""
     },
     "acceptNewKey": {
@@ -532,7 +552,7 @@
         "description": ""
     },
     "incomingError": {
-        "message": "受信中にエラー",
+        "message": "受信メッセージの処理エラー",
         "description": ""
     },
     "media": {
@@ -557,11 +577,11 @@
     },
     "today": {
         "message": "今日",
-        "description": "Section header in the media gallery"
+        "description": "The string \"today\""
     },
     "yesterday": {
         "message": "昨日",
-        "description": "Section header in the media gallery"
+        "description": "The string \"yesterday\""
     },
     "thisWeek": {
         "message": "今週",
@@ -609,7 +629,7 @@
         "message": "$domain$ のリンクプレビュー",
         "description": "Shown while Signal Desktop is fetching metadata for a url in composition area",
         "placeholders": {
-            "path": {
+            "domain": {
                 "content": "$1",
                 "example": "instagram.com"
             }
@@ -626,8 +646,22 @@
         }
     },
     "decryptionErrorToast": {
-        "message": "デスクトップで復号エラーが発生しました。クリックしてデバッグログを送信してください。",
-        "description": "An error popup when we haven't added an error for decryption error."
+        "message": "デスクトップで $name$ ($deviceId$) からの復号化でエラーが発生しました。",
+        "description": "An error popup when we haven't added an in-timeline error for decryption error, only for beta/internal users.",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            },
+            "deviceId": {
+                "content": "$1",
+                "example": "2"
+            }
+        }
+    },
+    "decryptionErrorToastAction": {
+        "message": "ログを送信",
+        "description": "Label for the decryption error toast button"
     },
     "oneNonImageAtATimeToast": {
         "message": "画像以外の添付ファイルを追加する場合、メッセージ1件に添付できるのは1つだけです。",
@@ -694,19 +728,19 @@
         "description": "Item under the help menu, takes you to the contact us support page"
     },
     "goToReleaseNotes": {
-        "message": "リリースノートを閲覧",
+        "message": "リリースノート",
         "description": "Item under the help menu, takes you to GitHub page for release notes"
     },
     "goToForums": {
-        "message": "フォーラムに参加",
+        "message": "フォーラム",
         "description": "Item under the Help menu, takes you to the forums"
     },
     "goToSupportPage": {
-        "message": "サポートページへ",
+        "message": "サポートページ",
         "description": "Item under the Help menu, takes you to the support page"
     },
     "joinTheBeta": {
-        "message": "ベータ版に参加",
+        "message": "ベータテストに参加",
         "description": "Item under the Help menu, takes you to an article describing how to install the beta release of Signal Desktop"
     },
     "signalDesktopPreferences": {
@@ -718,7 +752,7 @@
         "description": "Title of the window that pops up with Signal Desktop preferences in it"
     },
     "aboutSignalDesktop": {
-        "message": "Signal Desktop について",
+        "message": "Signal Desktopについて",
         "description": "Item under the Help menu, which opens a small about window"
     },
     "screenShareWindow": {
@@ -754,17 +788,11 @@
         "description": "Aria label for clear search button"
     },
     "searchIn": {
-        "message": "$conversationName$ 内のチャットを検索",
-        "description": "Shown in the search box before text is entered when searching in a specific conversation",
-        "placeholders": {
-            "conversationName": {
-                "content": "$1",
-                "example": "Friends"
-            }
-        }
+        "message": "チャットを検索",
+        "description": "Shown in the search box before text is entered when searching in a specific conversation"
     },
     "noSearchResults": {
-        "message": "$searchTerm$ はありません",
+        "message": "「$searchTerm$」はありません",
         "description": "Shown in the search left pane when no results were found",
         "placeholders": {
             "searchTerm": {
@@ -778,7 +806,7 @@
         "description": "Shown in the search left pane when no results were found and primary device has SMS/MMS handling enabled"
     },
     "noSearchResultsInConversation": {
-        "message": "$conversationName$ 内に $searchTerm$ はありません",
+        "message": "$conversationName$ 内に「$searchTerm$」はありません",
         "description": "Shown in the search left pane when no results were found",
         "placeholders": {
             "searchTerm": {
@@ -807,6 +835,24 @@
         "message": "メッセージ",
         "description": "Shown to separate the types of search results"
     },
+    "findByUsernameHeader": {
+        "message": "ユーザー名で検索",
+        "description": "Shown when search could be a valid username, with one sub-item that will kick off the search"
+    },
+    "findByPhoneNumberHeader": {
+        "message": "電話番号で検索",
+        "description": "Shown when search could be a valid phone number, with one sub-item that will kick off the search"
+    },
+    "at-username": {
+        "message": "@$username$",
+        "description": "@ added to username to signify it as a username. Should it be on the right in your language?",
+        "placeholders": {
+            "username": {
+                "content": "$1",
+                "example": "sammy45"
+            }
+        }
+    },
     "welcomeToSignal": {
         "message": "Signalへようこそ",
         "description": ""
@@ -834,7 +880,7 @@
         "description": "Used as the 'title' attribute for the typing animation"
     },
     "contactInAddressBook": {
-        "message": "この人は連絡先に入っています。",
+        "message": "この方は連絡先に入っています。",
         "description": "Description of icon denoting that contact is from your address book"
     },
     "contactAvatarAlt": {
@@ -860,8 +906,8 @@
         "description": "Shown on contact detail screen as a label for an address/phone/email"
     },
     "mobile": {
-        "message": "携帯",
-        "description": "Shown on contact detail screen as a label for aa phone or email"
+        "message": "携帯電話",
+        "description": "Shown on contact detail screen as a label for a phone or email"
     },
     "email": {
         "message": "メール",
@@ -880,7 +926,7 @@
         "description": "When rendering an address, used to provide context to a post office box"
     },
     "downloading": {
-        "message": "ダウンロード中",
+        "message": "ダウンロードしています",
         "description": "Shown in the message bubble while a long message attachment is being downloaded"
     },
     "downloadAttachment": {
@@ -888,7 +934,7 @@
         "description": "Shown in a message's triple-dot menu if there isn't room for a dedicated download button"
     },
     "reactToMessage": {
-        "message": "メッセージに反応",
+        "message": "メッセージにリアクション",
         "description": "Shown in triple-dot menu next to message to allow user to react to the associated message"
     },
     "replyToMessage": {
@@ -896,16 +942,28 @@
         "description": "Shown in triple-dot menu next to message to allow user to start crafting a message with a quotation"
     },
     "originalMessageNotFound": {
-        "message": "元のメッセージを見つけれません",
+        "message": "元のメッセージが見つかりません",
         "description": "Shown in quote if reference message was not found as message was initially downloaded and processed"
     },
     "originalMessageNotAvailable": {
-        "message": "元のメッセージは入手できません",
+        "message": "元のメッセージはもう利用できません",
         "description": "Shown in toast if user clicks on quote that references message no longer in database"
     },
     "messageFoundButNotLoaded": {
         "message": "元のメッセージを見つけたが、ロードされていません。ロードするのにスクロールアップして下さい。",
         "description": "Shown in toast if user clicks on quote references messages not loaded in view, but in database"
+    },
+    "voiceRecording--start": {
+        "message": "音声メッセージの録音を開始",
+        "description": "Tooltip for microphone button to start voice message"
+    },
+    "voiceRecording--complete": {
+        "message": "音声メッセージを送信",
+        "description": "Tooltip for green complete voice message and send"
+    },
+    "voiceRecording--cancel": {
+        "message": "音声メッセージをキャンセル",
+        "description": "Tooltip for red button to cancel voice message"
     },
     "voiceRecordingInterruptedMax": {
         "message": "制限時間がきたので音声メッセージの録音は停止されました。",
@@ -916,29 +974,31 @@
         "description": "Confirmation dialog message for when the voice recording is interrupted due to app losing focus"
     },
     "voiceNoteLimit": {
-        "message": "ボイスメッセージは5分に制限されています。他のアプリに変えると録音がとまります。",
+        "message": "音声メッセージの長さは、1時間までです。他のアプリに切り替えると、録音を停止します。",
         "description": "Shown in toast to warn user about limited time and that window must be in focus"
     },
     "voiceNoteMustBeOnlyAttachment": {
         "message": "音声メッセージには別のファイルを添付することはできません。",
         "description": "Shown in toast if tries to record a voice note with any staged attachments"
     },
+    "voiceNoteError": {
+        "message": "音声レコーダーにエラーが発生しました。",
+        "description": "Shown in a dialog to inform user that we experienced an unrecoverable error"
+    },
     "attachmentSaved": {
-        "message": "添付ファイルを保存しました。保存したフォルダを表示する",
-        "description": "Shown after user selects to save to downloads",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "proof.jpg"
-            }
-        }
+        "message": "添付ファイルを保存しました。",
+        "description": "Shown after user selects to save to downloads"
+    },
+    "attachmentSavedShow": {
+        "message": "フォルダで表示",
+        "description": "Button label for showing the attachment in your file system"
     },
     "you": {
         "message": "あなた",
         "description": "Shown when the user represented is the current user."
     },
     "replyingTo": {
-        "message": "$name$に返信中",
+        "message": "$name$ への返信",
         "description": "Shown in iOS theme when you or someone quotes to a message which is not from you",
         "placeholders": {
             "name": {
@@ -987,13 +1047,43 @@
         "message": "アップデートできません",
         "description": "Shown as the title of our update error dialogs on windows"
     },
+    "muted": {
+        "message": "ミュート中",
+        "description": "Shown in a button when a conversation is muted"
+    },
+    "mute": {
+        "message": "ミュート",
+        "description": "Shown in a button when a conversation is unmuted and can be muted"
+    },
     "cannotUpdateDetail": {
-        "message": "Signal Desktop はアップデートに失敗しましたが、新しいバージョンが利用可能です。$url$ から手動で新しいバージョンをインストールしてからサポートに問い合わせるか、このバグを報告してください。",
+        "message": "Signalをアップデートできませんでした。$retry$ か $url$ から手動でインストールしてください。$support$",
         "description": "Shown if a general error happened while trying to install update package",
         "placeholders": {
+            "retry": {
+                "content": "$2",
+                "example": "retry update"
+            },
             "url": {
-                "content": "$1",
+                "content": "$2",
                 "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
+            }
+        }
+    },
+    "cannotUpdateRequireManualDetail": {
+        "message": "Signal couldn't update. Visit $url$ to install it manually. Then, $support$ about this problem",
+        "description": "Shown if a general error happened while trying to install update package and manual update is required",
+        "placeholders": {
+            "url": {
+                "content": "$2",
+                "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
             }
         }
     },
@@ -1020,11 +1110,11 @@
         "description": ""
     },
     "discard": {
-        "message": "破棄する",
+        "message": "破棄",
         "description": ""
     },
     "failedToSend": {
-        "message": "宛先の一部で送信に失敗しました。ネットワークの接続をチェックしてください。",
+        "message": "いくつかの宛先に送信できませんでした。ネットワーク接続を確認してください。",
         "description": ""
     },
     "error": {
@@ -1041,6 +1131,10 @@
     },
     "accept": {
         "message": "承認する",
+        "description": ""
+    },
+    "forward": {
+        "message": "転送",
         "description": ""
     },
     "done": {
@@ -1095,10 +1189,6 @@
         "message": "メンバーを表示する",
         "description": ""
     },
-    "resetSession": {
-        "message": "セッションをリセット",
-        "description": "This is a menu item for resetting the session, using the imperative case, as in a command."
-    },
     "showSafetyNumber": {
         "message": "安全番号を表示する",
         "description": ""
@@ -1136,6 +1226,10 @@
     "retrySend": {
         "message": "再送信する",
         "description": "Shown on the drop-down menu for an individual message, but only if it is an outgoing message that failed to send"
+    },
+    "retryDeleteForEveryone": {
+        "message": "全員分の削除を再実行",
+        "description": "Shown on the drop-down menu for an individual message, but only if a previous delete for everyone failed to send"
     },
     "forwardMessage": {
         "message": "メッセージの転送",
@@ -1220,7 +1314,7 @@
         }
     },
     "ChangeNumber--notification": {
-        "message": "$sender$ が電話番号を変更しました",
+        "message": "$sender$ は電話番号を変更しました",
         "description": "Shown in timeline when a member of a conversation changes their phone number",
         "placeholders": {
             "sender": {
@@ -1230,7 +1324,7 @@
         }
     },
     "quoteThumbnailAlt": {
-        "message": "引用されたメッセージから画像のサムネール",
+        "message": "引用したメッセージの画像のサムネイル",
         "description": "Used in alt tag of thumbnail images inside of an embedded message quote"
     },
     "imageAttachmentAlt": {
@@ -1249,13 +1343,13 @@
         "message": "この画像にキャプションがついていることを示すアイコン",
         "description": "Used for the icon layered on top of an image in message bubbles"
     },
-    "addACaption": {
-        "message": "キャプション追加...",
-        "description": "Used as the placeholder text in the caption editor text field"
-    },
     "save": {
         "message": "保存",
-        "description": "Used as a 'commit changes' button in the Caption Editor for outgoing image attachments"
+        "description": "Used on save buttons"
+    },
+    "reset": {
+        "message": "リセット",
+        "description": "Used on reset buttons"
     },
     "fileIconAlt": {
         "message": "ファイルのアイコン",
@@ -1269,40 +1363,98 @@
         "message": "Signalを使えば簡単にプライバシーを守れます。",
         "description": "Tagline displayed under 'installWelcome' string on the install page"
     },
-    "linkYourPhone": {
-        "message": "携帯電話をSignal Desktopにリンクする",
-        "description": "Shown on the front page when the application first starts, above the QR code"
-    },
-    "signalSettings": {
-        "message": "Signalの設定",
-        "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
-    },
     "linkedDevices": {
         "message": "リンク済み端末",
         "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
     },
-    "plusButton": {
-        "message": "「+」ボタン",
-        "description": "The button used in Signal Android to add a new linked device"
-    },
     "linkNewDevice": {
-        "message": "新規の端末をリンクする",
+        "message": "新しい端末をリンク",
         "description": "The menu option shown in Signal iOS to add a new linked device"
+    },
+    "Install__scan-this-code": {
+        "message": "スマートフォンのSignalアプリで、\nこのQRコードを読み取ってください。",
+        "description": "Title of the device link screen. Also used as alt text for the QR code on the device link screen"
+    },
+    "Install__instructions__1": {
+        "message": "あなたの電話でSignalを開きます",
+        "description": "Instructions on the device link screen"
+    },
+    "Install__instructions__2": {
+        "message": "$settings$ をタップして、その次に $linkedDevices$ をタップしてください",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "settings": {
+                "content": "$1",
+                "example": "<strong>Settings</strong>"
+            },
+            "linkedDevices": {
+                "content": "$2",
+                "example": "<strong>Linked Devices</strong>"
+            }
+        }
+    },
+    "Install__instructions__2__settings": {
+        "message": "設定",
+        "description": "Part of the 2nd instruction on the device link screen"
+    },
+    "Install__instructions__3": {
+        "message": "Androidでは $plusButton$ を、iPhoneでは $linkNewDevice$ をタップしてください",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "plusButton": {
+                "content": "$1",
+                "example": "<PlusButton />"
+            },
+            "linkNewDevice": {
+                "content": "$2",
+                "example": "<strong>Link New Device</strong>"
+            }
+        }
+    },
+    "Install__qr-failed": {
+        "message": "QRコードが読みこめません。インターネットの接続を確認して、再度お試しください。$learnMore$",
+        "description": "Shown on the install screen if the QR code fails to load",
+        "placeholders": {
+            "learnMore": {
+                "content": "$1",
+                "example": "<a>Learn more</a>"
+            }
+        }
+    },
+    "Install__qr-failed__learn-more": {
+        "message": "さらに詳しく",
+        "description": "Shown on the install screen if the QR code fails to load"
+    },
+    "Install__support-link": {
+        "message": "お困りですか？",
+        "description": "Shown on the install screen. Link takes users to a support page"
+    },
+    "Install__choose-device-name__description": {
+        "message": "この名前はスマートフォン版Signalの「リンク済み端末」に表示されます",
+        "description": "The subheader shown on the 'choose device name' screen in the device linking process"
+    },
+    "Install__choose-device-name__placeholder": {
+        "message": "このコンピュータ",
+        "description": "The placeholder for the 'choose device name' input"
     },
     "Preferences--device-name": {
         "message": "端末名",
         "description": "The label in settings panel shown for the user-provided name for this desktop instance"
     },
     "chooseDeviceName": {
-        "message": "この端末の名前を選択",
+        "message": "この端末の名前を設定してください",
         "description": "The header shown on the 'choose device name' screen in the device linking process"
     },
     "finishLinkingPhone": {
-        "message": "携帯電話とのリンクを完了",
+        "message": "スマートフォンとのリンクを完了",
         "description": "The text on the button to finish the linking process, after choosing the device name"
     },
     "initialSync": {
         "message": "連絡先とグループを同期しています",
+        "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
+    },
+    "initialSync__subtitle": {
+        "message": "注意: このデバイスをリンクする前のチャット履歴は同期されません",
         "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
     },
     "installConnectionFailed": {
@@ -1321,6 +1473,10 @@
         "message": "エラーが発生しました。",
         "description": ""
     },
+    "installUnknownError": {
+        "message": "予期せぬエラーが発生しました。再度お試しください。",
+        "description": ""
+    },
     "installTryAgain": {
         "message": "もう一度試す",
         "description": ""
@@ -1333,6 +1489,14 @@
         "message": "通話",
         "description": "Header for calling options on the settings screen"
     },
+    "calling__call-back": {
+        "message": "折り返す",
+        "description": "Button to call someone back"
+    },
+    "calling__call-again": {
+        "message": "リダイヤルする",
+        "description": "Button to call someone again"
+    },
     "calling__start": {
         "message": "通話を開始する",
         "description": "Button label in the call lobby for starting a call"
@@ -1344,6 +1508,10 @@
     "calling__return": {
         "message": "通話に戻る",
         "description": "Button label in the call lobby for returning to a call"
+    },
+    "calling__lobby-automatically-muted-because-there-are-a-lot-of-people": {
+        "message": "すでに多くの参加者がいるためマイクをミュートしました",
+        "description": "Shown in a call lobby toast if there are a lot of people already on the call"
     },
     "calling__call-is-full": {
         "message": "満席です",
@@ -1396,6 +1564,22 @@
     "calling__button--presenting-off": {
         "message": "画面の共有を停止する",
         "description": "Button tooltip label for stopping screen sharing"
+    },
+    "calling__button--ring__label": {
+        "message": "呼び出し",
+        "description": "Label under the ring button"
+    },
+    "calling__button--ring__disabled-because-group-is-too-large": {
+        "message": "グループが大きすぎるため、参加者を呼べません。",
+        "description": "Button tooltip label when you can't ring because the group is too large"
+    },
+    "calling__button--ring__off": {
+        "message": "通知して、鳴らさない",
+        "description": "Button tooltip label for turning ringing off"
+    },
+    "calling__button--ring__on": {
+        "message": "呼び出し音を鳴らす",
+        "description": "Button tooltip label for turning ringing on"
     },
     "calling__your-video-is-off": {
         "message": "カメラがオフになっています。",
@@ -1479,6 +1663,56 @@
             }
         }
     },
+    "calling__pre-call-info--will-ring-2": {
+        "message": "Signalから $first$、$second$ に発信します",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-3": {
+        "message": "Signalから $first$、$second$ および $third$ に発信します",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "third": {
+                "content": "$3",
+                "example": "April"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-many": {
+        "message": "Signalから $first$、$second$ ほか$others$名に発信します",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "person": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "others": {
+                "content": "$3",
+                "example": "5"
+            }
+        }
+    },
     "calling__pre-call-info--will-notify-1": {
         "message": "$person$ に通知されます",
         "description": "Shown in the calling lobby to describe who will be notified",
@@ -1558,7 +1792,7 @@
         }
     },
     "calling__you-have-blocked": {
-        "message": "$name$をブロックしています",
+        "message": "$name$ はブロックしています",
         "description": "when you block someone and cannot view their video",
         "placeholders": {
             "name": {
@@ -1568,8 +1802,8 @@
         }
     },
     "calling__block-info": {
-        "message": "相手との音声や映像の送受信を行いません。",
-        "description": "Shown in the modal dialog to describe how blocking works in a gorup call"
+        "message": "音声や映像の送受信を行いません。",
+        "description": "Shown in the modal dialog to describe how blocking works in a group call"
     },
     "calling__overflow__scroll-up": {
         "message": "上にスクロール",
@@ -1658,19 +1892,19 @@
         "description": "Description of the always relay calls setting"
     },
     "alwaysRelayCallsDetail": {
-        "message": "すべての通話をSignalサーバで中継して、相手にIPアドレスを知られることを防ぎます。ただし、通話の品質は下がります。",
+        "message": "すべての通話をSignalサーバで中継して、相手にIPアドレスを知られることを防ぎます。ただし通話の品質は下がります。",
         "description": "Details describing the always relay calls setting"
     },
-    "Preferences--permissions": {
+    "permissions": {
         "message": "アクセス許可",
         "description": "Header for permissions section of settings"
     },
     "mediaPermissionsDescription": {
-        "message": "マイクへのアクセスを許可する",
+        "message": "マイクへのアクセスを許可",
         "description": "Description of the media permission description"
     },
     "mediaCameraPermissionsDescription": {
-        "message": "カメラへのアクセスを許可する",
+        "message": "カメラへのアクセスを許可",
         "description": "Description of the media permission description"
     },
     "general": {
@@ -1678,7 +1912,7 @@
         "description": "Header for general options on the settings screen"
     },
     "spellCheckDescription": {
-        "message": "メッセージ作成ボックスでスペルチェックを行います",
+        "message": "メッセージ作成ボックスでスペルチェックを行う",
         "description": "Description of the spell check setting"
     },
     "spellCheckWillBeEnabled": {
@@ -1690,11 +1924,11 @@
         "description": "Shown when the user disables spellcheck to indicate that they must restart Signal."
     },
     "SystemTraySetting__minimize-to-system-tray": {
-        "message": "システムトレイへ最小化する",
+        "message": "システムトレイへ最小化",
         "description": "In the settings, shown next to the checkbox option for minimizing to the system tray"
     },
     "SystemTraySetting__minimize-to-and-start-in-system-tray": {
-        "message": "トレイに最小化した状態で起動する",
+        "message": "トレイに最小化した状態で起動",
         "description": "In the settings, shown next to the checkbox option for starting in the system tray"
     },
     "autoLaunchDescription": {
@@ -1780,7 +2014,7 @@
         }
     },
     "notificationReaction": {
-        "message": "$sender$の反応 $emoji$",
+        "message": "$sender$ があなたのメッセージに $emoji$",
         "description": "",
         "placeholders": {
             "sender": {
@@ -1794,7 +2028,7 @@
         }
     },
     "notificationReactionMessage": {
-        "message": "$sender$の$message$への反応 $emoji$",
+        "message": "$sender$ が「$message$」に $emoji$",
         "description": "",
         "placeholders": {
             "sender": {
@@ -1815,6 +2049,10 @@
         "message": "送信できませんでした",
         "description": "Shown on outgoing message if it fails to send"
     },
+    "deleteFailed": {
+        "message": "削除できませんでした",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to anyone"
+    },
     "sendPaused": {
         "message": "送信を保留しました",
         "description": "Shown on outgoing message if it cannot be sent immediately"
@@ -1822,6 +2060,10 @@
     "partiallySent": {
         "message": "一部だけ送信しました。タップして詳細を表示",
         "description": "Shown on outgoing message if it is partially sent"
+    },
+    "partiallyDeleted": {
+        "message": "一部だけ削除済み、クリックして再実行",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to everyone"
     },
     "showMore": {
         "message": "詳細",
@@ -1856,11 +2098,11 @@
         "description": "Label for contact and group sync settings"
     },
     "syncExplanation": {
-        "message": "Signalのグループと連絡先を携帯端末からインポートします",
+        "message": "Signalのグループと連絡先を、携帯端末からインポートします。",
         "description": "Explanatory text for sync settings"
     },
     "lastSynced": {
-        "message": "最近の取り込みは",
+        "message": "インポート日時",
         "description": "Label for date and time of last sync operation"
     },
     "syncNow": {
@@ -1912,8 +2154,16 @@
         "description": "Shown if a message is very recent, less than 60 seconds old"
     },
     "timestampFormat_M": {
-        "message": "MMM D",
+        "message": "MMMD日",
         "description": "Timestamp format string for displaying month and day (but not the year) of a date within the current year, ex: use 'MMM D' for 'Aug 8', or 'D MMM' for '8 Aug'."
+    },
+    "timestampFormat__long__today": {
+        "message": "[今日] LT",
+        "description": "Timestamp format string for displaying \"Today\" and the time"
+    },
+    "timestampFormat__long__yesterday": {
+        "message": "[昨日] LT",
+        "description": "Timestamp format string for displaying \"Yesterday\" and the time"
     },
     "messageBodyTooLong": {
         "message": "メッセージが長すぎます。",
@@ -1980,7 +2230,7 @@
         "description": "Conversation menu option to enable disappearing messages. Title of the settings section for Disappearing Messages. Label of the disappearing timer select in group creation flow"
     },
     "disappearingMessagesDisabled": {
-        "message": "消えるメッセージを無効にされました",
+        "message": "消えるメッセージが無効にされました",
         "description": "Displayed in the left pane when the timer is turned off"
     },
     "disappearingMessagesDisabledByMember": {
@@ -1988,7 +2238,7 @@
         "description": "Displayed in the left pane when the timer is turned off"
     },
     "disabledDisappearingMessages": {
-        "message": "$name$が消えるメッセージを無効にしました。",
+        "message": "$name$ が消えるメッセージを無効にしました。",
         "description": "Displayed in the conversation list when the timer is turned off",
         "placeholders": {
             "name": {
@@ -2012,11 +2262,11 @@
         }
     },
     "audioNotificationDescription": {
-        "message": "通知音を再生",
+        "message": "通知音を鳴らす",
         "description": "Description for audio notification setting"
     },
     "callRingtoneNotificationDescription": {
-        "message": "呼び出し音を再生する",
+        "message": "呼び出し音を鳴らす",
         "description": "Description for call ringtone notification setting"
     },
     "callSystemNotificationDescription": {
@@ -2028,7 +2278,7 @@
         "description": "Description for incoming calls setting"
     },
     "contactChangedProfileName": {
-        "message": "$sender$がプロフィール名を$oldProfile$から$newProfile$に変更しました。",
+        "message": "$sender$ がプロフィール名を $oldProfile$ から $newProfile$ に変更しました。",
         "description": "Description for incoming calls setting",
         "placeholders": {
             "sender": {
@@ -2046,7 +2296,7 @@
         }
     },
     "changedProfileName": {
-        "message": "$oldProfile$がプロフィール名を$newProfile$に変更しました。",
+        "message": "$oldProfile$ がプロフィール名を $newProfile$ に変更しました。",
         "description": "Shown when a contact not in your address book changes their profile name",
         "placeholders": {
             "oldProfile": {
@@ -2058,6 +2308,10 @@
                 "example": "Bob Smith"
             }
         }
+    },
+    "SafetyNumberModal__title": {
+        "message": "安全番号の検証",
+        "description": "Title for the modal for safety number verification"
     },
     "safetyNumberChanged": {
         "message": "安全番号が変更されました",
@@ -2124,12 +2378,16 @@
         "description": "Label text for menu bar visibility setting"
     },
     "startConversation": {
-        "message": "新しいチャットを始める...",
+        "message": "新しいチャットを始める…",
         "description": "Label underneath number a user enters that is not an existing contact"
     },
     "newConversation": {
         "message": "新しいチャット",
         "description": "Label for header when starting a new conversation"
+    },
+    "stories": {
+        "message": "ストーリー",
+        "description": "Label for header to go to stories view"
     },
     "contactSearchPlaceholder": {
         "message": "名前や電話番号で検索",
@@ -2142,6 +2400,44 @@
     "noConversationsFound": {
         "message": "チャットが見つかりません",
         "description": "Label shown when there are no conversations to compose to"
+    },
+    "Toast--failed-to-fetch-username": {
+        "message": "ユーザ名を検索できませんでした。インターネット接続を確認して再度試してください。",
+        "description": "Shown if request to Signal servers to find username fails"
+    },
+    "Toast--failed-to-fetch-phone-number": {
+        "message": "電話番号の取得に失敗しました。接続を確認して再度お試しください。",
+        "description": "Shown if request to Signal servers to find phone number fails"
+    },
+    "startConversation--username-not-found": {
+        "message": "ユーザは見つかりませんでした。$atUsername$ はSignalユーザではありません。ユーザ名を確認してください。",
+        "description": "Shown in dialog if username is not found. Note that 'username' will be the output of at-username",
+        "placeholders": {
+            "atUsername": {
+                "content": "$1",
+                "example": "@alex"
+            }
+        }
+    },
+    "startConversation--phone-number-not-found": {
+        "message": "ユーザーが見つかりません。\"$phoneNumber$\"は、Signalユーザーではありません。",
+        "description": "Shown in dialog if phone number is not found.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
+    },
+    "startConversation--phone-number-not-valid": {
+        "message": "ユーザーが見つかりません。\"$phoneNumber$\"は、無効な電話番号です。",
+        "description": "Shown in dialog if phone number is not valid.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
     },
     "chooseGroupMembers__title": {
         "message": "メンバーの選択",
@@ -2160,7 +2456,7 @@
         "description": "The 'next' button text in the 'choose group members' left pane screen"
     },
     "chooseGroupMembers__maximum-group-size__title": {
-        "message": "グループのサイズが最大値に達しました",
+        "message": "グループメンバー数が上限に達しました",
         "description": "Shown in the alert when you add the maximum number of group members"
     },
     "chooseGroupMembers__maximum-group-size__body": {
@@ -2187,22 +2483,8 @@
             }
         }
     },
-    "chooseGroupMembers__cant-add-member__title": {
-        "message": "メンバーを追加できません",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group"
-    },
-    "chooseGroupMembers__cant-add-member__body": {
-        "message": "$name$は、古いバージョンのSignalを使っているのでグループに追加できません。Signalをアップデートしてもらってからグループに追加してください。",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group",
-        "placeholders": {
-            "max": {
-                "content": "$1",
-                "example": "Jane Doe"
-            }
-        }
-    },
     "setGroupMetadata__title": {
-        "message": "このグループに名前を付ける",
+        "message": "このグループの名前",
         "description": "The title for the 'set group metadata' left pane screen"
     },
     "setGroupMetadata__back-button": {
@@ -2238,7 +2520,7 @@
         "description": "Shown in the modal when we can't update a group"
     },
     "notSupportedSMS": {
-        "message": "SMS/MMS メッセージはサポートしていません。",
+        "message": "SMS/MMSメッセージはサポートしていません。",
         "description": "Label underneath number informing user that SMS is not supported on desktop"
     },
     "newPhoneNumber": {
@@ -2250,7 +2532,7 @@
         "description": "When a person inputs a number that is invalid"
     },
     "unlinkedWarning": {
-        "message": "メッセージを継続するために携帯端末と再接続する。",
+        "message": "クリックすると、Signal Desktopとスマートフォンが再リンクされ、メッセージのやり取りが継続されます。",
         "description": ""
     },
     "unlinked": {
@@ -2265,6 +2547,14 @@
         "message": "アップデートがあります",
         "description": ""
     },
+    "autoUpdateRetry": {
+        "message": "アップデートを再試行",
+        "description": ""
+    },
+    "autoUpdateContactSupport": {
+        "message": "お問い合わせ",
+        "description": ""
+    },
     "autoUpdateNewVersionMessage": {
         "message": "Signalを再起動する",
         "description": ""
@@ -2273,20 +2563,28 @@
         "message": "アップデートをダウンロードする",
         "description": ""
     },
+    "downloadFullNewVersionMessage": {
+        "message": "Signalのアップデートが失敗しました。クリックして再試行してください。",
+        "description": "Shown in update dialog when partial update fails and we have to ask user to download full update"
+    },
     "autoUpdateNewVersionInstructions": {
         "message": "アップデートを適用するにはSignalを再起動してください。",
         "description": ""
     },
     "autoUpdateRestartButtonLabel": {
-        "message": "Signalを再起動",
+        "message": "Signalを再起動する",
         "description": ""
     },
     "autoUpdateLaterButtonLabel": {
         "message": "あとで",
         "description": ""
     },
+    "autoUpdateIgnoreButtonLabel": {
+        "message": "アップデートを無視",
+        "description": ""
+    },
     "leftTheGroup": {
-        "message": "$name$がグループから退出しました。",
+        "message": "$name$ がグループを抜けました。",
         "description": "Shown in the conversation history when a single person leaves the group",
         "placeholders": {
             "name": {
@@ -2296,7 +2594,7 @@
         }
     },
     "multipleLeftTheGroup": {
-        "message": "$name$がグループから退出しました。",
+        "message": "$name$ がグループを抜けました。",
         "description": "Shown in the conversation history when multiple people leave the group",
         "placeholders": {
             "name": {
@@ -2306,7 +2604,7 @@
         }
     },
     "updatedTheGroup": {
-        "message": "$name$がグループを修正しました。",
+        "message": "$name$ がグループを更新しました。",
         "description": "Shown in the conversation history when someone updates the group",
         "placeholders": {
             "name": {
@@ -2320,7 +2618,7 @@
         "description": "Shown in the conversation history when you update a group"
     },
     "updatedGroupAvatar": {
-        "message": "グループ画像を更新しました。",
+        "message": "グループアバターが更新されました。",
         "description": "Shown in the conversation history when someone updates the group"
     },
     "titleIsNow": {
@@ -2334,7 +2632,7 @@
         }
     },
     "youJoinedTheGroup": {
-        "message": "あなたがグループに参加しました。",
+        "message": "グループに参加しました。",
         "description": "Shown in the conversation history when you are added to a group."
     },
     "joinedTheGroup": {
@@ -2357,8 +2655,40 @@
             }
         }
     },
+    "ConversationList__aria-label": {
+        "message": "$title$ とのチャット, 未読: $unreadCount$件, 最後のメッセージ: $lastMessage$",
+        "description": "Aria label for the conversation list item",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "unreadCount": {
+                "content": "$2",
+                "example": "23"
+            },
+            "lastMessage": {
+                "content": "$3",
+                "example": "How about Friday?"
+            }
+        }
+    },
+    "ConversationList__last-message-undefined": {
+        "message": "最後のメッセージは削除された可能性があります。",
+        "description": "For aria-label within conversation list. Describes if last message is not defined."
+    },
+    "BaseConversationListItem__aria-label": {
+        "message": "$title$ とチャットする",
+        "description": "Aria label for the conversation list item button",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
     "ConversationListItem--message-request": {
-        "message": "メッセージリクエスト",
+        "message": "メッセージ申請",
         "description": "Preview shown for conversation if the user has not yet accepted an incoming message request"
     },
     "ConversationListItem--draft-prefix": {
@@ -2484,7 +2814,7 @@
         "description": "Label for the open button for the sticker picker"
     },
     "stickers--StickerPicker--AddPack": {
-        "message": "ステッカーパックを追加する",
+        "message": "ステッカーパックを追加",
         "description": "Label for the add pack button in the sticker picker"
     },
     "stickers--StickerPicker--NextPage": {
@@ -2496,7 +2826,7 @@
         "description": "Label for the previous page button in the sticker picker"
     },
     "stickers--StickerPicker--Recents": {
-        "message": "ステッカーの履歴",
+        "message": "最近使ったステッカー",
         "description": "Label for the recent stickers button in the sticker picker"
     },
     "stickers--StickerPicker--DownloadError": {
@@ -2532,7 +2862,7 @@
         "description": "The message that appears in the sticker preview modal when there is an error."
     },
     "EmojiPicker--empty": {
-        "message": "該当する絵文字がありません",
+        "message": "該当する絵文字はありません",
         "description": "Shown in the emoji picker when a search yields 0 results."
     },
     "EmojiPicker--search-placeholder": {
@@ -2574,7 +2904,7 @@
         "description": "Label for travel emoji picker button"
     },
     "EmojiPicker__button--object": {
-        "message": "物",
+        "message": "オブジェクト",
         "description": "Label for object emoji picker button"
     },
     "EmojiPicker__button--symbol": {
@@ -2589,8 +2919,12 @@
         "message": "キャンセル",
         "description": "Appears on the cancel button in confirmation dialogs."
     },
+    "MessageBody--read-more": {
+        "message": "続きを読む",
+        "description": "When a message is too long this is the affordance to expand the message"
+    },
     "Message--unsupported-message": {
-        "message": "$contact$からメッセージが届きましたが、Signal の新機能を利用しているため処理または表示できません。",
+        "message": "$contact$ からメッセージが届きましたが、Signalの新機能を利用しているため処理または表示できません。",
         "description": "",
         "placeholders": {
             "contact": {
@@ -2600,7 +2934,7 @@
         }
     },
     "Message--unsupported-message-ask-to-resend": {
-        "message": "Signal を最新版に更新したので、$contact$にメッセージの再送を依頼してください。",
+        "message": "Signalを最新バージョンに更新したため、$contact$ にメッセージの再送を依頼できます。",
         "description": "",
         "placeholders": {
             "contact": {
@@ -2610,11 +2944,11 @@
         }
     },
     "Message--from-me-unsupported-message": {
-        "message": "別のデバイスで Signal の新機能を使用してメッセージを送信したため、処理または表示できませんでした。",
+        "message": "別の端末でSignalの新機能を使用してメッセージを送信したため、処理または表示できません。",
         "description": ""
     },
     "Message--from-me-unsupported-message-ask-to-resend": {
-        "message": "Signal を最新版に更新したので、今後はこのようなメッセージも同期されます。",
+        "message": "Signalを最新バージョンに更新したため、今後はこのようなメッセージも同期されます。",
         "description": ""
     },
     "Message--update-signal": {
@@ -2782,7 +3116,7 @@
         "description": "Key shown in shortcut combination in shortcuts guide"
     },
     "Keyboard--Key--option": {
-        "message": "設定",
+        "message": "オプション",
         "description": "Key shown in shortcut combination in shortcuts guide"
     },
     "Keyboard--Key--alt": {
@@ -2865,6 +3199,10 @@
         "message": "チャットをアーカイブしました",
         "description": "A toast that shows up when user archives a conversation"
     },
+    "conversationArchivedUndo": {
+        "message": "元に戻す",
+        "description": "Undo button for archiving a conversation"
+    },
     "conversationReturnedToInbox": {
         "message": "チャットを受信箱に戻しました",
         "description": "A toast that shows up when the user unarchives a conversation"
@@ -2902,7 +3240,7 @@
         "description": "Title for Facebook button"
     },
     "StickerCreator--ShareButtons--twitter": {
-        "message": "ツイッター",
+        "message": "Twitter",
         "description": "Title for Twitter button"
     },
     "StickerCreator--ShareButtons--pinterest": {
@@ -2924,6 +3262,14 @@
     "StickerCreator--DropStage--title": {
         "message": "ステッカーを追加",
         "description": "Title for the drop stage of the sticker creator"
+    },
+    "StickerCreator--DropStage--removeSticker": {
+        "message": "ステッカーを削除",
+        "description": "Label for the X button used to remove a staged sticker"
+    },
+    "StickerCreator--DropStage--dragDrop": {
+        "message": "ファイルをクリックまたはドラッグ/ドロップしてステッカーを追加します",
+        "description": "Shown on the + section of the file addition stage of sticker pack creation"
     },
     "StickerCreator--DropStage--help": {
         "message": "ステッカーは、背景が透明で512x512ピクセルの、PNG、APNGまたはWebP形式の画像である必要があります。推奨マージンは16pxです。",
@@ -2960,7 +3306,7 @@
         "description": "Label for the title input of the meta stage of the sticker creator"
     },
     "StickerCreator--MetaStage--Field--author": {
-        "message": "作成者名",
+        "message": "制作者",
         "description": "Label for the author input of the meta stage of the sticker creator"
     },
     "StickerCreator--MetaStage--Field--cover": {
@@ -3099,12 +3445,16 @@
         "message": "Sticker Pack Creatorを使うには、Signalを携帯電話とデスクトップで設定してください。",
         "description": "The error message which appears when the user has not linked their account and attempts to use the Sticker Creator"
     },
+    "Reactions--remove": {
+        "message": "リアクションを削除",
+        "description": ""
+    },
     "Reactions--error": {
         "message": "リアクションを送信に失敗しました。再度お試しください。",
         "description": "Shown when a reaction fails to send"
     },
-    "ReactionsViewer--more": {
-        "message": "さらに",
+    "Reactions--more": {
+        "message": "続き",
         "description": "Use in the reaction picker as the alt text for the 'more' button"
     },
     "ReactionsViewer--all": {
@@ -3133,13 +3483,7 @@
     },
     "MessageRequests--message-group": {
         "message": "このグループに参加し、名前やプロフィール画像を共有しますか? あなたが許可するまで、相手はあなたがメッセージを見たことを知りえません。",
-        "description": "Shown as the message for a message request in a group",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the message for a message request in a group"
     },
     "MessageRequests--message-group-blocked": {
         "message": "このグループのブロックを解除し、名前とプロフィール画像の共有を許可しますか？ブロックを解除するまでメッセージは届きません。",
@@ -3153,8 +3497,8 @@
         "message": "ブロックを解除する",
         "description": "Shown as a button to let the user unblock a message request"
     },
-    "MessageRequests--unblock-confirm-title": {
-        "message": "$name$のブロックを解除しますか?",
+    "MessageRequests--unblock-direct-confirm-title": {
+        "message": "$name$ のブロックを解除しますか？",
         "description": "Shown as a button to let the user unblock a message request",
         "placeholders": {
             "name": {
@@ -3165,23 +3509,11 @@
     },
     "MessageRequests--unblock-direct-confirm-body": {
         "message": "お互いにメッセージや通話ができるようになります。",
-        "description": "Shown as the body in the confirmation modal for unblocking a private message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a private message request"
     },
     "MessageRequests--unblock-group-confirm-body": {
         "message": "グループのメンバーはあなたをもう一度このグループに加えることができるようになります。",
-        "description": "Shown as the body in the confirmation modal for unblocking a group message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a group message request"
     },
     "MessageRequests--block-and-report-spam": {
         "message": "スパムとして報告してブロックする",
@@ -3192,7 +3524,7 @@
         "description": "Shown in a toast when you successfully block a user and report them as spam"
     },
     "MessageRequests--block-direct-confirm-title": {
-        "message": "$name$をブロックしますか?",
+        "message": "$name$ をブロックしますか？",
         "description": "Shown as the title in the confirmation modal for blocking a private message request",
         "placeholders": {
             "name": {
@@ -3206,7 +3538,7 @@
         "description": "Shown as the body in the confirmation modal for blocking a private message request"
     },
     "MessageRequests--block-group-confirm-title": {
-        "message": "ブロックして$group$から抜けますか?",
+        "message": "ブロックして $group$ から抜けますか？",
         "description": "Shown as the title in the confirmation modal for blocking a group message request",
         "placeholders": {
             "group": {
@@ -3286,11 +3618,11 @@
         }
     },
     "MessageRequests--learn-more": {
-        "message": "もっと詳しく",
+        "message": "さらに詳しく",
         "description": "Shown at the end of profile sharing messages as a link."
     },
     "ConversationHero--members": {
-        "message": "メンバー$count$人",
+        "message": "メンバー $count$人",
         "description": "Specifies the number of members in a group conversation",
         "placeholders": {
             "count": {
@@ -3300,7 +3632,7 @@
         }
     },
     "ConversationHero--members-1": {
-        "message": "1人のメンバー",
+        "message": "メンバー 1人",
         "description": "Specifies the number of members in a group conversation when there is one member",
         "placeholders": {
             "count": {
@@ -3310,7 +3642,7 @@
         }
     },
     "member-of-1-group": {
-        "message": "$group$のメンバー",
+        "message": "$group$ のメンバー",
         "description": "Shown in the conversation hero to indicate this user is a member of a mutual group",
         "placeholders": {
             "group": {
@@ -3320,8 +3652,8 @@
         }
     },
     "member-of-2-groups": {
-        "message": "$group1$と$group2$のメンバー",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least two mutual groups",
+        "message": "$group1$ と $group2$ のメンバー",
+        "description": "Shown in the conversation hero to indicate this user is a member of two mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3334,8 +3666,8 @@
         }
     },
     "member-of-3-groups": {
-        "message": "$group1$、$group2$、$group3$のメンバー",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "message": "$group1$、$group2$ および $group3$ のメンバー",
+        "description": "Shown in the conversation hero to indicate this user is a member of three mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3351,9 +3683,27 @@
             }
         }
     },
-    "member-of-more-than-3-groups": {
-        "message": "$group1$、$group2$、$group3$、他$remainingCount$グループのメンバー",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+    "member-of-more-than-3-groups--one-more": {
+        "message": "$group1$、$group2$、$group3$ ほか1グループのメンバー",
+        "description": "Shown in the conversation hero to indicate this user is a member of four mutual groups",
+        "placeholders": {
+            "group1": {
+                "content": "$1",
+                "example": "NYC Rock Climbers"
+            },
+            "group2": {
+                "content": "$2",
+                "example": "Dinner Party"
+            },
+            "group3": {
+                "content": "$3",
+                "example": "Friends 🌿"
+            }
+        }
+    },
+    "member-of-more-than-3-groups--multiple-more": {
+        "message": "$group1$、$group2$、$group3$ ほか$remainingCount$グループのメンバー",
+        "description": "Shown in the conversation hero to indicate this user is a member of 5+ mutual groups.",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3374,7 +3724,7 @@
         }
     },
     "ConversationHero--membership-added": {
-        "message": "$name$があなたをグループに追加しました。",
+        "message": "$name$ があなたをグループに追加しました。",
         "description": "Shown Indicates that you were added to a group by a given individual.",
         "placeholders": {
             "name": {
@@ -3451,12 +3801,90 @@
         "message": "ビデオ通話着信中…",
         "description": "Shown in both the incoming call bar and notification for an incoming video call"
     },
-    "outgoingCallPrering": {
-        "message": "呼び出しています…",
-        "description": "Shown in the call screen when placing an outgoing call that isn't ringing yet"
+    "incomingGroupCall__ringing-you": {
+        "message": "$ringer$ があなたを呼び出しています",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-1-other": {
+        "message": "$ringer$ があなたと $otherMember$ を呼び出しています",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "otherMember": {
+                "content": "$2",
+                "example": "Bob"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-2-others": {
+        "message": "$ringer$ があなたと $first$、$second$を呼び出しています",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-3-others": {
+        "message": "$ringer$ があなたと $first$、$second$ ほか1名をを呼び出しています",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-many": {
+        "message": "$ringer$ があなたと $first$、$second$ ほか$remaining$名をを呼び出しています",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            },
+            "remaining": {
+                "content": "$4",
+                "example": "5"
+            }
+        }
     },
     "outgoingCallRinging": {
-        "message": "着信中…",
+        "message": "呼び出しています…",
         "description": "Shown in the call screen when placing an outgoing call that is now ringing"
     },
     "makeOutgoingCall": {
@@ -3500,7 +3928,7 @@
         "description": "Title for device selection settings"
     },
     "calling__participants": {
-        "message": "$people$と通話中",
+        "message": "$people$ が通話中",
         "description": "Title for participants list toggle",
         "placeholders": {
             "people": {
@@ -3514,7 +3942,7 @@
         "description": "Notification message when a group call has ended"
     },
     "calling__call-notification__started-by-someone": {
-        "message": "グループ通話が始まりました",
+        "message": "グループ通話が開始されました",
         "description": "Notification message when a group call has started, but we don't know who started it"
     },
     "calling__call-notification__started-by-you": {
@@ -3522,7 +3950,7 @@
         "description": "Notification message when a group call has started by you"
     },
     "calling__call-notification__started": {
-        "message": "$name$がグループ通話を開始しました",
+        "message": "$name$ がグループ通話を開始しました",
         "description": "Notification message when a group call has started",
         "placeholders": {
             "name": {
@@ -3531,12 +3959,12 @@
             }
         }
     },
-    "calling__call-notification__button__in-another-call-tooltip": {
-        "message": "他の通話が進行中です。",
+    "calling__in-another-call-tooltip": {
+        "message": "あなたはすでに通話中です",
         "description": "Tooltip in disabled notification button when you're on another call"
     },
     "calling__call-notification__button__call-full-tooltip": {
-        "message": "通話の最大参加人数 ($max$人) を超えています",
+        "message": "通話の参加者が上限の$max$人に達しました",
         "description": "Tooltip in disabled notification button when the call is full",
         "placeholders": {
             "max": {
@@ -3570,7 +3998,7 @@
         "description": "Title for the select your screen sharing sources modal"
     },
     "calling__SelectPresentingSourcesModal--confirm": {
-        "message": "画面を共有する",
+        "message": "共有を開始",
         "description": "Confirm button for sharing screen modal"
     },
     "calling__SelectPresentingSourcesModal--entireScreen": {
@@ -3620,19 +4048,19 @@
         "description": "Label when the conversation is not muted"
     },
     "muteHour": {
-        "message": "1時間ミュート",
+        "message": "1時間",
         "description": "Label for muting the conversation"
     },
     "muteEightHours": {
-        "message": "8時間ミュート",
+        "message": "8時間",
         "description": "Label for muting the conversation"
     },
     "muteDay": {
-        "message": "1日ミュート",
+        "message": "1日間",
         "description": "Label for muting the conversation"
     },
     "muteWeek": {
-        "message": "1週間ミュート",
+        "message": "1週間",
         "description": "Label for muting the conversation"
     },
     "muteAlways": {
@@ -3662,16 +4090,16 @@
         "description": "Label for emoji button"
     },
     "ErrorModal--title": {
-        "message": "エラーが発生しました。",
-        "description": "Title of pop-up dialog when user-initiated task has gone wrong"
+        "message": "エラーが発生しました！",
+        "description": "Title of popup dialog when user-initiated task has gone wrong"
     },
     "ErrorModal--description": {
-        "message": "あとで再度試してみるか、サポートにお問い合わせください。",
-        "description": "Description text in pop-up dialog when user-initiated task has gone wrong"
+        "message": "再度試すか、サポートにお問い合わせください。",
+        "description": "Description text in popup dialog when user-initiated task has gone wrong"
     },
     "Confirmation--confirm": {
         "message": "OK",
-        "description": "Button to dismiss pop-up dialog when user-initiated task has gone wrong"
+        "description": "Button to dismiss popup dialog when user-initiated task has gone wrong"
     },
     "unknown-sgnl-link": {
         "message": "ごめんなさい、sgnl:// リンクはまだサポートしていません！",
@@ -3682,7 +4110,7 @@
         "description": "Shown in toast when you attempt to forward a message to an announcement only group"
     },
     "GroupV2--add--missing-capability": {
-        "message": "このユーザはSignalをアップグレードしていないため、グループに追加できません。",
+        "message": "このユーザーはSignalをアップグレードしていないため、グループに追加できません。",
         "description": "Shown in a confirmation dialog when members who cannot view announcement only group cannot be added"
     },
     "GroupV2--cannot-start-group-call": {
@@ -3725,6 +4153,14 @@
         "message": "このグループリンクはすでに無効です。",
         "description": "Shown if you click a group link and we can't get information about it"
     },
+    "GroupV2--join--link-forbidden--title": {
+        "message": "グループに参加できません",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
+    },
+    "GroupV2--join--link-forbidden": {
+        "message": "管理者があなたを削除したため、グループリンクからはこのグループに参加できません。",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
+    },
     "GroupV2--join--prompt-with-approval": {
         "message": "このグループに参加するには、グループ管理者の承認が必要です。承認されると、あなたの名前と画像がそのメンバーと共有されます。",
         "description": "Shown when you click on a group link to confirm, if it requires admin approval"
@@ -3758,7 +4194,7 @@
         "description": "Shown in the metadata section if group has just one member"
     },
     "GroupV2--join--member-count--multiple": {
-        "message": "メンバー$count$人",
+        "message": "メンバー $count$人",
         "description": "Shown in the metadata section if group has more than one member",
         "placeholders": {
             "count": {
@@ -3802,7 +4238,7 @@
         "description": "Label for describing the general non-privileged members of a group"
     },
     "updating": {
-        "message": "更新中...",
+        "message": "更新しています…",
         "description": "Shown along with a spinner when an update operation takes longer than one second"
     },
     "GroupV2--create--you": {
@@ -3810,7 +4246,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--create--other": {
-        "message": "$memberName$がグループを作成しました。",
+        "message": "$memberName$ がグループを作成しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -3824,7 +4260,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--title--change--other": {
-        "message": "$memberName$がグループ名を「$newTitle$」に変更しました。",
+        "message": "$memberName$ がグループ名を「$newTitle$」に変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -3838,7 +4274,7 @@
         }
     },
     "GroupV2--title--change--you": {
-        "message": "このグループ名を「$newTitle$」に変更しました。",
+        "message": "グループ名を「$newTitle$」に変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "newTitle": {
@@ -3858,7 +4294,7 @@
         }
     },
     "GroupV2--title--remove--other": {
-        "message": "$memberName$がグループ名を削除しました。",
+        "message": "$memberName$ がグループ名を削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -3876,7 +4312,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--avatar--change--other": {
-        "message": "$memberName$がグループの画像を変更しました。",
+        "message": "$memberName$ がグループアバターを変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -3886,15 +4322,15 @@
         }
     },
     "GroupV2--avatar--change--you": {
-        "message": "グループのアバターを変更しました。",
+        "message": "グループアバターを変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--avatar--change--unknown": {
-        "message": "メンバーがグループの画像を変更しました。",
+        "message": "メンバーがグループアバターを変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--avatar--remove--other": {
-        "message": "$memberName$がグループの画像を削除しました。",
+        "message": "$memberName$ がグループアバターを削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -3904,11 +4340,11 @@
         }
     },
     "GroupV2--avatar--remove--you": {
-        "message": "グループの画像を削除しました。",
+        "message": "グループアバターを削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--avatar--remove--unknown": {
-        "message": "メンバーがグループの画像を削除しました。",
+        "message": "メンバーがグループアバターを削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--access-attributes--admins--other": {
@@ -3962,7 +4398,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--access-members--admins--unknown": {
-        "message": "管理者がグループのメンバーを変更できるユーザを「管理者のみ」に変更しました。",
+        "message": "管理者がグループのメンバーを変更できるユーザーを「管理者のみ」に変更しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--access-members--all--other": {
@@ -4020,7 +4456,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-add--invited--you": {
-        "message": "招待された$inviteeName$をメンバーに追加しました。",
+        "message": "招待された $inviteeName$ をメンバーに追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4030,7 +4466,7 @@
         }
     },
     "GroupV2--member-add--invited--other": {
-        "message": "$memberName$が招待された$inviteeName$をメンバーに追加しました。",
+        "message": "$memberName$ が招待された $inviteeName$ をメンバーに追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4044,7 +4480,7 @@
         }
     },
     "GroupV2--member-add--invited--unknown": {
-        "message": "他のメンバーが、招待された$inviteeName$をメンバーに追加しました。",
+        "message": "メンバーが招待された $inviteeName$ をメンバーに追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4054,7 +4490,7 @@
         }
     },
     "GroupV2--member-add--from-invite--other": {
-        "message": "$inviteeName$は$inviterName$のグループへの招待を承認しました。 ",
+        "message": "$inviteeName$ が $inviterName$ のグループへの招待を受け入れました。 ",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4068,7 +4504,7 @@
         }
     },
     "GroupV2--member-add--from-invite--other-no-from": {
-        "message": "$inviteeName$がグループへの招待を承認しました。",
+        "message": "$inviteeName$ がグループへの招待を受け入れました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4078,7 +4514,7 @@
         }
     },
     "GroupV2--member-add--from-invite--you": {
-        "message": "$inviterName$のグループへの招待を承認しました。 ",
+        "message": "$inviterName$ からのグループへの招待を受け入れました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviterName": {
@@ -4088,11 +4524,11 @@
         }
     },
     "GroupV2--member-add--from-invite--you-no-from": {
-        "message": "こグループの招待を承認しました。",
+        "message": "グループへの招待を受け入れました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-add--from-invite--from-you": {
-        "message": "$inviteeName$はあなたのグループへの招待を承認しました。 ",
+        "message": "$inviteeName$ があなたからのグループへの招待を受け入れました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4102,7 +4538,7 @@
         }
     },
     "GroupV2--member-add--other--other": {
-        "message": "$adderName$が$addeeName$を追加しました。",
+        "message": "$adderName$ が $addeeName$ を追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adderName": {
@@ -4116,7 +4552,7 @@
         }
     },
     "GroupV2--member-add--other--you": {
-        "message": "$memberName$を追加しました。",
+        "message": "$memberName$ を追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4126,7 +4562,7 @@
         }
     },
     "GroupV2--member-add--other--unknown": {
-        "message": "メンバーが$memberName$を追加しました。",
+        "message": "メンバーが $memberName$ を追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4136,7 +4572,7 @@
         }
     },
     "GroupV2--member-add--you--other": {
-        "message": "$memberName$があなたをグループに追加しました。",
+        "message": "$memberName$ があなたをグループに追加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4146,7 +4582,7 @@
         }
     },
     "GroupV2--member-add--you--you": {
-        "message": "あなたがグループに参加しました。",
+        "message": "グループに参加しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-add--you--unknown": {
@@ -4216,7 +4652,7 @@
         }
     },
     "GroupV2--member-remove--other--other": {
-        "message": "$adminName$が$memberName$を退出させました。",
+        "message": "$adminName$ が $memberName$ を退出させました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4230,7 +4666,7 @@
         }
     },
     "GroupV2--member-remove--other--self": {
-        "message": "$memberName$がグループから退出しました。",
+        "message": "$memberName$ がグループを抜けました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4240,7 +4676,7 @@
         }
     },
     "GroupV2--member-remove--other--you": {
-        "message": "$memberName$を退出させました。",
+        "message": "$memberName$ を退出させました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4250,7 +4686,7 @@
         }
     },
     "GroupV2--member-remove--other--unknown": {
-        "message": "メンバーが$memberName$を退出させました。",
+        "message": "メンバーが $memberName$ を退出させました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4260,7 +4696,7 @@
         }
     },
     "GroupV2--member-remove--you--other": {
-        "message": "$adminName$があなたを退出させました。",
+        "message": "$adminName$ があなたを退出させました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4274,11 +4710,11 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-remove--you--unknown": {
-        "message": "グループから削除されました。",
+        "message": "グループから退出させられました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-privilege--promote--other--other": {
-        "message": "$adminName$が$memberName$を管理者にしました。",
+        "message": "$adminName$ が $memberName$ を管理者にしました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4292,7 +4728,7 @@
         }
     },
     "GroupV2--member-privilege--promote--other--you": {
-        "message": "$memberName$を管理者にしました。",
+        "message": "$memberName$ を管理者にしました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4302,7 +4738,7 @@
         }
     },
     "GroupV2--member-privilege--promote--other--unknown": {
-        "message": "管理者が$memberName$を管理者にしました。",
+        "message": "管理者が $memberName$ を管理者にしました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4312,7 +4748,7 @@
         }
     },
     "GroupV2--member-privilege--promote--you--other": {
-        "message": "$adminName$があなたを管理者にしました。",
+        "message": "$adminName$ があなたを管理者にしました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4326,7 +4762,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-privilege--demote--other--other": {
-        "message": "$adminName$が$memberName$の管理者権限を削除しました。",
+        "message": "$adminName$ が $memberName$ の管理者権限を削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4340,7 +4776,7 @@
         }
     },
     "GroupV2--member-privilege--demote--other--you": {
-        "message": "$memberName$の管理者権限を削除しました。",
+        "message": "$memberName$ の管理者権限を削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4350,11 +4786,17 @@
         }
     },
     "GroupV2--member-privilege--demote--other--unknown": {
-        "message": "管理者が$memberName$の管理者権限を削除しました。",
-        "description": "Shown in timeline or conversation preview when v2 group changes"
+        "message": "管理者が $memberName$ の管理者権限を削除しました。",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "memberName": {
+                "content": "$1",
+                "example": "Bob"
+            }
+        }
     },
     "GroupV2--member-privilege--demote--you--other": {
-        "message": "$adminName$があなたの管理者権限を削除しました。",
+        "message": "$adminName$ があなたの管理者権限を削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4368,7 +4810,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-add--one--other--other": {
-        "message": "$memberName$がグループに1人招待しました。",
+        "message": "$memberName$ がグループに1人招待しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4378,7 +4820,7 @@
         }
     },
     "GroupV2--pending-add--one--other--you": {
-        "message": "$inviteeName$をグループに招待しました。",
+        "message": "$inviteeName$ をグループに招待しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4398,7 +4840,7 @@
         }
     },
     "GroupV2--pending-add--one--you--other": {
-        "message": "$memberName$があなたをグループに招待しました。",
+        "message": "$memberName$ があなたをグループに招待しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4412,7 +4854,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-add--many--other": {
-        "message": "$memberName$がグループに$count$人招待しました。",
+        "message": "$memberName$ がグループに$count$人招待しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4446,7 +4888,7 @@
         }
     },
     "GroupV2--pending-remove--decline--other": {
-        "message": "1 人が$memberName$からのグループへの招待を断りました。",
+        "message": "1 人が $memberName$ からのグループへの招待を断りました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4456,7 +4898,7 @@
         }
     },
     "GroupV2--pending-remove--decline--you": {
-        "message": "$inviteeName$はあなたからのグループへの招待を断りました。",
+        "message": "$inviteeName$ があなたからのグループへの招待を断りました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4466,7 +4908,7 @@
         }
     },
     "GroupV2--pending-remove--decline--from-you": {
-        "message": "このグループへの招待を辞退しました。",
+        "message": "このグループへの招待を断りました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-remove--decline--unknown": {
@@ -4474,7 +4916,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-remove--revoke--one--other": {
-        "message": "$memberName$が1人に対してグループへの招待を無効にしました。",
+        "message": "$memberName$ がグループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4484,7 +4926,7 @@
         }
     },
     "GroupV2--pending-remove--revoke--one--you": {
-        "message": "1人に対してグループへの招待を無効にしました。",
+        "message": "グループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4494,7 +4936,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-own--to-you": {
-        "message": "$inviterName$があなたへの招待を取り消しました。",
+        "message": "$inviterName$ があなたへの招待を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviterName": {
@@ -4504,7 +4946,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-own--unknown": {
-        "message": "$inviterName$が1人への招待を取り消しました。",
+        "message": "$inviterName$ が招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviterName": {
@@ -4514,7 +4956,7 @@
         }
     },
     "GroupV2--pending-remove--revoke--one--unknown": {
-        "message": "管理者が1人に対してグループへの招待を無効にしました。",
+        "message": "管理者がグループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4524,7 +4966,7 @@
         }
     },
     "GroupV2--pending-remove--revoke--many--other": {
-        "message": "$memberName$が$count$人に対してグループへの招待を無効にしました。",
+        "message": "$memberName$ がグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4538,7 +4980,7 @@
         }
     },
     "GroupV2--pending-remove--revoke--many--you": {
-        "message": "$count$人に対してグループへの招待を無効にしました。",
+        "message": "グループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4548,7 +4990,7 @@
         }
     },
     "GroupV2--pending-remove--revoke--many--unknown": {
-        "message": "管理者が$count$人に対してグループへの招待を無効にしました。",
+        "message": "管理者がグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4558,7 +5000,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--other": {
-        "message": "$adminName$が1人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "$adminName$ が $memberName$ によるグループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4572,7 +5014,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--you": {
-        "message": "1人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "$memberName$ によるグループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4582,7 +5024,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--unknown": {
-        "message": "管理者が1人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "管理者が $memberName$ によるグループへの招待1件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4592,7 +5034,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--one--other": {
-        "message": "$adminName$が$inviteeName$に対してあなたからのグループへの招待を無効にしました。",
+        "message": "$adminName$ があなたが $inviteeName$ へ送ったグループへの招待を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4602,7 +5044,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--one--you": {
-        "message": "$inviteeName$に対してグループへの招待を取り消しました。",
+        "message": "$inviteeName$ へのグループへの招待を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4612,7 +5054,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--one--unknown": {
-        "message": "管理者が$inviteeName$に対してあなたからのグループへの招待を無効にしました。",
+        "message": "管理者があなたが $inviteeName$ へ送ったグループへの招待を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4622,7 +5064,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--many--other": {
-        "message": "$adminName$が$count$人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "$adminName$ が $memberName$ によるグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4636,7 +5078,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--many--you": {
-        "message": "$count$人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "$memberName$ によるグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4650,7 +5092,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--many--unknown": {
-        "message": "管理者が$count$人に対して$memberName$からのグループへの招待を無効にしました。",
+        "message": "管理者が $memberName$ によるグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4664,7 +5106,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--many--other": {
-        "message": "$adminName$が$count$人に対してあなたからのグループへの招待を無効にしました。",
+        "message": "$adminName$ があなたが送ったグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4678,7 +5120,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--many--you": {
-        "message": "$count$人に対してグループへの招待を取り消しました。",
+        "message": "グループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4688,7 +5130,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--many--unknown": {
-        "message": "管理者が$count$人に対してあなたからのグループへの招待を無効にしました。",
+        "message": "管理者があなたが送ったグループへの招待$count$件を取り消しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4750,6 +5192,30 @@
             "joinerName": {
                 "content": "$2",
                 "example": "Alice"
+            }
+        }
+    },
+    "GroupV2--admin-approval-bounce--one": {
+        "message": "$joinerName$ は、グループリンクからの参加申請をキャンセルしました。",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "GroupV2--admin-approval-bounce": {
+        "message": "$joinerName$ は、グループリンクからの参加申請を$numberOfRequests$件キャンセルしました。",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "numberOfRequests": {
+                "content": "$1",
+                "example": "3"
             }
         }
     },
@@ -4826,7 +5292,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--description--remove--you": {
-        "message": "あなたがグループの説明を削除しました。",
+        "message": "グループの説明を削除しました。",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--description--remove--other": {
@@ -4908,11 +5374,11 @@
         }
     },
     "GroupV1--Migration--was-upgraded": {
-        "message": "このグループは新グループにアップグレードされました。",
+        "message": "このグループは新しいグループにアップグレードされました。",
         "description": "Shown in timeline when a legacy group (GV1) is upgraded to a new group (GV2)"
     },
     "GroupV1--Migration--learn-more": {
-        "message": "詳細を見る",
+        "message": "さらに詳しく",
         "description": "Shown on a bubble below a 'group was migrated' timeline notification, or as button on Migrate dialog"
     },
     "GroupV1--Migration--migrate": {
@@ -4992,7 +5458,7 @@
         }
     },
     "GroupV1--Migration--removed--one": {
-        "message": "$contact$がグループから削除されました。",
+        "message": "$contact$ がグループから削除されました。",
         "description": "Shown in timeline when a group is upgraded and one person was removed entirely during the upgrade",
         "placeholders": {
             "contact": {
@@ -5022,6 +5488,30 @@
     "next": {
         "message": "次へ",
         "description": "Generic next label"
+    },
+    "BadgeDialog__become-a-sustainer-button": {
+        "message": "サポーターになる",
+        "description": "In the badge dialog. This button is shown under sustainer badges, taking users to some instructions"
+    },
+    "BadgeSustainerInstructions__header": {
+        "message": "サポーターになってください",
+        "description": "In the instructions for becoming a sustainer. The heading."
+    },
+    "BadgeSustainerInstructions__subheader": {
+        "message": "Signalはユーザーの皆様によって支えられています。ご寄付いただきバッジを獲得してください。",
+        "description": "In the instructions for becoming a sustainer. The subheading."
+    },
+    "BadgeSustainerInstructions__instructions__1": {
+        "message": "あなたの電話でSignalを開きます",
+        "description": "In the instructions for becoming a sustainer. First instruction."
+    },
+    "BadgeSustainerInstructions__instructions__2": {
+        "message": "左上の写真をタップして、設定を開きます",
+        "description": "In the instructions for becoming a sustainer. Second instruction."
+    },
+    "BadgeSustainerInstructions__instructions__3": {
+        "message": "「サポーターになる」をタップして登録します",
+        "description": "In the instructions for becoming a sustainer. Third instruction."
     },
     "CompositionArea--expand": {
         "message": "大きく",
@@ -5070,7 +5560,7 @@
         }
     },
     "ContactModal--rm-admin-info": {
-        "message": "$contact$ をグループ管理者から外す",
+        "message": "$contact$ をグループ管理者から外しますか？",
         "description": "Shown in a confirmation dialog when you are about to remove admin privileges from someone",
         "placeholders": {
             "contact": {
@@ -5091,6 +5581,14 @@
         "message": "グループ設定",
         "description": "This is a button in the conversation context menu to show group settings"
     },
+    "showConversationDetails--direct": {
+        "message": "チャットの設定",
+        "description": "This is a button in the conversation context menu to show chat settings"
+    },
+    "ConversationDetails__unmute--title": {
+        "message": "このチャットのミュートを解除しますか？",
+        "description": "Title for the modal to unmute a chat"
+    },
     "ConversationDetails--group-link": {
         "message": "グループリンク",
         "description": "This is the label for the group link management panel"
@@ -5099,9 +5597,13 @@
         "message": "消えるメッセージ",
         "description": "This is the label for the disappearing messages setting panel"
     },
-    "ConversationDetails--disappearing-messages-info": {
+    "ConversationDetails--disappearing-messages-info--group": {
         "message": "有効にすると、このグループ内で送受信されるメッセージは、閲覧後に消えます。",
-        "description": "This is the info about the disappearing messages setting"
+        "description": "This is the info about the disappearing messages setting, in groups"
+    },
+    "ConversationDetails--disappearing-messages-info--direct": {
+        "message": "有効にすると、この1対1チャットで送受信されるメッセージは、閲覧後に消えます。",
+        "description": "This is the info about the disappearing messages setting, for direct conversations"
     },
     "ConversationDetails--notifications": {
         "message": "通知",
@@ -5129,7 +5631,7 @@
     },
     "ConversationDetails--announcement-info": {
         "message": "このグループにメッセージを送信できるユーザーを選択してください。",
-        "description": "This is the additional info for the 'who can send mesages' panel"
+        "description": "This is the additional info for the 'who can send messages' panel"
     },
     "ConversationDetails--requests-and-invites": {
         "message": "申請と招待",
@@ -5174,7 +5676,7 @@
         "description": "This is the modal content for confirming blocking a group"
     },
     "ConversationDetailsActions--block-group-modal-confirm": {
-        "message": "ブロック",
+        "message": "ブロックする",
         "description": "This is the modal button to confirm blocking a group"
     },
     "ConversationDetailsHeader--members": {
@@ -5242,7 +5744,7 @@
         "description": "Shown in the confirmation dialog when an admin is about to reset the group link"
     },
     "GroupLinkManagement--reset": {
-        "message": "リンクをリセットする",
+        "message": "リンクをリセット",
         "description": "This lets users generate a new group link"
     },
     "GroupLinkManagement--approve-label": {
@@ -5285,6 +5787,16 @@
     },
     "PendingRequests--deny-for": {
         "message": "「$name$」からの申請を拒否しますか？",
+        "description": "This is the modal content when confirming denying a group request to join",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Meowsy Purrington"
+            }
+        }
+    },
+    "PendingRequests--deny-for--with-link": {
+        "message": "\"$name$\" からの申請を拒否しますか？このユーザーは、このグループリンクから再申請できなくなります。",
         "description": "This is the modal content when confirming denying a group request to join",
         "placeholders": {
             "name": {
@@ -5371,7 +5883,7 @@
     },
     "PendingRequests--info": {
         "message": "このリストの人々が、グループリンクから「$name$」への参加を申請しています。",
-        "description": "Inforamtion shown below the pending admin approval list",
+        "description": "Information shown below the pending admin approval list",
         "placeholders": {
             "name": {
                 "content": "$1",
@@ -5383,8 +5895,30 @@
         "message": "このグループに招待された人の詳細は、グループに参加するまで表示されません。招待された人は、グループに参加するとメッセージを見ることができます。",
         "description": "Information shown below the invite list"
     },
+    "PendingRequests--block--button": {
+        "message": "申請をブロック",
+        "description": "Shown in timeline if users cancel their request to join a group via a group link"
+    },
+    "PendingRequests--block--title": {
+        "message": "申請をブロックしますか？",
+        "description": "Title of dialog to block a user from requesting to join via the link again"
+    },
+    "PendingRequests--block--contents": {
+        "message": "$name$ はこのグループリンクからの参加申請ができなくなりますが、手動でグループに追加することはできます。",
+        "description": "Details of dialog to block a user from requesting to join via the link again",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Annoying Person"
+            }
+        }
+    },
+    "PendingRequests--block--confirm": {
+        "message": "リクエストをブロック",
+        "description": "Confirmation button of dialog to block a user from requesting to join via the link again"
+    },
     "AvatarInput--no-photo-label--group": {
-        "message": "グループアイコンの追加",
+        "message": "グループアバターを追加",
         "description": "The label for the avatar uploader when no group photo is selected"
     },
     "AvatarInput--no-photo-label--profile": {
@@ -5392,15 +5926,15 @@
         "description": "The label for the avatar uploader when no profile photo is selected"
     },
     "AvatarInput--change-photo-label": {
-        "message": "写真を変更",
+        "message": "アバターを変更",
         "description": "The label for the avatar uploader when a photo is selected"
     },
     "AvatarInput--upload-photo-choice": {
-        "message": "写真をアップロード",
+        "message": "アバターをアップロード",
         "description": "The button text when you click on an uploaded avatar and want to upload a new one"
     },
     "AvatarInput--remove-photo-choice": {
-        "message": "画像を削除する",
+        "message": "アバターを削除",
         "description": "The button text when you click on an uploaded avatar and want to remove it"
     },
     "ContactPill--remove": {
@@ -5444,7 +5978,7 @@
         "description": "When creating a new group and inviting users, this is shown in the dialog"
     },
     "NewlyCreatedGroupInvitedContactsDialog--body--learn-more": {
-        "message": "詳しく見る",
+        "message": "さらに詳しく",
         "description": "When creating a new group and inviting users, this is shown in the dialog"
     },
     "AddGroupMembersModal--title": {
@@ -5484,7 +6018,7 @@
         }
     },
     "AddGroupMembersModal--confirm-button--one": {
-        "message": "参加者を追加する",
+        "message": "メンバーを追加する",
         "description": "When adding new members to an existing group, this is shown on the confirmation dialog button"
     },
     "AddGroupMembersModal--confirm-button--many": {
@@ -5496,16 +6030,34 @@
         "description": "The text of the button to create new groups"
     },
     "selectContact": {
-        "message": "連絡先を選択",
-        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)"
+        "message": "$name$ を選択",
+        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "deselectContact": {
-        "message": "連絡先の選択を解除",
-        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)"
+        "message": "$name$ の選択を解除",
+        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "cannotSelectContact": {
-        "message": "連絡先を選択できません",
-        "description": "The label for contact checkboxes that are disabled"
+        "message": "$name$ を選択できません",
+        "description": "The label for contact checkboxes that are disabled",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "alreadyAMember": {
         "message": "既存のメンバー",
@@ -5549,8 +6101,16 @@
         "message": "続ける",
         "description": "aria-label for the 'next' button in the forward a message modal dialog"
     },
+    "TimelineDateHeader--date-in-last-6-months": {
+        "message": "MMMD日 (ddd)",
+        "description": "Moment.js format for date headers in the message timeline, for dates <6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
+    "TimelineDateHeader--date-older-than-6-months": {
+        "message": "YYYY年MMMD日",
+        "description": "Moment.js format for date headers in the message timeline, for dates >=6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
     "MessageRequestWarning__learn-more": {
-        "message": "詳しく見る",
+        "message": "さらに詳しく",
         "description": "Shown on the message request warning. Clicking this button will open a dialog with more information"
     },
     "MessageRequestWarning__dialog__details": {
@@ -5649,6 +6209,16 @@
             }
         }
     },
+    "RemoveGroupMemberConfirmation__description__with-link": {
+        "message": "\"$name$\"を、グループから削除しますか？このユーザは、グループリンクからもう一度このグループに入ることは、できなくなります。",
+        "description": "When confirming the removal of a group member, show this text in the dialog",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Jane Doe"
+            }
+        }
+    },
     "CaptchaDialog__title": {
         "message": "メッセージ送受信のため認証してください",
         "description": "Header in the captcha dialog"
@@ -5683,7 +6253,7 @@
     },
     "deleteForEveryoneFailed": {
         "message": "全員でのメッセージ削除に失敗しました。あとで再度試してください。",
-        "description": "Displayed when delete-for-everyone has failed to send to all recepients"
+        "description": "Displayed when delete-for-everyone has failed to send to all recipients"
     },
     "ChatColorPicker__delete--title": {
         "message": "色を削除",
@@ -5760,7 +6330,7 @@
         "description": "Option in the custom color bubble context menu"
     },
     "CustomColorEditor__solid": {
-        "message": "無地",
+        "message": "単色",
         "description": "Tab label for selecting solid colors"
     },
     "CustomColorEditor__gradient": {
@@ -5768,7 +6338,7 @@
         "description": "Tab label for selecting a gradient"
     },
     "CustomColorEditor__hue": {
-        "message": "色相（Hue）",
+        "message": "色相",
         "description": "Label for the hue slider"
     },
     "CustomColorEditor__saturation": {
@@ -5787,8 +6357,16 @@
         "message": "カスタム時間",
         "description": "Text for an option in Conversation Details Disappearing Messages setting when user previously selected custom time"
     },
+    "DisappearingTimeDialog__label--value": {
+        "message": "Number",
+        "description": "aria-label for the number select box"
+    },
+    "DisappearingTimeDialog__label--units": {
+        "message": "Unit of time",
+        "description": "aria-label for the units of time select box"
+    },
     "DisappearingTimeDialog__title": {
-        "message": "カスタム時刻",
+        "message": "カスタム時間",
         "description": "Title for the custom disappearing message timeout dialog"
     },
     "DisappearingTimeDialog__body": {
@@ -5816,7 +6394,7 @@
         "description": "Name of the 'days' unit select for the custom disappearing message timeout dialog"
     },
     "DisappearingTimeDialog__weeks": {
-        "message": "週",
+        "message": "週間",
         "description": "Name of the 'weeks' unit select for the custom disappearing message timeout dialog"
     },
     "settings__DisappearingMessages__footer": {
@@ -5825,7 +6403,7 @@
     },
     "settings__DisappearingMessages__timer__label": {
         "message": "新規チャットの既定タイマー",
-        "description": "Label for the Disapearring Messages default timer setting"
+        "description": "Label for the Disappearing Messages default timer setting"
     },
     "UniversalTimerNotification__text": {
         "message": "メッセージの送信時に、消えるメッセージのタイマーが$timeValue$に設定されます。",
@@ -5850,15 +6428,15 @@
         "description": "Label text shown when editing group description"
     },
     "ConversationDetailsHeader--add-group-description": {
-        "message": "グループの説明を追加...",
+        "message": "グループの説明を追加してください…",
         "description": "Placeholder text in the details header for those that can edit the group description"
     },
     "MediaQualitySelector--button": {
-        "message": "メディアの圧縮度を選択する",
+        "message": "メディアの画質を選択",
         "description": "aria-label for the media quality selector button"
     },
     "MediaQualitySelector--title": {
-        "message": "メディアの圧縮度",
+        "message": "メディアの画質",
         "description": "Popup selector title"
     },
     "MediaQualitySelector--standard-quality-title": {
@@ -5904,6 +6482,70 @@
     "ProfileEditor--about": {
         "message": "自己紹介",
         "description": "Default text for about field"
+    },
+    "ProfileEditor--username": {
+        "message": "ユーザー名",
+        "description": "Default text for username field"
+    },
+    "ProfileEditor--username--placeholder": {
+        "message": "ユーザー名を入力してください",
+        "description": "Placeholder for the username field"
+    },
+    "ProfileEditor--username--helper": {
+        "message": "Signalのユーザ名作成は任意です。ユーザ名を作成すると、他のSignalユーザはあなたの電話番号を知らなくても、あなたにこのユーザ名で連絡できるようになります。",
+        "description": "Shown on the edit username screen"
+    },
+    "ProfileEditor--username--check-characters": {
+        "message": "ユーザー名には半角の英数字とアンダーバーのみ使用できます",
+        "description": "Shown if user has attempted to use forbidden characters"
+    },
+    "ProfileEditor--username--check-starting-character": {
+        "message": "ユーザー名の頭文字は数字にできません。",
+        "description": "Shown if user has attempted to begin their username with a number"
+    },
+    "ProfileEditor--username--check-character-min": {
+        "message": "ユーザー名は$min$文字以上にしてください。",
+        "description": "Shown if user has attempted to enter a username with too few characters - currently min is 3",
+        "placeholders": {
+            "min": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "ProfileEditor--username--check-character-max": {
+        "message": "ユーザー名は$max$文字以下にしてください。",
+        "description": "Shown if user has attempted to enter a username with too many characters - currently min is 25",
+        "placeholders": {
+            "max": {
+                "content": "$1",
+                "example": "25"
+            }
+        }
+    },
+    "ProfileEditor--username--check-username-taken": {
+        "message": "このユーザー名はすでに使用されています。",
+        "description": "Shown if user has attempted to save a username which is not available"
+    },
+    "ProfileEditor--username--general-error": {
+        "message": "ユーザー名を保存できませんでした。インターネット接続を確認して再度試してください。",
+        "description": "Shown if something unknown has gone wrong with username save."
+    },
+    "ProfileEditor--username--delete-general-error": {
+        "message": "ユーザー名を削除できませんでした。インターネット接続を確認して再度試してください。",
+        "description": "Shown if something unknown has gone wrong with username delete."
+    },
+    "ProfileEditor--username--delete-username": {
+        "message": "ユーザー名を削除",
+        "description": "Shown as aria label for trash icon next to username"
+    },
+    "ProfileEditor--username--confirm-delete-body": {
+        "message": "これにより、あなたのユーザー名が削除され、他のユーザーがそのユーザー名を使用できるようになります。よろしいですか？",
+        "description": "Shown in dialog body if user has saved an empty string to delete their username"
+    },
+    "ProfileEditor--username--confirm-delete-button": {
+        "message": "削除する",
+        "description": "Shown in dialog button if user has saved an empty string to delete their username"
     },
     "ProfileEditor--about-placeholder": {
         "message": "簡単な自己紹介を記入してください…",
@@ -5967,6 +6609,14 @@
         "message": "自己紹介",
         "description": "Title for about editing"
     },
+    "ProfileEditorModal--avatar": {
+        "message": "アバター",
+        "description": "Title for profile avatar editing"
+    },
+    "ProfileEditorModal--username": {
+        "message": "ユーザー名",
+        "description": "Title for username editing"
+    },
     "ProfileEditorModal--error": {
         "message": "プロフィールを更新できませんでした。再度試してください。",
         "description": "Error message when something goes wrong updating your profile."
@@ -6011,7 +6661,7 @@
     },
     "Preferences__button--chats": {
         "message": "チャット",
-        "description": "Button to switch the settings view"
+        "description": "Button to switch the settings view (and a title of pane)"
     },
     "Preferences__button--calls": {
         "message": "通話",
@@ -6092,7 +6742,7 @@
         "description": "Title for the 'who can do X' setting"
     },
     "Preferences__privacy--description": {
-        "message": "これらの設定の変更は、スマートフォン版Signalの 設定 > チャット から行ってください",
+        "message": "これらの設定の変更は、スマートフォン版Signalの 設定 > チャット から行ってください。",
         "description": "Description for the 'who can do X' setting"
     },
     "Preferences__who-can--everybody": {
@@ -6135,6 +6785,14 @@
         "message": "アップデートを自動でダウンロードする",
         "description": "Label for checkbox for the auto download updates setting"
     },
+    "Preferences__enable-notifications": {
+        "message": "通知を有効にする",
+        "description": "Label for checkbox for the notifications setting"
+    },
+    "Preferences__devices": {
+        "message": "端末",
+        "description": "Label for Device list in call settings pane"
+    },
     "DialogUpdate--version-available": {
         "message": "バージョン$version$へのアップデートがあります",
         "description": "Tooltip for new update available",
@@ -6145,24 +6803,322 @@
             }
         }
     },
-    "WhatsNew__v5.15--1": {
-        "message": "未再生の音声メッセージには、バブルの中に点が表示されるようになりました。これは、ホコリではないですよ。",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--first-line": {
+        "message": "Signalを終了できません。",
+        "description": "First line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--2": {
-        "message": "通話前のロビーを改装しました。",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--second-line": {
+        "message": "手動で閉じて、『再試行』をクリックしてください。",
+        "description": "Second line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--3": {
-        "message": "新しい設定ウィンドウは、より良く、より速くなりました。ズームレベルを変更したり、テーマを切り替えたり、消えるメッセージの既定の時間を設定したりすることができます。",
-        "description": "Release notes for v5.15"
+    "NSIS__appRunning": {
+        "message": "$appName$ が起動しています。\nOKをクリックして、閉じてください。\n閉じない場合は、手動で閉じてください。",
+        "description": "The contents of a dialog displayed when Windows installer detect that the application is running and asks user to close it. Note: please keep the line breaks so that the text occupies three separate lines",
+        "placeholders": {
+            "appName": {
+                "content": "$1",
+                "example": "Signal"
+            }
+        }
     },
-    "WhatsNew__v5.15--4": {
-        "message": "Signal のアップデートをダウンロードするタイミングを選択できるようになりました。また、ダイアログも少し変更されました。新しい設定ウィンドウで確認してください。",
-        "description": "Release notes for v5.15"
+    "NSIS__decompressionFailed": {
+        "message": "ファイルの解凍に失敗しました。もう一度インストーラーを実行してみてください。",
+        "description": "Displayed when Windows installer cannot decompress application files"
     },
-    "WhatsNew__v5.15--5": {
-        "message": "多くのバグを解消し、パフォーマンスも改善されました。ご報告をいただいた皆様、ありがとうございました。",
-        "description": "Release notes for v5.15"
+    "NSIS__uninstallFailed": {
+        "message": "古いアプリケーションファイルのアンインストールに失敗しました。もう一度インストーラーを実行してみてください。",
+        "description": "Displayed when Windows installer cannot uninstall the old application"
+    },
+    "CrashReportDialog__title": {
+        "message": "Signalがクラッシュしました",
+        "description": "A title of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__body": {
+        "message": "Signalがクラッシュ後に再起動しました。クラッシュレポートを提出いただくと、Signalの問題の調査に役立てられます。",
+        "description": "The body of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__submit": {
+        "message": "送信する",
+        "description": "A button label for submission of the crash reporter data after a recent crash"
+    },
+    "CrashReportDialog__erase": {
+        "message": "送信しない",
+        "description": "A button label for erasure of the crash reporter data after a recent crash and continuing to start the app"
+    },
+    "CustomizingPreferredReactions__title": {
+        "message": "リアクションのカスタマイズ",
+        "description": "Shown in the header of the modal for customizing the preferred reactions. Also shown in the tooltip for the button that opens this modal."
+    },
+    "CustomizingPreferredReactions__subtitle": {
+        "message": "クリックして絵文字を置き換えます",
+        "description": "Instructions in the modal for customizing the preferred reactions."
+    },
+    "CustomizingPreferredReactions__had-save-error": {
+        "message": "設定の保存時にエラーが発生しました。再度試してください。",
+        "description": "Shown if there is an error when saving your preferred reaction settings. Should be very rare to see this message."
+    },
+    "MediaEditor__control--draw": {
+        "message": "描く",
+        "description": "Label for the draw button in the media editor"
+    },
+    "MediaEditor__control--text": {
+        "message": "テキストを追加",
+        "description": "Label for the text button in the media editor"
+    },
+    "MediaEditor__control--sticker": {
+        "message": "ステッカー",
+        "description": "Label for the sticker button in the media editor"
+    },
+    "MediaEditor__control--crop": {
+        "message": "切り抜きと回転",
+        "description": "Label for the crop & rotate button in the media editor"
+    },
+    "MediaEditor__control--undo": {
+        "message": "元に戻す",
+        "description": "Label for the undo button in the media editor"
+    },
+    "MediaEditor__control--redo": {
+        "message": "やり直す",
+        "description": "Label for the redo button in the media editor"
+    },
+    "MediaEditor__text--regular": {
+        "message": "レギュラー",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--highlight": {
+        "message": "ハイライト",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--outline": {
+        "message": "輪郭",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--underline": {
+        "message": "下線",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__draw--pen": {
+        "message": "ペン",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--highlighter": {
+        "message": "蛍光ペン",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--thin": {
+        "message": "細字",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--regular": {
+        "message": "標準",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--medium": {
+        "message": "中字",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--heavy": {
+        "message": "太字",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__crop--reset": {
+        "message": "リセット",
+        "description": "Reset the crop state"
+    },
+    "MediaEditor__crop--rotate": {
+        "message": "回転",
+        "description": "Rotate the canvas"
+    },
+    "MediaEditor__crop--flip": {
+        "message": "反転",
+        "description": "Flip/mirror the canvas"
+    },
+    "MediaEditor__crop--lock": {
+        "message": "固定",
+        "description": "Lock the aspect ratio"
+    },
+    "MediaEditor__crop--crop": {
+        "message": "切り取り",
+        "description": "Performs the crop"
+    },
+    "MyStories__title": {
+        "message": "マイストーリー",
+        "description": "Title for the my stories list"
+    },
+    "MyStories__story": {
+        "message": "あなたのストーリー",
+        "description": "aria-label for each one of your stories"
+    },
+    "MyStories__download": {
+        "message": "ストーリーをダウンロード",
+        "description": "aria-label for the download button"
+    },
+    "MyStories__more": {
+        "message": "その他のオプション",
+        "description": "aria-label for the more button"
+    },
+    "MyStories__views--singular": {
+        "message": "閲覧 $num$",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__views--plural": {
+        "message": "閲覧 $num$",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "16"
+            }
+        }
+    },
+    "MyStories__replies--singular": {
+        "message": "返信 $num$",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__replies--plural": {
+        "message": "返信 $num$",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "MyStories__delete": {
+        "message": "このストーリーを削除しますか？これを受けとった人も削除されます。",
+        "description": "Confirmation dialog description text for deleting a story"
+    },
+    "Stories__title": {
+        "message": "ストーリー",
+        "description": "Title for the stories list"
+    },
+    "Stories__mine": {
+        "message": "マイストーリー",
+        "description": "Label for your stories"
+    },
+    "Stories__add": {
+        "message": "ストーリーを追加",
+        "description": "Description hint to add a story"
+    },
+    "Stories__hidden-stories": {
+        "message": "非表示のストーリー",
+        "description": "Button label to go to hidden stories pane"
+    },
+    "Stories__list-empty": {
+        "message": "表示できるストーリーはありません",
+        "description": "Description for when there are no stories to show"
+    },
+    "Stories__placeholder--text": {
+        "message": "クリックしてストーリーを表示",
+        "description": "Placeholder label for the story view"
+    },
+    "Stories__from-to-group": {
+        "message": "$name$ から $group$",
+        "description": "Title for someone sending a story to a group",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Elle"
+            },
+            "group": {
+                "content": "$2",
+                "example": "Family"
+            }
+        }
+    },
+    "StoryViewer__reply": {
+        "message": "返信",
+        "description": "Button label to reply to a story"
+    },
+    "StoryViewsNRepliesModal__placeholder": {
+        "message": "返信を入力してください…",
+        "description": "Placeholder text for the story reply modal"
+    },
+    "StoryViewsNRepliesModal__tab--views": {
+        "message": "閲覧",
+        "description": "Title for views tab"
+    },
+    "StoryViewsNRepliesModal__tab--replies": {
+        "message": "返信",
+        "description": "Title for replies tab"
+    },
+    "StoryViewsNRepliesModal__react": {
+        "message": "ストーリーにリアクション",
+        "description": "aria-label for reaction button"
+    },
+    "StoryViewsNRepliesModal__reacted": {
+        "message": "ストーリーにリアクションされました",
+        "description": "Description of someone reacting to a story"
+    },
+    "StoryListItem__label": {
+        "message": "ストーリー",
+        "description": "aria-label for the story list button"
+    },
+    "StoryListItem__unhide": {
+        "message": "ストーリーを表示",
+        "description": "Label for menu item to un-hide the story"
+    },
+    "StoryListItem__hide": {
+        "message": "ストーリーを閉じる",
+        "description": "Label for menu item to hide the story"
+    },
+    "StoryListItem__go-to-chat": {
+        "message": "チャットする",
+        "description": "Label for menu item to go to conversation"
+    },
+    "StoryListItem__hide-modal--body": {
+        "message": "$name$ からの新しいストーリーがリストのトップに表示されなくなりますが、ストーリーを閉じますか？",
+        "description": "Body for the confirmation dialog for hiding a story"
+    },
+    "StoryListItem__hide-modal--confirm": {
+        "message": "閉じる",
+        "description": "Action button for the confirmation dialog to hide a story"
+    },
+    "StoryImage__error": {
+        "message": "画像表示のエラー",
+        "description": "aria-label for image errors"
+    },
+    "TextAttachment__preview__link": {
+        "message": "表示する",
+        "description": "Title for the link preview tooltip"
+    },
+    "WhatsNew__modal-title": {
+        "message": "更新情報",
+        "description": "Title for the whats new modal"
+    },
+    "WhatsNew__bugfixes": {
+        "message": "Signalをスムーズに動作させるための微調整とバグ修正を行いました。",
+        "description": "Release notes for releases that only include bug fixes"
+    },
+    "WhatsNew__v5.40--1": {
+        "message": "メニューがクリックしにくくなることがあるバグを修正しました。",
+        "description": "Release notes for v5.40"
+    },
+    "WhatsNew__v5.40--2": {
+        "message": "コントリビューターである、$dsanders11$ と、 $yusufsahinhamza$、ありがとうございます！",
+        "description": "Release notes for v5.40",
+        "placeholders": {
+            "dsanders11": {
+                "content": "$1",
+                "example": "dsanders11"
+            },
+            "yusufsahinhamza": {
+                "content": "$2",
+                "example": "yusufsahinhamza"
+            }
+        }
     }
 }

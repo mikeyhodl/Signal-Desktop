@@ -3,20 +3,21 @@
 
 import { omit } from 'lodash';
 import { v4 as getGuid } from 'uuid';
-import { ThunkAction } from 'redux-thunk';
-import { StateType as RootStateType } from '../reducer';
+import type { ThunkAction } from 'redux-thunk';
+import type { StateType as RootStateType } from '../reducer';
 import * as storageShim from '../../shims/storage';
-import { useBoundActions } from '../../util/hooks';
-import {
-  ConversationColors,
+import { useBoundActions } from '../../hooks/useBoundActions';
+import type {
   ConversationColorType,
   CustomColorType,
   CustomColorsItemType,
   DefaultConversationColorType,
 } from '../../types/Colors';
+import { ConversationColors } from '../../types/Colors';
 import { reloadSelectedConversation } from '../../shims/reloadSelectedConversation';
-import { StorageAccessType } from '../../types/Storage.d';
+import type { StorageAccessType } from '../../types/Storage.d';
 import { actions as conversationActions } from './conversations';
+import type { ConfigMapType as RemoteConfigType } from '../../RemoteConfig';
 
 // State
 
@@ -25,10 +26,18 @@ export type ItemsStateType = {
 
   readonly [key: string]: unknown;
 
+  readonly remoteConfig?: RemoteConfigType;
+
   // This property should always be set and this is ensured in background.ts
   readonly defaultConversationColor?: DefaultConversationColorType;
 
   readonly customColors?: CustomColorsItemType;
+
+  readonly preferredLeftPaneWidth?: number;
+
+  readonly preferredReactionEmoji?: Array<string>;
+
+  readonly areWeASubscriber?: boolean;
 };
 
 // Actions
@@ -74,6 +83,7 @@ export const actions = {
   editCustomColor,
   removeCustomColor,
   resetDefaultChatColor,
+  savePreferredLeftPaneWidth,
   setGlobalDefaultConversationColor,
   onSetSkinTone,
   putItem,
@@ -254,9 +264,17 @@ function setGlobalDefaultConversationColor(
   };
 }
 
+function savePreferredLeftPaneWidth(
+  preferredWidth: number
+): ThunkAction<void, RootStateType, unknown, ItemPutAction> {
+  return dispatch => {
+    dispatch(putItem('preferredLeftPaneWidth', preferredWidth));
+  };
+}
+
 // Reducer
 
-function getEmptyState(): ItemsStateType {
+export function getEmptyState(): ItemsStateType {
   return {
     defaultConversationColor: {
       color: ConversationColors[0],

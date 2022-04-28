@@ -1,11 +1,13 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useCallback, useState, ReactElement } from 'react';
+import type { ReactElement } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { Button, ButtonSize, ButtonVariant } from '../Button';
-import { ConversationType } from '../../state/ducks/conversations';
-import { LocalizerType } from '../../types/Util';
+import { SystemMessage } from './SystemMessage';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { LocalizerType } from '../../types/Util';
 import { Intl } from '../Intl';
 import { Emojify } from './Emojify';
 
@@ -46,26 +48,28 @@ export function DeliveryIssueNotification(
   }
 
   return (
-    <div className="SystemMessage SystemMessage--multiline">
-      <div className="SystemMessage__line">
-        <span className="SystemMessage__icon SystemMessage__icon--info" />
-        <Intl
-          id="DeliveryIssue--notification"
-          components={{
-            sender: <Emojify text={sender.firstName || sender.title} />,
-          }}
-          i18n={i18n}
-        />
-      </div>
-      <div className="SystemMessage__line">
-        <Button
-          onClick={openDialog}
-          size={ButtonSize.Small}
-          variant={ButtonVariant.SystemMessage}
-        >
-          {i18n('DeliveryIssue--learnMore')}
-        </Button>
-      </div>
+    <>
+      <SystemMessage
+        contents={
+          <Intl
+            id="DeliveryIssue--notification"
+            components={{
+              sender: <Emojify text={sender.firstName || sender.title} />,
+            }}
+            i18n={i18n}
+          />
+        }
+        icon="info"
+        button={
+          <Button
+            onClick={openDialog}
+            size={ButtonSize.Small}
+            variant={ButtonVariant.SystemMessage}
+          >
+            {i18n('DeliveryIssue--learnMore')}
+          </Button>
+        }
+      />
       {isDialogOpen ? (
         <DeliveryIssueDialog
           i18n={i18n}
@@ -75,6 +79,6 @@ export function DeliveryIssueNotification(
           onClose={closeDialog}
         />
       ) : null}
-    </div>
+    </>
   );
 }

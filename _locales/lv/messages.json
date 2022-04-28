@@ -177,15 +177,15 @@
     },
     "avatarMenuViewArchive": {
         "message": "Skatīt arhīvu",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuChatColors": {
         "message": "Tērzēšanas krāsa",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuUpdateAvailable": {
         "message": "Atjaunināt Signal",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "loading": {
         "message": "Ielādē...",
@@ -221,6 +221,10 @@
         "message": "Šīs sarunas ir arhivētas un iesūtnē būs redzamas tikai tad, ja tiks saņemtas jaunas ziņas.",
         "description": "Shown at the top of the archived conversations list in the left pane"
     },
+    "noArchivedConversations": {
+        "message": "No archived conversations.",
+        "description": "Shown at the top of the archived conversations list in the left pane if there is no any archived conversation"
+    },
     "archiveConversation": {
         "message": "Arhīvs",
         "description": "Shown in menu for conversation, and moves conversation out of main conversation list"
@@ -243,7 +247,7 @@
     },
     "pinnedConversationsFull": {
         "message": "Var piespraust 4 tērzēšanas",
-        "description": ""
+        "description": "Shown in a toast when a user attempts to pin more than the maximum number of chats"
     },
     "chooseDirectory": {
         "message": "Izvēlēties mapi",
@@ -415,6 +419,10 @@
         "message": "Iespējams, ka šie cilvēki ir pārinstalējuši vai mainījuši ierīces. Pārbaudiet savu drošības numuru kopā ar šiem cilvēkiem, lai nodrošinātu privātumu.",
         "description": "Shown on confirmation dialog when user attempts to send a message"
     },
+    "safetyNumberChangeDialog__pending-messages": {
+        "message": "Send pending messages",
+        "description": "Shown on confirmation dialog when user attempts to send a message in the outbox"
+    },
     "identityKeyErrorOnSend": {
         "message": "Jūsu drošības kods ar $name1$ ir mainījies. Tas varētu nozīmēt vai nu to, ka kāds mēģina pārtvert jūsu saziņu, vai arī $name2$ savā ierīcē pārinstalēja Signal. Iespējams, vēlaties pārbaudīt savu drošības kodu ar šo kontaktpersonu.",
         "description": "Shown when user clicks on a failed recipient in the message detail view after an identity key change",
@@ -456,27 +464,39 @@
         "description": "Shown in conversation banner when more than one group member's safety number has changed, but they were previously verified."
     },
     "debugLogExplanation": {
-        "message": "Šis žurnāls tiks publiskots internetā, lai lietotnes palīgi to varētu apskatīt. Pirms iesniegšanas varat to izpētīt un rediģēt.",
-        "description": ""
+        "message": "When you click Submit, your log will be posted online for 30 days at a unique, unpublished URL. You may Save it locally first.",
+        "description": "Description of what will happen with your debug log"
     },
     "debugLogError": {
-        "message": "Augšupielādes laikā kaut kas nogāja greizi. Lūdzu, apsveriet pievienot žurnālu manuāli jūsu reģistrētajai kļūdai.",
-        "description": ""
+        "message": "Something went wrong with the upload! Please email support@signal.org and attach your log as a text file.",
+        "description": "Error message a recommendations if debug log upload fails"
     },
-    "debugLogCopy": {
-        "message": "Kopēt",
+    "debugLogSuccess": {
+        "message": "Atkļūdošanas žurnāls iesniegts",
+        "description": "Title of the success page for submitting a debug log"
+    },
+    "debugLogSuccessNextSteps": {
+        "message": "Debug log uploaded. When you contact support, copy the URL below and attach it along with a description of the problem you saw and steps to reproduce it.",
+        "description": "Explanation of next steps to take when submitting debug log"
+    },
+    "debugLogLogIsIncomplete": {
+        "message": "... to see the full log, click Save",
         "description": "Shown as the text for the copy button on the debug log screen"
     },
-    "debugLogCopyAlt": {
-        "message": "Kopēt saiti starpliktuvē",
-        "description": "Shown as the alt text for the copy button on the debug log screen"
+    "debugLogCopy": {
+        "message": "Kopēt saiti",
+        "description": "Shown as the text for the copy button on the debug log screen"
+    },
+    "debugLogSave": {
+        "message": "Saglabāt",
+        "description": "Shown as the text for the download button on the debug log screen"
     },
     "debugLogLinkCopied": {
         "message": "Saite nokopēta starpliktuvē",
         "description": "Shown in a toast to let the user know that the link to the debug log has been copied to their clipboard"
     },
     "reportIssue": {
-        "message": "Paziņot par problēmu",
+        "message": "Sazināties ar atbalstu",
         "description": "Link to open the issue tracker"
     },
     "gotIt": {
@@ -557,11 +577,11 @@
     },
     "today": {
         "message": "Šodien",
-        "description": "Section header in the media gallery"
+        "description": "The string \"today\""
     },
     "yesterday": {
         "message": "Vakar",
-        "description": "Section header in the media gallery"
+        "description": "The string \"yesterday\""
     },
     "thisWeek": {
         "message": "Šonedēļ",
@@ -609,7 +629,7 @@
         "message": "$domain$ sīktēlu saites priekšskatījums",
         "description": "Shown while Signal Desktop is fetching metadata for a url in composition area",
         "placeholders": {
-            "path": {
+            "domain": {
                 "content": "$1",
                 "example": "instagram.com"
             }
@@ -626,8 +646,22 @@
         }
     },
     "decryptionErrorToast": {
-        "message": "Darbvirsmai radās atšifrēšanas kļūda. Noklikšķiniet, lai iesniegtu atkļūdošanas žurnālu.",
-        "description": "An error popup when we haven't added an error for decryption error."
+        "message": "Desktop ran into a decryption error from $name$, device $deviceId$",
+        "description": "An error popup when we haven't added an in-timeline error for decryption error, only for beta/internal users.",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            },
+            "deviceId": {
+                "content": "$1",
+                "example": "2"
+            }
+        }
+    },
+    "decryptionErrorToastAction": {
+        "message": "Ieniegt žurnālu",
+        "description": "Label for the decryption error toast button"
     },
     "oneNonImageAtATimeToast": {
         "message": "Iekļaujot pielikumu, kas nav attēls, vienā ziņā drīkst būt tikai viens pielikums.",
@@ -658,11 +692,11 @@
         "description": "Displayed when the desktop client is currently connecting to the server."
     },
     "connect": {
-        "message": "Click to reconnect.",
+        "message": "Noklikšķiniet, lai pieslēgtos atkārtoti.",
         "description": "Shown to allow the user to manually attempt a reconnect."
     },
     "connectingHangOn": {
-        "message": "Shouldn't be long",
+        "message": "Nevajadzētu būt ilgi",
         "description": "Subtext description for when the client is connecting to the server."
     },
     "offline": {
@@ -754,14 +788,8 @@
         "description": "Aria label for clear search button"
     },
     "searchIn": {
-        "message": "Meklēt $conversationName$",
-        "description": "Shown in the search box before text is entered when searching in a specific conversation",
-        "placeholders": {
-            "conversationName": {
-                "content": "$1",
-                "example": "Friends"
-            }
-        }
+        "message": "Meklēt sarunu",
+        "description": "Shown in the search box before text is entered when searching in a specific conversation"
     },
     "noSearchResults": {
         "message": "Vaicājumam \"$searchTerm$\" nav rezultātu",
@@ -806,6 +834,24 @@
     "messagesHeader": {
         "message": "Ziņas",
         "description": "Shown to separate the types of search results"
+    },
+    "findByUsernameHeader": {
+        "message": "Atrast pēc lietotājvārds",
+        "description": "Shown when search could be a valid username, with one sub-item that will kick off the search"
+    },
+    "findByPhoneNumberHeader": {
+        "message": "Meklēt pēc tālruņa numura",
+        "description": "Shown when search could be a valid phone number, with one sub-item that will kick off the search"
+    },
+    "at-username": {
+        "message": "@$username$",
+        "description": "@ added to username to signify it as a username. Should it be on the right in your language?",
+        "placeholders": {
+            "username": {
+                "content": "$1",
+                "example": "sammy45"
+            }
+        }
     },
     "welcomeToSignal": {
         "message": "Sveicināti Signālā",
@@ -861,7 +907,7 @@
     },
     "mobile": {
         "message": "mobilais",
-        "description": "Shown on contact detail screen as a label for aa phone or email"
+        "description": "Shown on contact detail screen as a label for a phone or email"
     },
     "email": {
         "message": "e-pasts",
@@ -907,6 +953,18 @@
         "message": "Sākotnējā ziņa ir atrasta, bet nav ielādēta. Ritiniet uz augšu, lai to ielādētu.",
         "description": "Shown in toast if user clicks on quote references messages not loaded in view, but in database"
     },
+    "voiceRecording--start": {
+        "message": "Start recording voice message",
+        "description": "Tooltip for microphone button to start voice message"
+    },
+    "voiceRecording--complete": {
+        "message": "Complete voice message and send",
+        "description": "Tooltip for green complete voice message and send"
+    },
+    "voiceRecording--cancel": {
+        "message": "Cancel voice message",
+        "description": "Tooltip for red button to cancel voice message"
+    },
     "voiceRecordingInterruptedMax": {
         "message": "Balss ziņu ierakstīšana tika pārtraukta, jo tika sasniegts maksimālais laika ierobežojums.",
         "description": "Confirmation dialog message for when the voice recording is interrupted due to max time limit"
@@ -916,22 +974,24 @@
         "description": "Confirmation dialog message for when the voice recording is interrupted due to app losing focus"
     },
     "voiceNoteLimit": {
-        "message": "Balss ziņu laiks ir ierobežots līdz piecām minūtēm. Pārslēdzoties uz citu lietotni, ierakstīšana tiks pārtraukta.",
+        "message": "Voice messages are limited to one hour. Recording will stop if you switch to another app.",
         "description": "Shown in toast to warn user about limited time and that window must be in focus"
     },
     "voiceNoteMustBeOnlyAttachment": {
         "message": "Balss ziņā drīkst būt tikai viens pielikums.",
         "description": "Shown in toast if tries to record a voice note with any staged attachments"
     },
+    "voiceNoteError": {
+        "message": "There was an error with the voice recorder.",
+        "description": "Shown in a dialog to inform user that we experienced an unrecoverable error"
+    },
     "attachmentSaved": {
-        "message": "Pielikums saglabāts. Noklikšķiniet, lai to parādītu mapē.",
-        "description": "Shown after user selects to save to downloads",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "proof.jpg"
-            }
-        }
+        "message": "Attachment saved.",
+        "description": "Shown after user selects to save to downloads"
+    },
+    "attachmentSavedShow": {
+        "message": "Show in folder",
+        "description": "Button label for showing the attachment in your file system"
     },
     "you": {
         "message": "Jūs",
@@ -987,13 +1047,43 @@
         "message": "Nevar atjaunināt",
         "description": "Shown as the title of our update error dialogs on windows"
     },
+    "muted": {
+        "message": "Izslēgta skaņa",
+        "description": "Shown in a button when a conversation is muted"
+    },
+    "mute": {
+        "message": "Atspējot ziņas",
+        "description": "Shown in a button when a conversation is unmuted and can be muted"
+    },
     "cannotUpdateDetail": {
-        "message": "Signal Desktop versiju neizdevās atjaunināt, taču ir pieejama jauna versija. Apmeklējiet $url$ un instalējiet jauno versiju manuāli. Pēc tam vai nu sazinieties ar atbalstu vai reģistrējiet kļūdu par šo problēmu.",
+        "message": "Signal couldn't update. $retry$ or visit $url$ to install it manually. Then, $support$ about this problem",
         "description": "Shown if a general error happened while trying to install update package",
         "placeholders": {
+            "retry": {
+                "content": "$2",
+                "example": "retry update"
+            },
             "url": {
-                "content": "$1",
+                "content": "$2",
                 "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
+            }
+        }
+    },
+    "cannotUpdateRequireManualDetail": {
+        "message": "Signal couldn't update. Visit $url$ to install it manually. Then, $support$ about this problem",
+        "description": "Shown if a general error happened while trying to install update package and manual update is required",
+        "placeholders": {
+            "url": {
+                "content": "$2",
+                "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
             }
         }
     },
@@ -1041,6 +1131,10 @@
     },
     "accept": {
         "message": "Apstiprināt",
+        "description": ""
+    },
+    "forward": {
+        "message": "Pārsūtīt",
         "description": ""
     },
     "done": {
@@ -1095,10 +1189,6 @@
         "message": "Rādīt dalībniekus",
         "description": ""
     },
-    "resetSession": {
-        "message": "Atstatīt sesiju",
-        "description": "This is a menu item for resetting the session, using the imperative case, as in a command."
-    },
     "showSafetyNumber": {
         "message": "Skatīt drošības numuru",
         "description": ""
@@ -1108,7 +1198,7 @@
         "description": "This is a menu item for viewing all media (images + video) in a conversation, using the imperative case, as in a command."
     },
     "verifyHelp": {
-        "message": "Ja vēlaties pārbaudīt pilnīgas šifrēšanas drošību ar $name$, salīdziniet augstāk norādītos ciparus ar attiecīgā cilvēka ierīcē esošajiem cipariem.",
+        "message": "To verify the security of your end-to-end encryption with $name$, compare the numbers above with their device.",
         "description": "",
         "placeholders": {
             "name": {
@@ -1136,6 +1226,10 @@
     "retrySend": {
         "message": "Mēģināt nosūtīt vēlreiz",
         "description": "Shown on the drop-down menu for an individual message, but only if it is an outgoing message that failed to send"
+    },
+    "retryDeleteForEveryone": {
+        "message": "Retry Delete for Everyone",
+        "description": "Shown on the drop-down menu for an individual message, but only if a previous delete for everyone failed to send"
     },
     "forwardMessage": {
         "message": "Pārsūtīt ziņu",
@@ -1220,7 +1314,7 @@
         }
     },
     "ChangeNumber--notification": {
-        "message": "$sender$ mainīja numuru uz jaunu",
+        "message": "$sender$ changed their phone number",
         "description": "Shown in timeline when a member of a conversation changes their phone number",
         "placeholders": {
             "sender": {
@@ -1249,13 +1343,13 @@
         "message": "Ikona, kas parāda, ka šim attēlam ir paraksts",
         "description": "Used for the icon layered on top of an image in message bubbles"
     },
-    "addACaption": {
-        "message": "Pievienot komentāru...",
-        "description": "Used as the placeholder text in the caption editor text field"
-    },
     "save": {
         "message": "Saglabāt",
-        "description": "Used as a 'commit changes' button in the Caption Editor for outgoing image attachments"
+        "description": "Used on save buttons"
+    },
+    "reset": {
+        "message": "Atstatīt",
+        "description": "Used on reset buttons"
     },
     "fileIconAlt": {
         "message": "Faila ikona",
@@ -1269,25 +1363,79 @@
         "message": "Privātums ir iespējams. Signāls padara to viegli īstenojamu.",
         "description": "Tagline displayed under 'installWelcome' string on the install page"
     },
-    "linkYourPhone": {
-        "message": "Saistīt tālruni ar Signal Desktop versiju",
-        "description": "Shown on the front page when the application first starts, above the QR code"
-    },
-    "signalSettings": {
-        "message": "Signal iestatījumi",
-        "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
-    },
     "linkedDevices": {
         "message": "Saistītās ierīces",
         "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
     },
-    "plusButton": {
-        "message": "'+' poga",
-        "description": "The button used in Signal Android to add a new linked device"
-    },
     "linkNewDevice": {
         "message": "Pievienot jaunu ierīci",
         "description": "The menu option shown in Signal iOS to add a new linked device"
+    },
+    "Install__scan-this-code": {
+        "message": "Scan this code in the Signal app on your phone",
+        "description": "Title of the device link screen. Also used as alt text for the QR code on the device link screen"
+    },
+    "Install__instructions__1": {
+        "message": "Open Signal on your phone",
+        "description": "Instructions on the device link screen"
+    },
+    "Install__instructions__2": {
+        "message": "Tap into $settings$, then tap $linkedDevices$",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "settings": {
+                "content": "$1",
+                "example": "<strong>Settings</strong>"
+            },
+            "linkedDevices": {
+                "content": "$2",
+                "example": "<strong>Linked Devices</strong>"
+            }
+        }
+    },
+    "Install__instructions__2__settings": {
+        "message": "Iestatījumi",
+        "description": "Part of the 2nd instruction on the device link screen"
+    },
+    "Install__instructions__3": {
+        "message": "Tap $plusButton$ (Android) or $linkNewDevice$ (iPhone)",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "plusButton": {
+                "content": "$1",
+                "example": "<PlusButton />"
+            },
+            "linkNewDevice": {
+                "content": "$2",
+                "example": "<strong>Link New Device</strong>"
+            }
+        }
+    },
+    "Install__qr-failed": {
+        "message": "The QR code couldn't load. Check your internet and try again. $learnMore$",
+        "description": "Shown on the install screen if the QR code fails to load",
+        "placeholders": {
+            "learnMore": {
+                "content": "$1",
+                "example": "<a>Learn more</a>"
+            }
+        }
+    },
+    "Install__qr-failed__learn-more": {
+        "message": "Lasīt vairāk",
+        "description": "Shown on the install screen if the QR code fails to load"
+    },
+    "Install__support-link": {
+        "message": "Nepieciešama palīdzība?",
+        "description": "Shown on the install screen. Link takes users to a support page"
+    },
+    "Install__choose-device-name__description": {
+        "message": "You'll see this name under \"Linked Devices\" on your phone",
+        "description": "The subheader shown on the 'choose device name' screen in the device linking process"
+    },
+    "Install__choose-device-name__placeholder": {
+        "message": "My Computer",
+        "description": "The placeholder for the 'choose device name' input"
     },
     "Preferences--device-name": {
         "message": "Ierīces nosaukums",
@@ -1303,6 +1451,10 @@
     },
     "initialSync": {
         "message": "Sinhronizē kontaktpersonas un grupas",
+        "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
+    },
+    "initialSync__subtitle": {
+        "message": "Note: Your chat history will not be synced to this device",
         "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
     },
     "installConnectionFailed": {
@@ -1321,6 +1473,10 @@
         "message": "Kaut kas sagāja grīstē!",
         "description": ""
     },
+    "installUnknownError": {
+        "message": "An unexpected error occurred. Please try again.",
+        "description": ""
+    },
     "installTryAgain": {
         "message": "Mēģiniet vēlreiz",
         "description": ""
@@ -1333,6 +1489,14 @@
         "message": "Zvani",
         "description": "Header for calling options on the settings screen"
     },
+    "calling__call-back": {
+        "message": "Atzvanīt",
+        "description": "Button to call someone back"
+    },
+    "calling__call-again": {
+        "message": "Zvanīt vēlreiz",
+        "description": "Button to call someone again"
+    },
     "calling__start": {
         "message": "Sākt zvanu",
         "description": "Button label in the call lobby for starting a call"
@@ -1344,6 +1508,10 @@
     "calling__return": {
         "message": "Atgriezties zvanā",
         "description": "Button label in the call lobby for returning to a call"
+    },
+    "calling__lobby-automatically-muted-because-there-are-a-lot-of-people": {
+        "message": "Microphone muted due to the size of the call",
+        "description": "Shown in a call lobby toast if there are a lot of people already on the call"
     },
     "calling__call-is-full": {
         "message": "Zvana/sarunas dalībnieku limits izsmelts",
@@ -1396,6 +1564,22 @@
     "calling__button--presenting-off": {
         "message": "Pārtraukt prezentēšanu",
         "description": "Button tooltip label for stopping screen sharing"
+    },
+    "calling__button--ring__label": {
+        "message": "Zvanīt",
+        "description": "Label under the ring button"
+    },
+    "calling__button--ring__disabled-because-group-is-too-large": {
+        "message": "Grupa ir pārāk liela, lai zvanītu dalībniekiem",
+        "description": "Button tooltip label when you can't ring because the group is too large"
+    },
+    "calling__button--ring__off": {
+        "message": "Notify, don't ring",
+        "description": "Button tooltip label for turning ringing off"
+    },
+    "calling__button--ring__on": {
+        "message": "Enable ringing",
+        "description": "Button tooltip label for turning ringing on"
     },
     "calling__your-video-is-off": {
         "message": "Jūsu kamera ir izslēgta",
@@ -1476,6 +1660,56 @@
             "person": {
                 "content": "$1",
                 "example": "Sam"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-2": {
+        "message": "Signal will ring $first$ and $second$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-3": {
+        "message": "Signal will ring $first$, $second$, and $third$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "third": {
+                "content": "$3",
+                "example": "April"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-many": {
+        "message": "Signal will ring $first$, $second$, and $others$ others",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "person": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "others": {
+                "content": "$3",
+                "example": "5"
             }
         }
     },
@@ -1569,7 +1803,7 @@
     },
     "calling__block-info": {
         "message": "Jūs nesaņemsiet dalībnieku audio vai video zvanu un viņi nesaņems jūsu zvanus.",
-        "description": "Shown in the modal dialog to describe how blocking works in a gorup call"
+        "description": "Shown in the modal dialog to describe how blocking works in a group call"
     },
     "calling__overflow__scroll-up": {
         "message": "Ritināt uz augšu",
@@ -1661,7 +1895,7 @@
         "message": "Pārraidiet visus zvanus caur Signal serveri, lai izvairītos no IP adreses atklāšanas kontaktpersonai. Aktivizēšana samazinās zvanu kvalitāti.",
         "description": "Details describing the always relay calls setting"
     },
-    "Preferences--permissions": {
+    "permissions": {
         "message": "Atļaujas",
         "description": "Header for permissions section of settings"
     },
@@ -1815,6 +2049,10 @@
         "message": "Sūtīšana neizidevās",
         "description": "Shown on outgoing message if it fails to send"
     },
+    "deleteFailed": {
+        "message": "Delete failed",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to anyone"
+    },
     "sendPaused": {
         "message": "Sūtīšana pārtraukta",
         "description": "Shown on outgoing message if it cannot be sent immediately"
@@ -1822,6 +2060,10 @@
     "partiallySent": {
         "message": "Daļēji nosūtīts; noklikšķiniet, lai skatītu datus",
         "description": "Shown on outgoing message if it is partially sent"
+    },
+    "partiallyDeleted": {
+        "message": "Partially deleted, click to retry",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to everyone"
     },
     "showMore": {
         "message": "Sīkāki dati",
@@ -1908,12 +2150,20 @@
         }
     },
     "justNow": {
-        "message": "tagad",
+        "message": "Tagad",
         "description": "Shown if a message is very recent, less than 60 seconds old"
     },
     "timestampFormat_M": {
         "message": "D MMM",
         "description": "Timestamp format string for displaying month and day (but not the year) of a date within the current year, ex: use 'MMM D' for 'Aug 8', or 'D MMM' for '8 Aug'."
+    },
+    "timestampFormat__long__today": {
+        "message": "[Šodien], LT",
+        "description": "Timestamp format string for displaying \"Today\" and the time"
+    },
+    "timestampFormat__long__yesterday": {
+        "message": "[Vakar], LT",
+        "description": "Timestamp format string for displaying \"Yesterday\" and the time"
     },
     "messageBodyTooLong": {
         "message": "Ziņas pamatteksts ir pārāk garš.",
@@ -2059,6 +2309,10 @@
             }
         }
     },
+    "SafetyNumberModal__title": {
+        "message": "Pārbaudīt drošības numuru",
+        "description": "Title for the modal for safety number verification"
+    },
     "safetyNumberChanged": {
         "message": "Drošības kods mainījies",
         "description": "A notification shown in the conversation when a contact reinstalls"
@@ -2131,6 +2385,10 @@
         "message": "Jauna saruna",
         "description": "Label for header when starting a new conversation"
     },
+    "stories": {
+        "message": "Stāsti",
+        "description": "Label for header to go to stories view"
+    },
     "contactSearchPlaceholder": {
         "message": "Meklēt pēc vārda vai tālruņa numura",
         "description": "Placeholder to use when searching for contacts in the composer"
@@ -2142,6 +2400,44 @@
     "noConversationsFound": {
         "message": "Nav atrasta neviena saruna",
         "description": "Label shown when there are no conversations to compose to"
+    },
+    "Toast--failed-to-fetch-username": {
+        "message": "Failed to fetch username. Check your connection and try again.",
+        "description": "Shown if request to Signal servers to find username fails"
+    },
+    "Toast--failed-to-fetch-phone-number": {
+        "message": "Failed to fetch phone number. Check your connection and try again.",
+        "description": "Shown if request to Signal servers to find phone number fails"
+    },
+    "startConversation--username-not-found": {
+        "message": "User not found. $atUsername$ is not a Signal user; make sure you’ve entered the complete username.",
+        "description": "Shown in dialog if username is not found. Note that 'username' will be the output of at-username",
+        "placeholders": {
+            "atUsername": {
+                "content": "$1",
+                "example": "@alex"
+            }
+        }
+    },
+    "startConversation--phone-number-not-found": {
+        "message": "User not found. \"$phoneNumber$\" is not a Signal user.",
+        "description": "Shown in dialog if phone number is not found.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
+    },
+    "startConversation--phone-number-not-valid": {
+        "message": "User not found. \"$phoneNumber$\" is not a valid phone number.",
+        "description": "Shown in dialog if phone number is not valid.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
     },
     "chooseGroupMembers__title": {
         "message": "Izvēlēties dalībniekus",
@@ -2184,20 +2480,6 @@
             "max": {
                 "content": "$1",
                 "example": "150"
-            }
-        }
-    },
-    "chooseGroupMembers__cant-add-member__title": {
-        "message": "Nevar pievienot dalībnieku",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group"
-    },
-    "chooseGroupMembers__cant-add-member__body": {
-        "message": "\"$name$\" nevar pievienot grupai, jo šis cilvēks izmanto veco Signal versiju. Pēc Signal atjaunināšanas varat šo cilvēku pievienot grupai.",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group",
-        "placeholders": {
-            "max": {
-                "content": "$1",
-                "example": "Jane Doe"
             }
         }
     },
@@ -2250,7 +2532,7 @@
         "description": "When a person inputs a number that is invalid"
     },
     "unlinkedWarning": {
-        "message": "Lai turpinātu ziņapmaiņu, atkārtoti saistiet Signal Desktop versiju ar savu mobilo ierīci.",
+        "message": "Click to relink Signal Desktop to your mobile device to continue messaging.",
         "description": ""
     },
     "unlinked": {
@@ -2265,6 +2547,14 @@
         "message": "Update available",
         "description": ""
     },
+    "autoUpdateRetry": {
+        "message": "Retry update",
+        "description": ""
+    },
+    "autoUpdateContactSupport": {
+        "message": "contact support",
+        "description": ""
+    },
     "autoUpdateNewVersionMessage": {
         "message": "Click to restart Signal",
         "description": ""
@@ -2272,6 +2562,10 @@
     "downloadNewVersionMessage": {
         "message": "Click to download update",
         "description": ""
+    },
+    "downloadFullNewVersionMessage": {
+        "message": "Signal couldn’t update. Click to try again.",
+        "description": "Shown in update dialog when partial update fails and we have to ask user to download full update"
     },
     "autoUpdateNewVersionInstructions": {
         "message": "Nospiediet Restartēt Signal, lai lietotu atjauninājumus.",
@@ -2283,6 +2577,10 @@
     },
     "autoUpdateLaterButtonLabel": {
         "message": "Vēlāk",
+        "description": ""
+    },
+    "autoUpdateIgnoreButtonLabel": {
+        "message": "Ignore update",
         "description": ""
     },
     "leftTheGroup": {
@@ -2354,6 +2652,38 @@
             "names": {
                 "content": "$1",
                 "example": "Alice, Bob"
+            }
+        }
+    },
+    "ConversationList__aria-label": {
+        "message": "Conversation with $title$, $unreadCount$ new messages, last message: $lastMessage$.",
+        "description": "Aria label for the conversation list item",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "unreadCount": {
+                "content": "$2",
+                "example": "23"
+            },
+            "lastMessage": {
+                "content": "$3",
+                "example": "How about Friday?"
+            }
+        }
+    },
+    "ConversationList__last-message-undefined": {
+        "message": "The last message may have been deleted.",
+        "description": "For aria-label within conversation list. Describes if last message is not defined."
+    },
+    "BaseConversationListItem__aria-label": {
+        "message": "Go to conversation with $title$",
+        "description": "Aria label for the conversation list item button",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
             }
         }
     },
@@ -2588,6 +2918,10 @@
     "confirmation-dialog--Cancel": {
         "message": "Atcelt",
         "description": "Appears on the cancel button in confirmation dialogs."
+    },
+    "MessageBody--read-more": {
+        "message": "Lasīt vairāk",
+        "description": "When a message is too long this is the affordance to expand the message"
     },
     "Message--unsupported-message": {
         "message": "$contact$nosūtīja jums ziņu, kuru nevar apstrādāt vai parādīt, jo tajā izmantota jauna Signal funkcija.",
@@ -2865,6 +3199,10 @@
         "message": "Saruna arhivēta",
         "description": "A toast that shows up when user archives a conversation"
     },
+    "conversationArchivedUndo": {
+        "message": "Atsaukt",
+        "description": "Undo button for archiving a conversation"
+    },
     "conversationReturnedToInbox": {
         "message": "Saruna atgriezta uz iesūtni",
         "description": "A toast that shows up when the user unarchives a conversation"
@@ -2924,6 +3262,14 @@
     "StickerCreator--DropStage--title": {
         "message": "Pievienot uzlīmes",
         "description": "Title for the drop stage of the sticker creator"
+    },
+    "StickerCreator--DropStage--removeSticker": {
+        "message": "Remove sticker",
+        "description": "Label for the X button used to remove a staged sticker"
+    },
+    "StickerCreator--DropStage--dragDrop": {
+        "message": "Click or drag/drop a file to add a sticker",
+        "description": "Shown on the + section of the file addition stage of sticker pack creation"
     },
     "StickerCreator--DropStage--help": {
         "message": "Uzlīmēm jābūt PNG, APNG vai WebP formātā ar caurspīdīgu fonu un 512x512 pikseļiem. Ieteicamā piemale ir 16px.",
@@ -3099,11 +3445,15 @@
         "message": "Lai izmantotu uzlīmju komplekta veidotāju, iestatiet Signal savā tālrunī un datorā",
         "description": "The error message which appears when the user has not linked their account and attempts to use the Sticker Creator"
     },
+    "Reactions--remove": {
+        "message": "Remove reaction",
+        "description": ""
+    },
     "Reactions--error": {
         "message": "Neizdevās nosūtīt emociju izpausmi. Mēģiniet vēlreiz.",
         "description": "Shown when a reaction fails to send"
     },
-    "ReactionsViewer--more": {
+    "Reactions--more": {
         "message": "Vēl",
         "description": "Use in the reaction picker as the alt text for the 'more' button"
     },
@@ -3133,13 +3483,7 @@
     },
     "MessageRequests--message-group": {
         "message": "Pievienoties šai grupai un dalīties ar Jūsu vārdu un attēlu ar šiem dalībniekiem? Viņi nezinās, ka Jūs izlasījāt ziņas, kamēr neapstiprināsiet.",
-        "description": "Shown as the message for a message request in a group",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the message for a message request in a group"
     },
     "MessageRequests--message-group-blocked": {
         "message": "Atbloķēt šo grupu un dalīties ar savu vārdu un attēlu ar šiem dalībniekiem? Jūs nesaņemsiet nevienu ziņu, kamēr šo grupu neatbloķēsiet.",
@@ -3153,7 +3497,7 @@
         "message": "Atbloķēt",
         "description": "Shown as a button to let the user unblock a message request"
     },
-    "MessageRequests--unblock-confirm-title": {
+    "MessageRequests--unblock-direct-confirm-title": {
         "message": "Vai atbloķēt $name$?",
         "description": "Shown as a button to let the user unblock a message request",
         "placeholders": {
@@ -3165,23 +3509,11 @@
     },
     "MessageRequests--unblock-direct-confirm-body": {
         "message": "Jūs varēsiet nosūtīt ziņas un piezvanīt viens otram.",
-        "description": "Shown as the body in the confirmation modal for unblocking a private message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a private message request"
     },
     "MessageRequests--unblock-group-confirm-body": {
         "message": "Grupas dalībnieki varēs atkal jūs pievienot šai grupai.",
-        "description": "Shown as the body in the confirmation modal for unblocking a group message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a group message request"
     },
     "MessageRequests--block-and-report-spam": {
         "message": "Ziņot par nevēlamu pastu un bloķēt",
@@ -3321,7 +3653,7 @@
     },
     "member-of-2-groups": {
         "message": "$group1$ un $group2$ dalībnieks",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least two mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of two mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3335,7 +3667,7 @@
     },
     "member-of-3-groups": {
         "message": "$group1$, $group2$ un $group3$ dalībnieks ",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of three mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3351,9 +3683,27 @@
             }
         }
     },
-    "member-of-more-than-3-groups": {
+    "member-of-more-than-3-groups--one-more": {
+        "message": "Member of $group1$, $group2$, $group3$ and one more",
+        "description": "Shown in the conversation hero to indicate this user is a member of four mutual groups",
+        "placeholders": {
+            "group1": {
+                "content": "$1",
+                "example": "NYC Rock Climbers"
+            },
+            "group2": {
+                "content": "$2",
+                "example": "Dinner Party"
+            },
+            "group3": {
+                "content": "$3",
+                "example": "Friends 🌿"
+            }
+        }
+    },
+    "member-of-more-than-3-groups--multiple-more": {
         "message": "$group1$, $group2$, $group3$ dalībnieks un $remainingCount$ citi",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of 5+ mutual groups.",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3451,9 +3801,87 @@
         "message": "Ienākošs videozvans...",
         "description": "Shown in both the incoming call bar and notification for an incoming video call"
     },
-    "outgoingCallPrering": {
-        "message": "Veido zvanu...",
-        "description": "Shown in the call screen when placing an outgoing call that isn't ringing yet"
+    "incomingGroupCall__ringing-you": {
+        "message": "$ringer$ is calling you",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-1-other": {
+        "message": "$ringer$ is calling you and $otherMember$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "otherMember": {
+                "content": "$2",
+                "example": "Bob"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-2-others": {
+        "message": "$ringer$ is calling you, $first$, and $second$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-3-others": {
+        "message": "$ringer$ is calling you, $first$, $second$, and 1 other",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-many": {
+        "message": "$ringer$ is calling you, $first$, $second$, and $remaining$ others",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            },
+            "remaining": {
+                "content": "$4",
+                "example": "5"
+            }
+        }
     },
     "outgoingCallRinging": {
         "message": "Zvana...",
@@ -3531,7 +3959,7 @@
             }
         }
     },
-    "calling__call-notification__button__in-another-call-tooltip": {
+    "calling__in-another-call-tooltip": {
         "message": "Jūs jau esat zvanā",
         "description": "Tooltip in disabled notification button when you're on another call"
     },
@@ -3570,7 +3998,7 @@
         "description": "Title for the select your screen sharing sources modal"
     },
     "calling__SelectPresentingSourcesModal--confirm": {
-        "message": "Kopīgot ekrānu",
+        "message": "Start sharing",
         "description": "Confirm button for sharing screen modal"
     },
     "calling__SelectPresentingSourcesModal--entireScreen": {
@@ -3663,15 +4091,15 @@
     },
     "ErrorModal--title": {
         "message": "Kaut kas sagāja grīstē!",
-        "description": "Title of pop-up dialog when user-initiated task has gone wrong"
+        "description": "Title of popup dialog when user-initiated task has gone wrong"
     },
     "ErrorModal--description": {
         "message": "Mēģiniet vēlreiz vai sazinieties ar atbalstu.",
-        "description": "Description text in pop-up dialog when user-initiated task has gone wrong"
+        "description": "Description text in popup dialog when user-initiated task has gone wrong"
     },
     "Confirmation--confirm": {
         "message": "Labi",
-        "description": "Button to dismiss pop-up dialog when user-initiated task has gone wrong"
+        "description": "Button to dismiss popup dialog when user-initiated task has gone wrong"
     },
     "unknown-sgnl-link": {
         "message": "Atvainojamies, ka saite sgnl:// bija bezjēdzīga!",
@@ -3724,6 +4152,14 @@
     "GroupV2--join--link-revoked": {
         "message": "Šī grupas saite vairs nav derīga.",
         "description": "Shown if you click a group link and we can't get information about it"
+    },
+    "GroupV2--join--link-forbidden--title": {
+        "message": "Nevar pievienoties grupai",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
+    },
+    "GroupV2--join--link-forbidden": {
+        "message": "Jūs nevarat pievienoties grupai caur grupas saiti, jo adminstrators jums to ir liedzis.",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
     },
     "GroupV2--join--prompt-with-approval": {
         "message": "Lai jūs varētu pievienoties šai grupai, šīs grupas administratoram ir jāapstiprina jūsu pieprasījums. Ja tas tiks apstiprināts, grupas dalībnieki redzēs jūsu vārdu un fotoattēlu.",
@@ -4351,7 +4787,13 @@
     },
     "GroupV2--member-privilege--demote--other--unknown": {
         "message": "Administrators atsauca $memberName$ administratora tiesības.",
-        "description": "Shown in timeline or conversation preview when v2 group changes"
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "memberName": {
+                "content": "$1",
+                "example": "Bob"
+            }
+        }
     },
     "GroupV2--member-privilege--demote--you--other": {
         "message": "$adminName$ atsauca jūsu administratora tiesības.",
@@ -4753,6 +5195,30 @@
             }
         }
     },
+    "GroupV2--admin-approval-bounce--one": {
+        "message": "$joinerName$ requested and cancelled their request to join via the group link",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "GroupV2--admin-approval-bounce": {
+        "message": "$joinerName$ requested and cancelled $numberOfRequests$ requests to join via the group link",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "numberOfRequests": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
     "GroupV2--group-link-add--disabled--you": {
         "message": "Jūs ieslēdzāt grupas saiti ar atspējotu administratora apstiprinājumu.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
@@ -5023,6 +5489,30 @@
         "message": "tālāk",
         "description": "Generic next label"
     },
+    "BadgeDialog__become-a-sustainer-button": {
+        "message": "Kļūsti par Uzturētāju",
+        "description": "In the badge dialog. This button is shown under sustainer badges, taking users to some instructions"
+    },
+    "BadgeSustainerInstructions__header": {
+        "message": "Kļūsti par Uzturētāju",
+        "description": "In the instructions for becoming a sustainer. The heading."
+    },
+    "BadgeSustainerInstructions__subheader": {
+        "message": "Signal is powered by people like you. Contribute and receive a badge.",
+        "description": "In the instructions for becoming a sustainer. The subheading."
+    },
+    "BadgeSustainerInstructions__instructions__1": {
+        "message": "Open Signal on your phone",
+        "description": "In the instructions for becoming a sustainer. First instruction."
+    },
+    "BadgeSustainerInstructions__instructions__2": {
+        "message": "Pieskarieties sava profila fotoattēlam augšējā kreisajā stūrī, lai atvērtu iestatījumus",
+        "description": "In the instructions for becoming a sustainer. Second instruction."
+    },
+    "BadgeSustainerInstructions__instructions__3": {
+        "message": "Tap on \"Become a Sustainer\" and subscribe",
+        "description": "In the instructions for becoming a sustainer. Third instruction."
+    },
     "CompositionArea--expand": {
         "message": "Izvērst",
         "description": "Aria label for expanding composition area"
@@ -5070,7 +5560,7 @@
         }
     },
     "ContactModal--rm-admin-info": {
-        "message": "Noņemt $contact$ kā grupas administratoru",
+        "message": "Remove $contact$ as group admin?",
         "description": "Shown in a confirmation dialog when you are about to remove admin privileges from someone",
         "placeholders": {
             "contact": {
@@ -5091,6 +5581,14 @@
         "message": "Grupu iestatījumi",
         "description": "This is a button in the conversation context menu to show group settings"
     },
+    "showConversationDetails--direct": {
+        "message": "Sarunas Iestatījumi",
+        "description": "This is a button in the conversation context menu to show chat settings"
+    },
+    "ConversationDetails__unmute--title": {
+        "message": "Unmute this chat?",
+        "description": "Title for the modal to unmute a chat"
+    },
     "ConversationDetails--group-link": {
         "message": "Grupas saite",
         "description": "This is the label for the group link management panel"
@@ -5099,9 +5597,13 @@
         "message": "Gaistošās ziņas",
         "description": "This is the label for the disappearing messages setting panel"
     },
-    "ConversationDetails--disappearing-messages-info": {
+    "ConversationDetails--disappearing-messages-info--group": {
         "message": "Ja šī funkcija ir iespējota, šajā grupā nosūtītās un saņemtās ziņas pēc izlasīšanas tiks dzēstas.",
-        "description": "This is the info about the disappearing messages setting"
+        "description": "This is the info about the disappearing messages setting, in groups"
+    },
+    "ConversationDetails--disappearing-messages-info--direct": {
+        "message": "When enabled, messages sent and received in this 1:1 chat will disappear after they've been seen.",
+        "description": "This is the info about the disappearing messages setting, for direct conversations"
     },
     "ConversationDetails--notifications": {
         "message": "Paziņojumi",
@@ -5129,7 +5631,7 @@
     },
     "ConversationDetails--announcement-info": {
         "message": "Izvēlieties, kurš šai grupai var sūtīt ziņas.",
-        "description": "This is the additional info for the 'who can send mesages' panel"
+        "description": "This is the additional info for the 'who can send messages' panel"
     },
     "ConversationDetails--requests-and-invites": {
         "message": "Pieprasījumi un uzaicinājumi",
@@ -5293,6 +5795,16 @@
             }
         }
     },
+    "PendingRequests--deny-for--with-link": {
+        "message": "Deny request from \"$name$\"? They will not be able to request to join via the group link again.",
+        "description": "This is the modal content when confirming denying a group request to join",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Meowsy Purrington"
+            }
+        }
+    },
     "PendingInvites--invites": {
         "message": "Uzaicinājāt jūs",
         "description": "This is the title list of all invites"
@@ -5344,7 +5856,7 @@
         }
     },
     "PendingInvites--revoke-from-plural": {
-        "message": "Atsaukt “$name$” nosūtītos $number$ uzaicinājumus",
+        "message": "Revoke $number$ invites sent by \"$name$\"?",
         "description": "This is the modal content when confirming revoking multiple invites",
         "placeholders": {
             "number": {
@@ -5371,7 +5883,7 @@
     },
     "PendingRequests--info": {
         "message": "Šajā sarakstā iekļautie cilvēki mēģina pievienoties \"$name$\", izmantojot grupas saiti.",
-        "description": "Inforamtion shown below the pending admin approval list",
+        "description": "Information shown below the pending admin approval list",
         "placeholders": {
             "name": {
                 "content": "$1",
@@ -5382,6 +5894,28 @@
     "PendingInvites--info": {
         "message": "Detalizēta informācija par šajā grupā uzaicinātajiem cilvēkiem netiek rādīta, kamēr viņi nav pievienojušies. Uzaicinātie redzēs ziņas tikai pēc pievienošanās grupai.",
         "description": "Information shown below the invite list"
+    },
+    "PendingRequests--block--button": {
+        "message": "Bloķēt pieprasījumu",
+        "description": "Shown in timeline if users cancel their request to join a group via a group link"
+    },
+    "PendingRequests--block--title": {
+        "message": "Bloķēt pieprasījumu?",
+        "description": "Title of dialog to block a user from requesting to join via the link again"
+    },
+    "PendingRequests--block--contents": {
+        "message": "$name$ will not be able to join or request to join this group via the group link. They can still be added to the group manually.",
+        "description": "Details of dialog to block a user from requesting to join via the link again",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Annoying Person"
+            }
+        }
+    },
+    "PendingRequests--block--confirm": {
+        "message": "Block Request",
+        "description": "Confirmation button of dialog to block a user from requesting to join via the link again"
     },
     "AvatarInput--no-photo-label--group": {
         "message": "Pievienot grupas fotoattēlu",
@@ -5496,16 +6030,34 @@
         "description": "The text of the button to create new groups"
     },
     "selectContact": {
-        "message": "Atlasīt kontaktpersonu",
-        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)"
+        "message": "Select contact $name$",
+        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "deselectContact": {
-        "message": "Noņemt kontaktpersonas atlasi",
-        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)"
+        "message": "De-select contact $name$",
+        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "cannotSelectContact": {
-        "message": "Nevar atlasīt kontaktpersonu",
-        "description": "The label for contact checkboxes that are disabled"
+        "message": "Cannot select contact $name$",
+        "description": "The label for contact checkboxes that are disabled",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "alreadyAMember": {
         "message": "Jau dalībnieks",
@@ -5548,6 +6100,14 @@
     "ForwardMessageModal--continue": {
         "message": "Turpināt",
         "description": "aria-label for the 'next' button in the forward a message modal dialog"
+    },
+    "TimelineDateHeader--date-in-last-6-months": {
+        "message": "ddd, MMM D",
+        "description": "Moment.js format for date headers in the message timeline, for dates <6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
+    "TimelineDateHeader--date-older-than-6-months": {
+        "message": "MMM D, YYYY",
+        "description": "Moment.js format for date headers in the message timeline, for dates >=6 months old. See https://momentjs.com/docs/#/displaying/format/."
     },
     "MessageRequestWarning__learn-more": {
         "message": "Lasīt vairāk",
@@ -5649,6 +6209,16 @@
             }
         }
     },
+    "RemoveGroupMemberConfirmation__description__with-link": {
+        "message": "Remove \"$name$\" from the group? They will not be able to rejoin via the group link.",
+        "description": "When confirming the removal of a group member, show this text in the dialog",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Jane Doe"
+            }
+        }
+    },
     "CaptchaDialog__title": {
         "message": "Verificēt, lai turpinātu ziņapmaiņu",
         "description": "Header in the captcha dialog"
@@ -5683,7 +6253,7 @@
     },
     "deleteForEveryoneFailed": {
         "message": "Neizdevās dzēst ziņu visiem. Vēlāk mēģiniet vēlreiz.",
-        "description": "Displayed when delete-for-everyone has failed to send to all recepients"
+        "description": "Displayed when delete-for-everyone has failed to send to all recipients"
     },
     "ChatColorPicker__delete--title": {
         "message": "Dzēst krāsu",
@@ -5787,6 +6357,14 @@
         "message": "Pielāgots laiks",
         "description": "Text for an option in Conversation Details Disappearing Messages setting when user previously selected custom time"
     },
+    "DisappearingTimeDialog__label--value": {
+        "message": "Number",
+        "description": "aria-label for the number select box"
+    },
+    "DisappearingTimeDialog__label--units": {
+        "message": "Unit of time",
+        "description": "aria-label for the units of time select box"
+    },
     "DisappearingTimeDialog__title": {
         "message": "Pielāgots laiks",
         "description": "Title for the custom disappearing message timeout dialog"
@@ -5825,7 +6403,7 @@
     },
     "settings__DisappearingMessages__timer__label": {
         "message": "Noklusējuma taimeris jaunām tērzēšanām",
-        "description": "Label for the Disapearring Messages default timer setting"
+        "description": "Label for the Disappearing Messages default timer setting"
     },
     "UniversalTimerNotification__text": {
         "message": "Pēc ziņu nosūtīšanas ziņu dzēšanas laiks tiks iestatīts uz $timeValue$.",
@@ -5905,6 +6483,70 @@
         "message": "Par",
         "description": "Default text for about field"
     },
+    "ProfileEditor--username": {
+        "message": "Lietotājvārds",
+        "description": "Default text for username field"
+    },
+    "ProfileEditor--username--placeholder": {
+        "message": "Ievadiet lietotājvārdu",
+        "description": "Placeholder for the username field"
+    },
+    "ProfileEditor--username--helper": {
+        "message": "Lietotājvārdi lietotnē Signal nav obligāti. Ja izvēlaties izveidot lietotājvārdu, citi Signal lietotāji jūs varēs atrast ar šo lietotājvārdu un sazināties ar jums, nezinot jūsu tālruņa numuru.",
+        "description": "Shown on the edit username screen"
+    },
+    "ProfileEditor--username--check-characters": {
+        "message": "Usernames may only contain a-z, 0-9 and _",
+        "description": "Shown if user has attempted to use forbidden characters"
+    },
+    "ProfileEditor--username--check-starting-character": {
+        "message": "Lietotājvārdi nedrīkst sākties ar ciparu.",
+        "description": "Shown if user has attempted to begin their username with a number"
+    },
+    "ProfileEditor--username--check-character-min": {
+        "message": "Usernames must have a least $min$ characters.",
+        "description": "Shown if user has attempted to enter a username with too few characters - currently min is 3",
+        "placeholders": {
+            "min": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "ProfileEditor--username--check-character-max": {
+        "message": "Usernames must have at most $max$ characters.",
+        "description": "Shown if user has attempted to enter a username with too many characters - currently min is 25",
+        "placeholders": {
+            "max": {
+                "content": "$1",
+                "example": "25"
+            }
+        }
+    },
+    "ProfileEditor--username--check-username-taken": {
+        "message": "Šis lietotājvārds ir aizņemts.",
+        "description": "Shown if user has attempted to save a username which is not available"
+    },
+    "ProfileEditor--username--general-error": {
+        "message": "Your username couldn’t be saved. Check your connection and try again.",
+        "description": "Shown if something unknown has gone wrong with username save."
+    },
+    "ProfileEditor--username--delete-general-error": {
+        "message": "Your username couldn’t be removed. Check your connection and try again.",
+        "description": "Shown if something unknown has gone wrong with username delete."
+    },
+    "ProfileEditor--username--delete-username": {
+        "message": "Delete username",
+        "description": "Shown as aria label for trash icon next to username"
+    },
+    "ProfileEditor--username--confirm-delete-body": {
+        "message": "This will remove your username, allowing other users to claim it. Are you sure?",
+        "description": "Shown in dialog body if user has saved an empty string to delete their username"
+    },
+    "ProfileEditor--username--confirm-delete-button": {
+        "message": "Dzēst",
+        "description": "Shown in dialog button if user has saved an empty string to delete their username"
+    },
     "ProfileEditor--about-placeholder": {
         "message": "Uzrakstiet dažus vārdus par sevi...",
         "description": "Placeholder text for about input field"
@@ -5967,6 +6609,14 @@
         "message": "Par",
         "description": "Title for about editing"
     },
+    "ProfileEditorModal--avatar": {
+        "message": "Your Avatar",
+        "description": "Title for profile avatar editing"
+    },
+    "ProfileEditorModal--username": {
+        "message": "Lietotājvārds",
+        "description": "Title for username editing"
+    },
     "ProfileEditorModal--error": {
         "message": "Jūsu profilu nevarēja atjaunināt. Lūdzu, mēģiniet vēlreiz.",
         "description": "Error message when something goes wrong updating your profile."
@@ -6011,7 +6661,7 @@
     },
     "Preferences__button--chats": {
         "message": "Sarunas",
-        "description": "Button to switch the settings view"
+        "description": "Button to switch the settings view (and a title of pane)"
     },
     "Preferences__button--calls": {
         "message": "Zvani",
@@ -6135,6 +6785,14 @@
         "message": "Automatically download updates",
         "description": "Label for checkbox for the auto download updates setting"
     },
+    "Preferences__enable-notifications": {
+        "message": "Enable notifications",
+        "description": "Label for checkbox for the notifications setting"
+    },
+    "Preferences__devices": {
+        "message": "Devices",
+        "description": "Label for Device list in call settings pane"
+    },
     "DialogUpdate--version-available": {
         "message": "Update to version $version$ available",
         "description": "Tooltip for new update available",
@@ -6145,24 +6803,322 @@
             }
         }
     },
-    "WhatsNew__v5.15--1": {
-        "message": "No that's not speck of dust you need to flick off your monitor, there's now a dot for unplayed incoming audio messages.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--first-line": {
+        "message": "Signal cannot be closed.",
+        "description": "First line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--2": {
-        "message": "The calling lobby got some remodeling and renovations done and we didn't even have to refinance.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--second-line": {
+        "message": "Please close it manually and click Retry to continue.",
+        "description": "Second line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--3": {
-        "message": "The new preferences window is better and faster. Go ahead and change your zoom level, toggle the theme, set a custom disappearing timer.",
-        "description": "Release notes for v5.15"
+    "NSIS__appRunning": {
+        "message": "$appName$ is running.\nClick OK to close it.\nIf it doesn't close, try closing it manually.",
+        "description": "The contents of a dialog displayed when Windows installer detect that the application is running and asks user to close it. Note: please keep the line breaks so that the text occupies three separate lines",
+        "placeholders": {
+            "appName": {
+                "content": "$1",
+                "example": "Signal"
+            }
+        }
     },
-    "WhatsNew__v5.15--4": {
-        "message": "You can now choose when to download and apply new updates for Signal. The dialogs got a small makeover too. Check out the setting in the new preferences window.",
-        "description": "Release notes for v5.15"
+    "NSIS__decompressionFailed": {
+        "message": "Failed to decompress files. Please try running the installer again.",
+        "description": "Displayed when Windows installer cannot decompress application files"
     },
-    "WhatsNew__v5.15--5": {
-        "message": "Squashed lots of bugs and there are some performance improvements as well. Thank you all for your reports!",
-        "description": "Release notes for v5.15"
+    "NSIS__uninstallFailed": {
+        "message": "Failed to uninstall old application files. Please try running the installer again.",
+        "description": "Displayed when Windows installer cannot uninstall the old application"
+    },
+    "CrashReportDialog__title": {
+        "message": "Application crashed",
+        "description": "A title of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__body": {
+        "message": "Signal restarted after a crash. You can submit a crash report to help Signal investigate the issue.",
+        "description": "The body of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__submit": {
+        "message": "Sūtīt",
+        "description": "A button label for submission of the crash reporter data after a recent crash"
+    },
+    "CrashReportDialog__erase": {
+        "message": "Don't Send",
+        "description": "A button label for erasure of the crash reporter data after a recent crash and continuing to start the app"
+    },
+    "CustomizingPreferredReactions__title": {
+        "message": "Pielāgot emociju izpausmes",
+        "description": "Shown in the header of the modal for customizing the preferred reactions. Also shown in the tooltip for the button that opens this modal."
+    },
+    "CustomizingPreferredReactions__subtitle": {
+        "message": "Click to replace an emoji",
+        "description": "Instructions in the modal for customizing the preferred reactions."
+    },
+    "CustomizingPreferredReactions__had-save-error": {
+        "message": "There was an error when saving your settings. Please try again.",
+        "description": "Shown if there is an error when saving your preferred reaction settings. Should be very rare to see this message."
+    },
+    "MediaEditor__control--draw": {
+        "message": "Zīmēt",
+        "description": "Label for the draw button in the media editor"
+    },
+    "MediaEditor__control--text": {
+        "message": "Pievienot tekstu",
+        "description": "Label for the text button in the media editor"
+    },
+    "MediaEditor__control--sticker": {
+        "message": "Uzlīmes",
+        "description": "Label for the sticker button in the media editor"
+    },
+    "MediaEditor__control--crop": {
+        "message": "Crop and rotate",
+        "description": "Label for the crop & rotate button in the media editor"
+    },
+    "MediaEditor__control--undo": {
+        "message": "Atsaukt",
+        "description": "Label for the undo button in the media editor"
+    },
+    "MediaEditor__control--redo": {
+        "message": "Atcelt atsaukšanu",
+        "description": "Label for the redo button in the media editor"
+    },
+    "MediaEditor__text--regular": {
+        "message": "Regular",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--highlight": {
+        "message": "Highlight",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--outline": {
+        "message": "Outline",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--underline": {
+        "message": "Underline",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__draw--pen": {
+        "message": "Pen",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--highlighter": {
+        "message": "Highlighter",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--thin": {
+        "message": "Thin",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--regular": {
+        "message": "Regular",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--medium": {
+        "message": "Datu nesējs",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--heavy": {
+        "message": "Heavy",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__crop--reset": {
+        "message": "Atstatīt",
+        "description": "Reset the crop state"
+    },
+    "MediaEditor__crop--rotate": {
+        "message": "Rotate",
+        "description": "Rotate the canvas"
+    },
+    "MediaEditor__crop--flip": {
+        "message": "Pārslēgt",
+        "description": "Flip/mirror the canvas"
+    },
+    "MediaEditor__crop--lock": {
+        "message": "Bloķēt",
+        "description": "Lock the aspect ratio"
+    },
+    "MediaEditor__crop--crop": {
+        "message": "Crop",
+        "description": "Performs the crop"
+    },
+    "MyStories__title": {
+        "message": "Mani stāsti",
+        "description": "Title for the my stories list"
+    },
+    "MyStories__story": {
+        "message": "Your story",
+        "description": "aria-label for each one of your stories"
+    },
+    "MyStories__download": {
+        "message": "Download story",
+        "description": "aria-label for the download button"
+    },
+    "MyStories__more": {
+        "message": "More options",
+        "description": "aria-label for the more button"
+    },
+    "MyStories__views--singular": {
+        "message": "$num$ view",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__views--plural": {
+        "message": "$num$ views",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "16"
+            }
+        }
+    },
+    "MyStories__replies--singular": {
+        "message": "$num$ reply",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__replies--plural": {
+        "message": "$num$ replies",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "MyStories__delete": {
+        "message": "Delete this story? It will also be deleted for everyone who received it.",
+        "description": "Confirmation dialog description text for deleting a story"
+    },
+    "Stories__title": {
+        "message": "Stāsti",
+        "description": "Title for the stories list"
+    },
+    "Stories__mine": {
+        "message": "Mani stāsti",
+        "description": "Label for your stories"
+    },
+    "Stories__add": {
+        "message": "Pievienot stāstu",
+        "description": "Description hint to add a story"
+    },
+    "Stories__hidden-stories": {
+        "message": "Paslēptie stāsti",
+        "description": "Button label to go to hidden stories pane"
+    },
+    "Stories__list-empty": {
+        "message": "No recent stories to show right now",
+        "description": "Description for when there are no stories to show"
+    },
+    "Stories__placeholder--text": {
+        "message": "Click to view a story",
+        "description": "Placeholder label for the story view"
+    },
+    "Stories__from-to-group": {
+        "message": "$name$ to $group$",
+        "description": "Title for someone sending a story to a group",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Elle"
+            },
+            "group": {
+                "content": "$2",
+                "example": "Family"
+            }
+        }
+    },
+    "StoryViewer__reply": {
+        "message": "Atbildēt",
+        "description": "Button label to reply to a story"
+    },
+    "StoryViewsNRepliesModal__placeholder": {
+        "message": "Type a reply...",
+        "description": "Placeholder text for the story reply modal"
+    },
+    "StoryViewsNRepliesModal__tab--views": {
+        "message": "Skatījumi",
+        "description": "Title for views tab"
+    },
+    "StoryViewsNRepliesModal__tab--replies": {
+        "message": "Atbildes",
+        "description": "Title for replies tab"
+    },
+    "StoryViewsNRepliesModal__react": {
+        "message": "React to story",
+        "description": "aria-label for reaction button"
+    },
+    "StoryViewsNRepliesModal__reacted": {
+        "message": "Reaģēja uz stāstu",
+        "description": "Description of someone reacting to a story"
+    },
+    "StoryListItem__label": {
+        "message": "Story",
+        "description": "aria-label for the story list button"
+    },
+    "StoryListItem__unhide": {
+        "message": "Show stories",
+        "description": "Label for menu item to un-hide the story"
+    },
+    "StoryListItem__hide": {
+        "message": "Paslēpt stāstu",
+        "description": "Label for menu item to hide the story"
+    },
+    "StoryListItem__go-to-chat": {
+        "message": "Doties uz sarunu",
+        "description": "Label for menu item to go to conversation"
+    },
+    "StoryListItem__hide-modal--body": {
+        "message": "Hide story? New story updates from $name$ won’t appear at the top of the stories list anymore.",
+        "description": "Body for the confirmation dialog for hiding a story"
+    },
+    "StoryListItem__hide-modal--confirm": {
+        "message": "Slēpt",
+        "description": "Action button for the confirmation dialog to hide a story"
+    },
+    "StoryImage__error": {
+        "message": "Error displaying image",
+        "description": "aria-label for image errors"
+    },
+    "TextAttachment__preview__link": {
+        "message": "Apmeklēt saiti",
+        "description": "Title for the link preview tooltip"
+    },
+    "WhatsNew__modal-title": {
+        "message": "What's New",
+        "description": "Title for the whats new modal"
+    },
+    "WhatsNew__bugfixes": {
+        "message": "This version contains a number of small tweaks and bug fixes to keep Signal running smoothly.",
+        "description": "Release notes for releases that only include bug fixes"
+    },
+    "WhatsNew__v5.40--1": {
+        "message": "Bug fixes including a fix to an issue that would sometimes make it difficult to click on menus. ",
+        "description": "Release notes for v5.40"
+    },
+    "WhatsNew__v5.40--2": {
+        "message": "Thanks to our open source contributors $dsanders11$ and $yusufsahinhamza$ for contributing to these improvements.",
+        "description": "Release notes for v5.40",
+        "placeholders": {
+            "dsanders11": {
+                "content": "$1",
+                "example": "dsanders11"
+            },
+            "yusufsahinhamza": {
+                "content": "$2",
+                "example": "yusufsahinhamza"
+            }
+        }
     }
 }

@@ -3,42 +3,41 @@
 
 /* eslint-disable max-classes-per-file */
 
-import { Reader } from 'protobufjs';
+import protobuf from '../protobuf/wrap';
 
 import { SignalService as Proto } from '../protobuf';
 import { normalizeUuid } from '../util/normalizeUuid';
-import { typedArrayToArrayBuffer } from '../Crypto';
+import * as log from '../logging/log';
 
 import Avatar = Proto.ContactDetails.IAvatar;
+
+const { Reader } = protobuf;
 
 type OptionalAvatar = { avatar?: Avatar | null };
 
 type DecoderBase<Message extends OptionalAvatar> = {
-  decodeDelimited(reader: Reader): Message | undefined;
+  decodeDelimited(reader: protobuf.Reader): Message | undefined;
 };
 
 export type MessageWithAvatar<Message extends OptionalAvatar> = Omit<
   Message,
   'avatar'
 > & {
-  avatar?: (Avatar & { data: ArrayBuffer }) | null;
+  avatar?: (Avatar & { data: Uint8Array }) | null;
 };
 
 export type ModifiedGroupDetails = MessageWithAvatar<Proto.GroupDetails>;
 
 export type ModifiedContactDetails = MessageWithAvatar<Proto.ContactDetails>;
 
-// TODO: remove once we move away from ArrayBuffers
-const FIXMEU8 = Uint8Array;
-
 class ParserBase<
   Message extends OptionalAvatar,
   Decoder extends DecoderBase<Message>
 > {
-  protected readonly reader: Reader;
+  protected readonly reader: protobuf.Reader;
 
-  constructor(arrayBuffer: ArrayBuffer, private readonly decoder: Decoder) {
-    this.reader = new Reader(new FIXMEU8(arrayBuffer));
+  constructor(bytes: Uint8Array, private readonly decoder: Decoder) {
+    this.reader = new Reader(bytes);
   }
 
   protected decodeDelimited(): MessageWithAvatar<Message> | undefined {
@@ -73,11 +72,11 @@ class ParserBase<
         avatar: {
           ...proto.avatar,
 
-          data: typedArrayToArrayBuffer(avatarData),
+          data: avatarData,
         },
       };
     } catch (error) {
-      window.log.error(
+      log.error(
         'ProtoParser.next error:',
         error && error.stack ? error.stack : error
       );
@@ -90,7 +89,7 @@ export class GroupBuffer extends ParserBase<
   Proto.GroupDetails,
   typeof Proto.GroupDetails
 > {
-  constructor(arrayBuffer: ArrayBuffer) {
+  constructor(arrayBuffer: Uint8Array) {
     super(arrayBuffer, Proto.GroupDetails);
   }
 
@@ -123,7 +122,7 @@ export class ContactBuffer extends ParserBase<
   Proto.ContactDetails,
   typeof Proto.ContactDetails
 > {
-  constructor(arrayBuffer: ArrayBuffer) {
+  constructor(arrayBuffer: Uint8Array) {
     super(arrayBuffer, Proto.ContactDetails);
   }
 

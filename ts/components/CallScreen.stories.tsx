@@ -1,30 +1,33 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
 import { times } from 'lodash';
-import { v4 as generateUuid } from 'uuid';
 import { storiesOf } from '@storybook/react';
 import { boolean, select, number } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
 
+import type { GroupCallRemoteParticipantType } from '../types/Calling';
 import {
   CallMode,
   CallState,
   GroupCallConnectionState,
   GroupCallJoinState,
-  GroupCallRemoteParticipantType,
 } from '../types/Calling';
-import { ConversationType } from '../state/ducks/conversations';
+import type { ConversationType } from '../state/ducks/conversations';
 import { AvatarColors } from '../types/Colors';
-import { CallScreen, PropsType } from './CallScreen';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './CallScreen';
+import { CallScreen } from './CallScreen';
+import { setupI18n } from '../util/setupI18n';
 import { missingCaseError } from '../util/missingCaseError';
-import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
+import {
+  getDefaultConversation,
+  getDefaultConversationWithUuid,
+} from '../test-both/helpers/getDefaultConversation';
 import { fakeGetGroupCallVideoFrameSource } from '../test-both/helpers/fakeGetGroupCallVideoFrameSource';
 import enMessages from '../../_locales/en/messages.json';
 
-const MAX_PARTICIPANTS = 32;
+const MAX_PARTICIPANTS = 64;
 
 const i18n = setupI18n('en', enMessages);
 
@@ -41,6 +44,7 @@ const conversation = getDefaultConversation({
 type OverridePropsBase = {
   hasLocalAudio?: boolean;
   hasLocalVideo?: boolean;
+  amISpeaking?: boolean;
   isInSpeakerView?: boolean;
 };
 
@@ -100,6 +104,7 @@ const createActiveGroupCallProp = (overrideProps: GroupCallOverrideProps) => ({
   peekedParticipants:
     overrideProps.peekedParticipants || overrideProps.remoteParticipants || [],
   remoteParticipants: overrideProps.remoteParticipants || [],
+  speakingDemuxIds: new Set<number>(),
 });
 
 const createActiveCallProp = (
@@ -116,6 +121,7 @@ const createActiveCallProp = (
       'hasLocalVideo',
       overrideProps.hasLocalVideo || false
     ),
+    amISpeaking: boolean('amISpeaking', overrideProps.amISpeaking || false),
     isInSpeakerView: boolean(
       'isInSpeakerView',
       overrideProps.isInSpeakerView || false
@@ -144,16 +150,16 @@ const createProps = (
   activeCall: createActiveCallProp(overrideProps),
   getGroupCallVideoFrameSource: fakeGetGroupCallVideoFrameSource,
   getPresentingSources: action('get-presenting-sources'),
-  hangUp: action('hang-up'),
+  hangUpActiveCall: action('hang-up'),
   i18n,
-  me: {
+  me: getDefaultConversation({
     color: AvatarColors[1],
     id: '6146087e-f7ef-457e-9a8d-47df1fdd6b25',
     name: 'Morty Smith',
     profileName: 'Morty Smith',
     title: 'Morty Smith',
     uuid: '3c134598-eecb-42ab-9ad3-2b0873f771b2',
-  },
+  }),
   openSystemPreferencesAction: action('open-system-preferences-action'),
   setGroupCallVideoRequest: action('set-group-call-video-request'),
   setLocalAudio: action('set-local-audio'),
@@ -285,10 +291,9 @@ const allRemoteParticipants = times(MAX_PARTICIPANTS).map(index => ({
   presenting: false,
   sharingScreen: false,
   videoAspectRatio: 1.3,
-  ...getDefaultConversation({
+  ...getDefaultConversationWithUuid({
     isBlocked: index === 10 || index === MAX_PARTICIPANTS - 1,
     title: `Participant ${index + 1}`,
-    uuid: generateUuid(),
   }),
 }));
 
@@ -299,7 +304,7 @@ story.add('Group call - Many', () => {
         callMode: CallMode.Group,
         remoteParticipants: allRemoteParticipants.slice(
           0,
-          number('Participant count', 3, {
+          number('Participant count', 40, {
             range: true,
             min: 0,
             max: MAX_PARTICIPANTS,

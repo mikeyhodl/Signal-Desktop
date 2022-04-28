@@ -1,18 +1,22 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { RequestInit, Response } from 'node-fetch';
+import type { RequestInit, Response } from 'node-fetch';
 import type { AbortSignal as AbortSignalForNodeFetch } from 'abort-controller';
+import { blobToArrayBuffer } from 'blob-util';
 
+import type { MIMEType } from '../types/MIME';
 import {
   IMAGE_GIF,
   IMAGE_ICO,
   IMAGE_JPEG,
   IMAGE_PNG,
   IMAGE_WEBP,
-  MIMEType,
   stringToMIMEType,
 } from '../types/MIME';
+import type { LoggerType } from '../types/Logging';
+import { scaleImageToLevel } from '../util/scaleImageToLevel';
+import * as log from '../logging/log';
 
 const USER_AGENT = 'WhatsApp/2';
 
@@ -26,9 +30,9 @@ const MAX_CONTENT_TYPE_LENGTH_TO_PARSE = 100;
 
 // Though we'll accept HTML of any Content-Length (including no specified length), we
 //   will only load some of the HTML. So we might start loading a 99 gigabyte HTML page
-//   but only parse the first 500 kilobytes. However, if the Content-Length is less than
+//   but only parse the first 1000 kilobytes. However, if the Content-Length is less than
 //   this, we won't waste space.
-const MAX_HTML_BYTES_TO_LOAD = 500 * 1024;
+const MAX_HTML_BYTES_TO_LOAD = 1000 * 1024;
 
 // `<title>x` is 8 bytes. Nothing else (meta tags, etc) will even fit, so we can ignore
 //   it. This is mostly to protect us against empty response bodies.
@@ -53,7 +57,7 @@ const MAX_DATE = new Date(3000, 0, 1).valueOf();
 
 const emptyContentType = { type: null, charset: null };
 
-type FetchFn = (href: string, init: RequestInit) => Promise<Response>;
+export type FetchFn = (href: string, init: RequestInit) => Promise<Response>;
 
 export type LinkPreviewMetadata = {
   title: string;
@@ -63,7 +67,7 @@ export type LinkPreviewMetadata = {
 };
 
 export type LinkPreviewImage = {
-  data: ArrayBuffer;
+  data: Uint8Array;
   contentType: MIMEType;
 };
 
@@ -75,14 +79,15 @@ type ParsedContentType =
 async function fetchWithRedirects(
   fetchFn: FetchFn,
   href: string,
-  options: RequestInit
+  options: RequestInit,
+  logger: Pick<LoggerType, 'warn'> = log
 ): Promise<Response> {
   const urlsSeen = new Set<string>();
 
   let nextHrefToLoad = href;
   for (let i = 0; i < MAX_REQUEST_COUNT_WITH_REDIRECTS; i += 1) {
     if (urlsSeen.has(nextHrefToLoad)) {
-      window.log.warn('fetchWithRedirects: found a redirect loop');
+      logger.warn('fetchWithRedirects: found a redirect loop');
       throw new Error('redirect loop');
     }
     urlsSeen.add(nextHrefToLoad);
@@ -100,7 +105,7 @@ async function fetchWithRedirects(
 
     const location = response.headers.get('location');
     if (!location) {
-      window.log.warn(
+      logger.warn(
         'fetchWithRedirects: got a redirect status code but no Location header; bailing'
       );
       throw new Error('no location with redirect');
@@ -108,7 +113,7 @@ async function fetchWithRedirects(
 
     const newUrl = maybeParseUrl(location, nextHrefToLoad);
     if (newUrl?.protocol !== 'https:') {
-      window.log.warn(
+      logger.warn(
         'fetchWithRedirects: got a redirect status code and an invalid Location header'
       );
       throw new Error('invalid location');
@@ -117,7 +122,7 @@ async function fetchWithRedirects(
     nextHrefToLoad = newUrl.href;
   }
 
-  window.log.warn('fetchWithRedirects: too many redirects');
+  logger.warn('fetchWithRedirects: too many redirects');
   throw new Error('too many redirects');
 }
 
@@ -135,7 +140,7 @@ function maybeParseUrl(href: string, base: string): null | URL {
 
 /**
  * Parses a Content-Type header value. Refer to [RFC 2045][0] for details (though this is
- * a simplified version for link previews.
+ * a simplified version for link previews).
  * [0]: https://tools.ietf.org/html/rfc2045
  */
 const parseContentType = (headerValue: string | null): ParsedContentType => {
@@ -282,14 +287,13 @@ const parseHtmlBytes = (
 
 const getHtmlDocument = async (
   body: AsyncIterable<string | Uint8Array>,
-  contentLength: number,
   httpCharset: string | null,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  logger: Pick<LoggerType, 'warn'> = log
 ): Promise<HTMLDocument> => {
   let result: HTMLDocument = emptyHtmlDocument();
 
-  const maxHtmlBytesToLoad = Math.min(contentLength, MAX_HTML_BYTES_TO_LOAD);
-  const buffer = new Uint8Array(new ArrayBuffer(maxHtmlBytesToLoad));
+  const buffer = new Uint8Array(MAX_HTML_BYTES_TO_LOAD);
   let bytesLoadedSoFar = 0;
 
   try {
@@ -306,22 +310,19 @@ const getHtmlDocument = async (
         chunk = Buffer.from(chunk, httpCharset || 'utf8');
       }
 
-      const truncatedChunk = chunk.slice(
-        0,
-        maxHtmlBytesToLoad - bytesLoadedSoFar
-      );
+      const truncatedChunk = chunk.slice(0, buffer.length - bytesLoadedSoFar);
       buffer.set(truncatedChunk, bytesLoadedSoFar);
       bytesLoadedSoFar += truncatedChunk.byteLength;
 
       result = parseHtmlBytes(buffer.slice(0, bytesLoadedSoFar), httpCharset);
 
-      const hasLoadedMaxBytes = bytesLoadedSoFar >= maxHtmlBytesToLoad;
+      const hasLoadedMaxBytes = bytesLoadedSoFar >= buffer.length;
       if (hasLoadedMaxBytes) {
         break;
       }
     }
   } catch (err) {
-    window.log.warn(
+    logger.warn(
       'getHtmlDocument: error when reading body; continuing with what we got'
     );
   }
@@ -365,14 +366,13 @@ const getLinkHrefAttribute = (
 
 const parseMetadata = (
   document: HTMLDocument,
-  href: string
+  href: string,
+  logger: Pick<LoggerType, 'warn'> = log
 ): LinkPreviewMetadata | null => {
   const title =
     getOpenGraphContent(document, ['og:title']) || document.title.trim();
   if (!title) {
-    window.log.warn(
-      "parseMetadata: HTML document doesn't have a title; bailing"
-    );
+    logger.warn("parseMetadata: HTML document doesn't have a title; bailing");
     return null;
   }
 
@@ -418,8 +418,8 @@ const parseMetadata = (
 };
 
 /**
- * This attempts to fetch link preview metadata, returning `null` if it cannot be found
- * for any reason.
+ * This attempts to fetch link preview metadata, resolving with `null` if it cannot
+ * be found for any reason.
  *
  * NOTE: This does NOT validate the incoming URL for safety. For example, it may fetch an
  * insecure HTTP href. It also does not offer a timeout; that is up to the caller.
@@ -437,40 +437,46 @@ const parseMetadata = (
 export async function fetchLinkPreviewMetadata(
   fetchFn: FetchFn,
   href: string,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  logger: Pick<LoggerType, 'warn'> = log
 ): Promise<null | LinkPreviewMetadata> {
   let response: Response;
   try {
-    response = await fetchWithRedirects(fetchFn, href, {
-      headers: {
-        Accept: 'text/html,application/xhtml+xml',
-        'User-Agent': USER_AGENT,
+    response = await fetchWithRedirects(
+      fetchFn,
+      href,
+      {
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+          'User-Agent': USER_AGENT,
+        },
+        signal: abortSignal as AbortSignalForNodeFetch,
       },
-      signal: abortSignal as AbortSignalForNodeFetch,
-    });
+      logger
+    );
   } catch (err) {
-    window.log.warn(
+    logger.warn(
       'fetchLinkPreviewMetadata: failed to fetch link preview HTML; bailing'
     );
     return null;
   }
 
   if (!response.ok) {
-    window.log.warn(
+    logger.warn(
       `fetchLinkPreviewMetadata: got a ${response.status} status code; bailing`
     );
     return null;
   }
 
   if (!response.body) {
-    window.log.warn('fetchLinkPreviewMetadata: no response body; bailing');
+    logger.warn('fetchLinkPreviewMetadata: no response body; bailing');
     return null;
   }
 
   if (
     !isInlineContentDisposition(response.headers.get('Content-Disposition'))
   ) {
-    window.log.warn(
+    logger.warn(
       'fetchLinkPreviewMetadata: Content-Disposition header is not inline; bailing'
     );
     return null;
@@ -484,7 +490,7 @@ export async function fetchLinkPreviewMetadata(
     response.headers.get('Content-Length')
   );
   if (contentLength < MIN_HTML_CONTENT_LENGTH) {
-    window.log.warn(
+    logger.warn(
       'fetchLinkPreviewMetadata: Content-Length is too short; bailing'
     );
     return null;
@@ -492,17 +498,15 @@ export async function fetchLinkPreviewMetadata(
 
   const contentType = parseContentType(response.headers.get('Content-Type'));
   if (contentType.type !== 'text/html') {
-    window.log.warn(
-      'fetchLinkPreviewMetadata: Content-Type is not HTML; bailing'
-    );
+    logger.warn('fetchLinkPreviewMetadata: Content-Type is not HTML; bailing');
     return null;
   }
 
   const document = await getHtmlDocument(
     response.body,
-    contentLength,
     contentType.charset,
-    abortSignal
+    abortSignal,
+    logger
   );
 
   // [The Node docs about `ReadableStream.prototype[Symbol.asyncIterator]`][0] say that
@@ -522,11 +526,11 @@ export async function fetchLinkPreviewMetadata(
     return null;
   }
 
-  return parseMetadata(document, response.url);
+  return parseMetadata(document, response.url, logger);
 }
 
 /**
- * This attempts to fetch an image, returning `null` if it fails for any reason.
+ * This attempts to fetch an image, resolving with `null` if it fails for any reason.
  *
  * NOTE: This does NOT validate the incoming URL for safety. For example, it may fetch an
  * insecure HTTP href. It also does not offer a timeout; that is up to the caller.
@@ -534,19 +538,25 @@ export async function fetchLinkPreviewMetadata(
 export async function fetchLinkPreviewImage(
   fetchFn: FetchFn,
   href: string,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  logger: Pick<LoggerType, 'warn'> = log
 ): Promise<null | LinkPreviewImage> {
   let response: Response;
   try {
-    response = await fetchWithRedirects(fetchFn, href, {
-      headers: {
-        'User-Agent': USER_AGENT,
+    response = await fetchWithRedirects(
+      fetchFn,
+      href,
+      {
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+        size: MAX_IMAGE_CONTENT_LENGTH,
+        signal: abortSignal as AbortSignalForNodeFetch,
       },
-      size: MAX_IMAGE_CONTENT_LENGTH,
-      signal: abortSignal as AbortSignalForNodeFetch,
-    });
+      logger
+    );
   } catch (err) {
-    window.log.warn('fetchLinkPreviewImage: failed to fetch image; bailing');
+    logger.warn('fetchLinkPreviewImage: failed to fetch image; bailing');
     return null;
   }
 
@@ -555,7 +565,7 @@ export async function fetchLinkPreviewImage(
   }
 
   if (!response.ok) {
-    window.log.warn(
+    logger.warn(
       `fetchLinkPreviewImage: got a ${response.status} status code; bailing`
     );
     return null;
@@ -565,13 +575,11 @@ export async function fetchLinkPreviewImage(
     response.headers.get('Content-Length')
   );
   if (contentLength < MIN_IMAGE_CONTENT_LENGTH) {
-    window.log.warn(
-      'fetchLinkPreviewImage: Content-Length is too short; bailing'
-    );
+    logger.warn('fetchLinkPreviewImage: Content-Length is too short; bailing');
     return null;
   }
   if (contentLength > MAX_IMAGE_CONTENT_LENGTH) {
-    window.log.warn(
+    logger.warn(
       'fetchLinkPreviewImage: Content-Length is too large or is unset; bailing'
     );
     return null;
@@ -581,22 +589,35 @@ export async function fetchLinkPreviewImage(
     response.headers.get('Content-Type')
   );
   if (!contentType || !VALID_IMAGE_MIME_TYPES.has(contentType)) {
-    window.log.warn(
-      'fetchLinkPreviewImage: Content-Type is not an image; bailing'
-    );
+    logger.warn('fetchLinkPreviewImage: Content-Type is not an image; bailing');
     return null;
   }
 
-  let data: ArrayBuffer;
+  let data: Uint8Array;
   try {
-    data = await response.arrayBuffer();
+    data = await response.buffer();
   } catch (err) {
-    window.log.warn('fetchLinkPreviewImage: failed to read body; bailing');
+    logger.warn('fetchLinkPreviewImage: failed to read body; bailing');
     return null;
   }
 
   if (abortSignal.aborted) {
     return null;
+  }
+
+  // Scale link preview image
+  if (contentType !== IMAGE_GIF) {
+    const dataBlob = new Blob([data], {
+      type: contentType,
+    });
+    const { blob: xcodedDataBlob } = await scaleImageToLevel(
+      dataBlob,
+      contentType,
+      false
+    );
+    const xcodedDataArrayBuffer = await blobToArrayBuffer(xcodedDataBlob);
+
+    data = new Uint8Array(xcodedDataArrayBuffer);
   }
 
   return { data, contentType };

@@ -5,14 +5,16 @@
 
 import { Collection, Model } from 'backbone';
 
-import { MessageModel } from '../models/messages';
+import type { MessageModel } from '../models/messages';
 import { ReadStatus } from '../messages/MessageReadStatus';
 import { markViewed } from '../services/MessageUpdater';
-import { isIncoming } from '../state/selectors/message';
+import { isIncoming, isStory } from '../state/selectors/message';
+import { notificationService } from '../services/notifications';
+import * as log from '../logging/log';
 
-type ViewSyncAttributesType = {
+export type ViewSyncAttributesType = {
   senderId: string;
-  senderE164: string;
+  senderE164?: string;
   senderUuid: string;
   timestamp: number;
   viewedAt: number;
@@ -43,7 +45,7 @@ export class ViewSyncs extends Collection {
       );
     });
     if (syncs.length) {
-      window.log.info(
+      log.info(
         `Found ${syncs.length} early view sync(s) for message ${message.get(
           'sent_at'
         )}`
@@ -56,23 +58,23 @@ export class ViewSyncs extends Collection {
   async onSync(sync: ViewSyncModel): Promise<void> {
     try {
       const messages = await window.Signal.Data.getMessagesBySentAt(
-        sync.get('timestamp'),
-        {
-          MessageCollection: window.Whisper.MessageCollection,
-        }
+        sync.get('timestamp')
       );
 
       const found = messages.find(item => {
         const senderId = window.ConversationController.ensureContactIds({
-          e164: item.get('source'),
-          uuid: item.get('sourceUuid'),
+          e164: item.source,
+          uuid: item.sourceUuid,
         });
 
-        return isIncoming(item.attributes) && senderId === sync.get('senderId');
+        return (
+          (isIncoming(item) || isStory(item)) &&
+          senderId === sync.get('senderId')
+        );
       });
 
       if (!found) {
-        window.log.info(
+        log.info(
           'Nothing found for view sync',
           sync.get('senderId'),
           sync.get('senderE164'),
@@ -82,7 +84,7 @@ export class ViewSyncs extends Collection {
         return;
       }
 
-      window.Whisper.Notifications.removeBy({ messageId: found.id });
+      notificationService.removeBy({ messageId: found.id });
 
       const message = window.MessageController.register(found.id, found);
 
@@ -92,7 +94,7 @@ export class ViewSyncs extends Collection {
 
       this.remove(sync);
     } catch (error) {
-      window.log.error(
+      log.error(
         'ViewSyncs.onSync error:',
         error && error.stack ? error.stack : error
       );

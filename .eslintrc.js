@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Signal Messenger, LLC
+// Copyright 2018-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // For reference: https://github.com/airbnb/javascript
@@ -23,6 +23,7 @@ const rules = {
 
   // it helps readability to put public API at top,
   'no-use-before-define': 'off',
+  '@typescript-eslint/no-use-before-define': 'off',
 
   // useful for unused or internal fields
   'no-underscore-dangle': 'off',
@@ -44,6 +45,8 @@ const rules = {
   ],
 
   'no-continue': 'off',
+  'lines-between-class-members': 'off',
+  'class-methods-use-this': 'off',
 
   // Prettier overrides:
   'arrow-parens': 'off',
@@ -114,6 +117,21 @@ const typescriptRules = {
 
   '@typescript-eslint/array-type': ['error', { default: 'generic' }],
 
+  'no-restricted-imports': 'off',
+  '@typescript-eslint/no-restricted-imports': [
+    'error',
+    {
+      paths: [
+        {
+          name: 'chai',
+          importNames: ['expect', 'should', 'Should'],
+          message: 'Please use assert',
+          allowTypeImports: true,
+        },
+      ],
+    },
+  ],
+
   // Overrides recommended by typescript-eslint
   //   https://github.com/typescript-eslint/typescript-eslint/releases/tag/v4.0.0
   '@typescript-eslint/no-redeclare': 'error',
@@ -127,6 +145,8 @@ const typescriptRules = {
 
   // Upgrade from a warning
   '@typescript-eslint/explicit-module-boundary-types': 'error',
+
+  '@typescript-eslint/consistent-type-imports': 'error',
 
   // Already enforced by TypeScript
   'consistent-return': 'off',

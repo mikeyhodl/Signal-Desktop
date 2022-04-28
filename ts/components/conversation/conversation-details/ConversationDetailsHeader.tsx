@@ -1,87 +1,155 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState } from 'react';
 
 import { Avatar } from '../../Avatar';
 import { AvatarLightbox } from '../../AvatarLightbox';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { ConversationType } from '../../../state/ducks/conversations';
 import { Emojify } from '../Emojify';
 import { GroupDescription } from '../GroupDescription';
-import { GroupV2Membership } from './ConversationDetailsMembershipList';
-import { LocalizerType } from '../../../types/Util';
+import { About } from '../About';
+import type { GroupV2Membership } from './ConversationDetailsMembershipList';
+import type { LocalizerType, ThemeType } from '../../../types/Util';
 import { bemGenerator } from './util';
+import { BadgeDialog } from '../../BadgeDialog';
+import type { BadgeType } from '../../../badges/types';
 
 export type Props = {
+  areWeASubscriber: boolean;
+  badges?: ReadonlyArray<BadgeType>;
   canEdit: boolean;
   conversation: ConversationType;
   i18n: LocalizerType;
+  isGroup: boolean;
+  isMe: boolean;
   memberships: Array<GroupV2Membership>;
   startEditing: (isGroupTitle: boolean) => void;
+  theme: ThemeType;
 };
 
-const bem = bemGenerator('module-conversation-details-header');
+enum ConversationDetailsHeaderActiveModal {
+  ShowingAvatar,
+  ShowingBadges,
+}
+
+const bem = bemGenerator('ConversationDetails-header');
 
 export const ConversationDetailsHeader: React.ComponentType<Props> = ({
+  areWeASubscriber,
+  badges,
   canEdit,
   conversation,
   i18n,
+  isGroup,
+  isMe,
   memberships,
   startEditing,
+  theme,
 }) => {
-  const [showingAvatar, setShowingAvatar] = useState(false);
+  const [activeModal, setActiveModal] = useState<
+    undefined | ConversationDetailsHeaderActiveModal
+  >();
 
+  let preferredBadge: undefined | BadgeType;
   let subtitle: ReactNode;
-  if (conversation.groupDescription) {
+  if (isGroup) {
+    if (conversation.groupDescription) {
+      subtitle = (
+        <GroupDescription
+          i18n={i18n}
+          text={conversation.groupDescription}
+          title={conversation.title}
+        />
+      );
+    } else if (canEdit) {
+      subtitle = i18n('ConversationDetailsHeader--add-group-description');
+    } else {
+      subtitle = i18n('ConversationDetailsHeader--members', [
+        memberships.length.toString(),
+      ]);
+    }
+  } else if (!isMe) {
     subtitle = (
-      <GroupDescription
-        i18n={i18n}
-        text={conversation.groupDescription}
-        title={conversation.title}
-      />
+      <>
+        <div className={bem('subtitle__about')}>
+          <About text={conversation.about} />
+        </div>
+        <div className={bem('subtitle__phone-number')}>
+          {conversation.phoneNumber}
+        </div>
+      </>
     );
-  } else if (canEdit) {
-    subtitle = i18n('ConversationDetailsHeader--add-group-description');
-  } else {
-    subtitle = i18n('ConversationDetailsHeader--members', [
-      memberships.length.toString(),
-    ]);
+    preferredBadge = badges?.[0];
   }
 
   const avatar = (
     <Avatar
-      conversationType="group"
+      badge={preferredBadge}
+      conversationType={conversation.type}
       i18n={i18n}
       size={80}
       {...conversation}
-      onClick={() => setShowingAvatar(true)}
+      noteToSelf={isMe}
+      onClick={() => {
+        setActiveModal(ConversationDetailsHeaderActiveModal.ShowingAvatar);
+      }}
+      onClickBadge={() => {
+        setActiveModal(ConversationDetailsHeaderActiveModal.ShowingBadges);
+      }}
       sharedGroupNames={[]}
+      theme={theme}
     />
   );
 
   const contents = (
     <div>
       <div className={bem('title')}>
-        <Emojify text={conversation.title} />
+        <Emojify text={isMe ? i18n('noteToSelf') : conversation.title} />
       </div>
     </div>
   );
 
-  const avatarLightbox = showingAvatar ? (
-    <AvatarLightbox
-      avatarColor={conversation.color}
-      avatarPath={conversation.avatarPath}
-      conversationTitle={conversation.title}
-      i18n={i18n}
-      isGroup
-      onClose={() => setShowingAvatar(false)}
-    />
-  ) : null;
+  let modal: ReactNode;
+  switch (activeModal) {
+    case ConversationDetailsHeaderActiveModal.ShowingAvatar:
+      modal = (
+        <AvatarLightbox
+          avatarColor={conversation.color}
+          avatarPath={conversation.avatarPath}
+          conversationTitle={conversation.title}
+          i18n={i18n}
+          isGroup={isGroup}
+          onClose={() => {
+            setActiveModal(undefined);
+          }}
+        />
+      );
+      break;
+    case ConversationDetailsHeaderActiveModal.ShowingBadges:
+      modal = (
+        <BadgeDialog
+          areWeASubscriber={areWeASubscriber}
+          badges={badges || []}
+          firstName={conversation.firstName}
+          i18n={i18n}
+          onClose={() => {
+            setActiveModal(undefined);
+          }}
+          title={conversation.title}
+        />
+      );
+      break;
+    default:
+      modal = null;
+      break;
+  }
 
   if (canEdit) {
     return (
       <div className={bem('root')}>
-        {avatarLightbox}
+        {modal}
         {avatar}
         <button
           type="button"
@@ -115,7 +183,7 @@ export const ConversationDetailsHeader: React.ComponentType<Props> = ({
 
   return (
     <div className={bem('root')}>
-      {avatarLightbox}
+      {modal}
       {avatar}
       {contents}
       <div className={bem('subtitle')}>{subtitle}</div>

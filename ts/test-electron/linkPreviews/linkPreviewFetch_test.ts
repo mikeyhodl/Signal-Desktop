@@ -1,14 +1,14 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
+import { Response } from 'node-fetch';
 import * as sinon from 'sinon';
 import * as fs from 'fs';
 import * as path from 'path';
 import AbortController from 'abort-controller';
 import { IMAGE_JPEG, stringToMIMEType } from '../../types/MIME';
-
-import { typedArrayToArrayBuffer } from '../../Crypto';
+import type { LoggerType } from '../../types/Logging';
 
 import {
   fetchLinkPreviewImage,
@@ -24,16 +24,12 @@ describe('link preview fetching', () => {
     return sinon.stub();
   }
 
-  let sandbox: sinon.SinonSandbox;
   let warn: sinon.SinonStub;
+  let logger: Pick<LoggerType, 'warn'>;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    warn = sandbox.stub(window.log, 'warn');
-  });
-
-  afterEach(() => {
-    sandbox.restore();
+    warn = sinon.stub();
+    logger = { warn };
   });
 
   describe('fetchLinkPreviewMetadata', () => {
@@ -127,28 +123,23 @@ describe('link preview fetching', () => {
     it('handles image href sources in the correct order', async () => {
       const orderedImageHrefSources = [
         {
-          tag:
-            '<meta property="og:image" content="https://example.com/og-image.jpg">',
+          tag: '<meta property="og:image" content="https://example.com/og-image.jpg">',
           expectedHref: 'https://example.com/og-image.jpg',
         },
         {
-          tag:
-            '<meta property="og:image:url" content="https://example.com/og-image-url.jpg">',
+          tag: '<meta property="og:image:url" content="https://example.com/og-image-url.jpg">',
           expectedHref: 'https://example.com/og-image-url.jpg',
         },
         {
-          tag:
-            '<link rel="apple-touch-icon" href="https://example.com/apple-touch-icon.jpg">',
+          tag: '<link rel="apple-touch-icon" href="https://example.com/apple-touch-icon.jpg">',
           expectedHref: 'https://example.com/apple-touch-icon.jpg',
         },
         {
-          tag:
-            '<link rel="apple-touch-icon-precomposed" href="https://example.com/apple-touch-icon-precomposed.jpg">',
+          tag: '<link rel="apple-touch-icon-precomposed" href="https://example.com/apple-touch-icon-precomposed.jpg">',
           expectedHref: 'https://example.com/apple-touch-icon-precomposed.jpg',
         },
         {
-          tag:
-            '<link rel="shortcut icon" href="https://example.com/shortcut-icon.jpg">',
+          tag: '<link rel="shortcut icon" href="https://example.com/shortcut-icon.jpg">',
           expectedHref: 'https://example.com/shortcut-icon.jpg',
         },
         {
@@ -201,7 +192,8 @@ describe('link preview fetching', () => {
       await fetchLinkPreviewMetadata(
         fakeFetch,
         'https://example.com',
-        new AbortController().signal
+        new AbortController().signal,
+        logger
       );
 
       sinon.assert.notCalled(warn);
@@ -234,7 +226,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -254,7 +247,8 @@ describe('link preview fetching', () => {
             await fetchLinkPreviewMetadata(
               fakeFetch,
               'https://example.com',
-              new AbortController().signal
+              new AbortController().signal,
+              logger
             )
           );
 
@@ -439,7 +433,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -456,7 +451,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -478,7 +474,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -522,7 +519,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -803,7 +801,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         ),
         'title',
         'foo bar'
@@ -843,7 +842,7 @@ describe('link preview fetching', () => {
       sinon.assert.notCalled(shouldNeverBeCalled);
     });
 
-    it('stops reading bodies after 500 kilobytes', async function test() {
+    it('stops reading bodies after 1000 kilobytes', async function test() {
       const shouldNeverBeCalled = sinon.stub();
 
       const fakeFetch = stub().resolves(
@@ -853,6 +852,9 @@ describe('link preview fetching', () => {
               '<!doctype html><head><title>foo bar</title>'
             );
             const spaces = new Uint8Array(250 * 1024).fill(32);
+            yield spaces;
+            yield spaces;
+            yield spaces;
             yield spaces;
             yield spaces;
             shouldNeverBeCalled();
@@ -895,7 +897,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewMetadata(
           fakeFetch,
           'https://example.com',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -1148,15 +1151,14 @@ describe('link preview fetching', () => {
         );
 
         assert.deepEqual(
-          await fetchLinkPreviewImage(
-            fakeFetch,
-            'https://example.com/img',
-            new AbortController().signal
-          ),
-          {
-            data: typedArrayToArrayBuffer(fixture),
-            contentType: stringToMIMEType(contentType),
-          }
+          (
+            await fetchLinkPreviewImage(
+              fakeFetch,
+              'https://example.com/img',
+              new AbortController().signal
+            )
+          )?.contentType,
+          stringToMIMEType(contentType)
         );
       });
     });
@@ -1168,7 +1170,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewImage(
           fakeFetch,
           'https://example.com/img',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -1198,7 +1201,8 @@ describe('link preview fetching', () => {
             await fetchLinkPreviewImage(
               fakeFetch,
               'https://example.com/img',
-              new AbortController().signal
+              new AbortController().signal,
+              logger
             )
           );
 
@@ -1216,7 +1220,7 @@ describe('link preview fetching', () => {
 
       const fakeFetch = stub();
       fakeFetch.onFirstCall().resolves(
-        new Response(null, {
+        new Response(Buffer.from(''), {
           status: 301,
           headers: {
             Location: '/result.jpg',
@@ -1233,15 +1237,14 @@ describe('link preview fetching', () => {
       );
 
       assert.deepEqual(
-        await fetchLinkPreviewImage(
-          fakeFetch,
-          'https://example.com/img',
-          new AbortController().signal
-        ),
-        {
-          data: typedArrayToArrayBuffer(fixture),
-          contentType: IMAGE_JPEG,
-        }
+        (
+          await fetchLinkPreviewImage(
+            fakeFetch,
+            'https://example.com/img',
+            new AbortController().signal
+          )
+        )?.contentType,
+        IMAGE_JPEG
       );
 
       sinon.assert.calledTwice(fakeFetch);
@@ -1266,7 +1269,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewImage(
           fakeFetch,
           'https://example.com/img',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -1291,7 +1295,8 @@ describe('link preview fetching', () => {
         await fetchLinkPreviewImage(
           fakeFetch,
           'https://example.com/img',
-          new AbortController().signal
+          new AbortController().signal,
+          logger
         )
       );
 
@@ -1321,7 +1326,8 @@ describe('link preview fetching', () => {
               await fetchLinkPreviewImage(
                 fakeFetch,
                 'https://example.com/img',
-                new AbortController().signal
+                new AbortController().signal,
+                logger
               )
             );
 
@@ -1335,7 +1341,7 @@ describe('link preview fetching', () => {
     });
 
     it('sends WhatsApp as the User-Agent for compatibility', async () => {
-      const fakeFetch = stub().resolves(new Response(null));
+      const fakeFetch = stub().resolves(new Response(Buffer.from('')));
 
       await fetchLinkPreviewImage(
         fakeFetch,
@@ -1367,7 +1373,7 @@ describe('link preview fetching', () => {
           },
         });
         sinon
-          .stub(response, 'arrayBuffer')
+          .stub(response, 'buffer')
           .rejects(new Error('Should not be called'));
         sinon.stub(response, 'blob').rejects(new Error('Should not be called'));
         sinon.stub(response, 'text').rejects(new Error('Should not be called'));
@@ -1401,9 +1407,9 @@ describe('link preview fetching', () => {
             'Content-Length': fixture.length.toString(),
           },
         });
-        const oldArrayBufferMethod = response.arrayBuffer.bind(response);
-        sinon.stub(response, 'arrayBuffer').callsFake(async () => {
-          const data = await oldArrayBufferMethod();
+        const oldBufferMethod = response.buffer.bind(response);
+        sinon.stub(response, 'buffer').callsFake(async () => {
+          const data = await oldBufferMethod();
           abortController.abort();
           return data;
         });

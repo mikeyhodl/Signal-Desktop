@@ -1,52 +1,30 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ComponentProps } from 'react';
 import { connect } from 'react-redux';
 
+import type { ExternalProps as MessageDetailProps } from '../../components/conversation/MessageDetail';
 import { MessageDetail } from '../../components/conversation/MessageDetail';
 
 import { mapDispatchToProps } from '../actions';
-import { StateType } from '../reducer';
-import { getIntl, getInteractionMode } from '../selectors/user';
+import type { StateType } from '../reducer';
+import { getPreferredBadgeSelector } from '../selectors/badges';
+import { getIntl, getInteractionMode, getTheme } from '../selectors/user';
 import { renderAudioAttachment } from './renderAudioAttachment';
 import { renderEmojiPicker } from './renderEmojiPicker';
+import { renderReactionPicker } from './renderReactionPicker';
 import { getContactNameColorSelector } from '../selectors/conversations';
 
-type MessageDetailProps = ComponentProps<typeof MessageDetail>;
-
 export { Contact } from '../../components/conversation/MessageDetail';
-
-export type OwnProps = Pick<
+export type OwnProps = Omit<
   MessageDetailProps,
-  | 'clearSelectedMessage'
-  | 'checkForAccount'
-  | 'contacts'
-  | 'deleteMessage'
-  | 'deleteMessageForEveryone'
-  | 'displayTapToViewMessage'
-  | 'downloadAttachment'
-  | 'doubleCheckMissingQuoteReference'
-  | 'errors'
-  | 'kickOffAttachmentDownload'
-  | 'markAttachmentAsCorrupted'
-  | 'markViewed'
-  | 'message'
-  | 'openConversation'
-  | 'openLink'
-  | 'reactToMessage'
-  | 'receivedAt'
-  | 'replyToMessage'
-  | 'retrySend'
-  | 'sendAnyway'
-  | 'sentAt'
-  | 'showContactDetail'
-  | 'showContactModal'
-  | 'showExpiredIncomingTapToViewToast'
-  | 'showExpiredOutgoingTapToViewToast'
-  | 'showForwardMessageModal'
-  | 'showSafetyNumber'
-  | 'showVisualAttachment'
+  | 'getPreferredBadge'
+  | 'i18n'
+  | 'interactionMode'
+  | 'renderAudioAttachment'
+  | 'renderEmojiPicker'
+  | 'renderReactionPicker'
+  | 'theme'
 >;
 
 const mapStateToProps = (
@@ -60,16 +38,9 @@ const mapStateToProps = (
     receivedAt,
     sentAt,
 
-    sendAnyway,
     showSafetyNumber,
 
-    checkForAccount,
-    clearSelectedMessage,
-    deleteMessage,
-    deleteMessageForEveryone,
     displayTapToViewMessage,
-    downloadAttachment,
-    doubleCheckMissingQuoteReference,
     kickOffAttachmentDownload,
     markAttachmentAsCorrupted,
     markViewed,
@@ -77,6 +48,7 @@ const mapStateToProps = (
     openLink,
     reactToMessage,
     replyToMessage,
+    retryDeleteForEveryone,
     retrySend,
     showContactDetail,
     showContactModal,
@@ -84,6 +56,7 @@ const mapStateToProps = (
     showExpiredOutgoingTapToViewToast,
     showForwardMessageModal,
     showVisualAttachment,
+    startConversation,
   } = props;
 
   const contactNameColor =
@@ -94,6 +67,8 @@ const mapStateToProps = (
         )
       : undefined;
 
+  const getPreferredBadge = getPreferredBadgeSelector(state);
+
   return {
     contacts,
     contactNameColor,
@@ -102,19 +77,14 @@ const mapStateToProps = (
     receivedAt,
     sentAt,
 
+    getPreferredBadge,
     i18n: getIntl(state),
     interactionMode: getInteractionMode(state),
+    theme: getTheme(state),
 
-    sendAnyway,
     showSafetyNumber,
 
-    checkForAccount,
-    clearSelectedMessage,
-    deleteMessage,
-    deleteMessageForEveryone,
     displayTapToViewMessage,
-    downloadAttachment,
-    doubleCheckMissingQuoteReference,
     kickOffAttachmentDownload,
     markAttachmentAsCorrupted,
     markViewed,
@@ -123,7 +93,9 @@ const mapStateToProps = (
     reactToMessage,
     renderAudioAttachment,
     renderEmojiPicker,
+    renderReactionPicker,
     replyToMessage,
+    retryDeleteForEveryone,
     retrySend,
     showContactDetail,
     showContactModal,
@@ -131,6 +103,7 @@ const mapStateToProps = (
     showExpiredOutgoingTapToViewToast,
     showForwardMessageModal,
     showVisualAttachment,
+    startConversation,
   };
 };
 

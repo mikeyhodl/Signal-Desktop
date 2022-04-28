@@ -6,19 +6,23 @@
 import { isEqual } from 'lodash';
 import { Collection, Model } from 'backbone';
 
-import { ConversationModel } from '../models/conversations';
-import { MessageModel } from '../models/messages';
-import { MessageModelCollectionType } from '../model-types.d';
-import { isOutgoing } from '../state/selectors/message';
+import type { ConversationModel } from '../models/conversations';
+import type { MessageModel } from '../models/messages';
+import type { MessageAttributesType } from '../model-types.d';
+import { isOutgoing, isStory } from '../state/selectors/message';
 import { isDirectConversation } from '../util/whatTypeOfConversation';
 import { getOwn } from '../util/getOwn';
 import { missingCaseError } from '../util/missingCaseError';
+import { createWaitBatcher } from '../util/waitBatcher';
+import type { UUIDStringType } from '../types/UUID';
 import {
   SendActionType,
   SendStatus,
   sendStateReducer,
 } from '../messages/MessageSendState';
+import type { DeleteSentProtoRecipientOptionsType } from '../sql/Interface';
 import dataInterface from '../sql/Client';
+import * as log from '../logging/log';
 
 const { deleteSentProtoRecipient } = dataInterface;
 
@@ -28,9 +32,10 @@ export enum MessageReceiptType {
   View = 'View',
 }
 
-type MessageReceiptAttributesType = {
+export type MessageReceiptAttributesType = {
   messageSentAt: number;
   receiptTimestamp: number;
+  sourceUuid: UUIDStringType;
   sourceConversationId: string;
   sourceDevice: number;
   type: MessageReceiptType;
@@ -40,31 +45,42 @@ class MessageReceiptModel extends Model<MessageReceiptAttributesType> {}
 
 let singleton: MessageReceipts | undefined;
 
+const deleteSentProtoBatcher = createWaitBatcher({
+  name: 'deleteSentProtoBatcher',
+  wait: 250,
+  maxSize: 30,
+  async processBatch(items: Array<DeleteSentProtoRecipientOptionsType>) {
+    log.info(
+      `MessageReceipts: Batching ${items.length} sent proto recipients deletes`
+    );
+    await deleteSentProtoRecipient(items);
+  },
+});
+
 async function getTargetMessage(
   sourceId: string,
-  messages: MessageModelCollectionType
+  sourceUuid: UUIDStringType,
+  messages: ReadonlyArray<MessageAttributesType>
 ): Promise<MessageModel | null> {
   if (messages.length === 0) {
     return null;
   }
   const message = messages.find(
     item =>
-      isOutgoing(item.attributes) && sourceId === item.get('conversationId')
+      (isOutgoing(item) || isStory(item)) && sourceId === item.conversationId
   );
   if (message) {
     return window.MessageController.register(message.id, message);
   }
 
-  const groups = await window.Signal.Data.getAllGroupsInvolvingId(sourceId, {
-    ConversationCollection: window.Whisper.ConversationCollection,
-  });
+  const groups = await window.Signal.Data.getAllGroupsInvolvingUuid(sourceUuid);
 
-  const ids = groups.pluck('id');
+  const ids = groups.map(item => item.id);
   ids.push(sourceId);
 
   const target = messages.find(
     item =>
-      isOutgoing(item.attributes) && ids.includes(item.get('conversationId'))
+      (isOutgoing(item) || isStory(item)) && ids.includes(item.conversationId)
   );
   if (!target) {
     return null;
@@ -111,7 +127,7 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
         ids.includes(receipt.get('sourceConversationId'))
     );
     if (receipts.length) {
-      window.log.info('Found early receipts for message');
+      log.info('Found early receipts for message');
       this.remove(receipts);
     }
     return receipts;
@@ -120,19 +136,22 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
   async onReceipt(receipt: MessageReceiptModel): Promise<void> {
     const type = receipt.get('type');
     const messageSentAt = receipt.get('messageSentAt');
+    const receiptTimestamp = receipt.get('receiptTimestamp');
     const sourceConversationId = receipt.get('sourceConversationId');
+    const sourceUuid = receipt.get('sourceUuid');
 
     try {
       const messages = await window.Signal.Data.getMessagesBySentAt(
-        messageSentAt,
-        {
-          MessageCollection: window.Whisper.MessageCollection,
-        }
+        messageSentAt
       );
 
-      const message = await getTargetMessage(sourceConversationId, messages);
+      const message = await getTargetMessage(
+        sourceConversationId,
+        sourceUuid,
+        messages
+      );
       if (!message) {
-        window.log.info(
+        log.info(
           'No message for receipt',
           type,
           sourceConversationId,
@@ -165,7 +184,7 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
 
       const newSendState = sendStateReducer(oldSendState, {
         type: sendActionType,
-        updatedAt: messageSentAt,
+        updatedAt: receiptTimestamp,
       });
 
       // The send state may not change. For example, this can happen if we get a read
@@ -195,20 +214,19 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
           wasDeliveredWithSealedSender(sourceConversationId, message)) ||
         type === MessageReceiptType.Read
       ) {
-        const recipient = window.ConversationController.get(
-          sourceConversationId
-        );
+        const recipient =
+          window.ConversationController.get(sourceConversationId);
         const recipientUuid = recipient?.get('uuid');
         const deviceId = receipt.get('sourceDevice');
 
         if (recipientUuid && deviceId) {
-          await deleteSentProtoRecipient({
+          await deleteSentProtoBatcher.add({
             timestamp: messageSentAt,
             recipientUuid,
             deviceId,
           });
         } else {
-          window.log.warn(
+          log.warn(
             `MessageReceipts.onReceipt: Missing uuid or deviceId for deliveredTo ${sourceConversationId}`
           );
         }
@@ -216,7 +234,7 @@ export class MessageReceipts extends Collection<MessageReceiptModel> {
 
       this.remove(receipt);
     } catch (error) {
-      window.log.error(
+      log.error(
         'MessageReceipts.onReceipt error:',
         error && error.stack ? error.stack : error
       );

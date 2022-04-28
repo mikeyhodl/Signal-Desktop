@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { isNumber, omit } from 'lodash';
@@ -6,16 +6,18 @@ import { v4 as getGuid } from 'uuid';
 
 import dataInterface from '../sql/Client';
 import * as durations from '../util/durations';
+import { clearTimeoutIfNecessary } from '../util/clearTimeoutIfNecessary';
 import { downloadAttachment } from '../util/downloadAttachment';
-import { stringFromBytes } from '../Crypto';
-import {
+import * as Bytes from '../Bytes';
+import type {
   AttachmentDownloadJobType,
   AttachmentDownloadJobTypeType,
 } from '../sql/Interface';
 
-import { MessageModel } from '../models/messages';
-import { AttachmentType } from '../types/Attachment';
-import { LoggerType } from '../window.d';
+import type { MessageModel } from '../models/messages';
+import type { AttachmentType } from '../types/Attachment';
+import type { LoggerType } from '../types/Logging';
+import * as log from '../logging/log';
 
 const {
   getMessageById,
@@ -40,10 +42,8 @@ const RETRY_BACKOFF: Record<number, number> = {
 let enabled = false;
 let timeout: NodeJS.Timeout | null;
 let logger: LoggerType;
-const _activeAttachmentDownloadJobs: Record<
-  string,
-  Promise<void> | undefined
-> = {};
+const _activeAttachmentDownloadJobs: Record<string, Promise<void> | undefined> =
+  {};
 
 type StartOptionsType = {
   logger: LoggerType;
@@ -68,10 +68,8 @@ export async function stop(): Promise<void> {
     logger.info('attachment_downloads/stop: disabling');
   }
   enabled = false;
-  if (timeout) {
-    clearTimeout(timeout);
-    timeout = null;
-  }
+  clearTimeoutIfNecessary(timeout);
+  timeout = null;
 }
 
 export async function addJob(
@@ -116,10 +114,8 @@ export async function addJob(
 }
 
 async function _tick(): Promise<void> {
-  if (timeout) {
-    clearTimeout(timeout);
-    timeout = null;
-  }
+  clearTimeoutIfNecessary(timeout);
+  timeout = null;
 
   _maybeStartJob();
   timeout = setTimeout(_tick, TICK_INTERVAL);
@@ -179,7 +175,7 @@ async function _maybeStartJob(): Promise<void> {
 
 async function _runJob(job?: AttachmentDownloadJobType): Promise<void> {
   if (!job) {
-    window.log.warn('_runJob: Job was missing!');
+    log.warn('_runJob: Job was missing!');
     return;
   }
 
@@ -197,9 +193,7 @@ async function _runJob(job?: AttachmentDownloadJobType): Promise<void> {
 
     const found =
       window.MessageController.getById(messageId) ||
-      (await getMessageById(messageId, {
-        Message: window.Whisper.Message,
-      }));
+      (await getMessageById(messageId));
     if (!found) {
       logger.error('_runJob: Source message not found, deleting job');
       await _finishJob(null, id);
@@ -230,9 +224,8 @@ async function _runJob(job?: AttachmentDownloadJobType): Promise<void> {
       return;
     }
 
-    const upgradedAttachment = await window.Signal.Migrations.processNewAttachment(
-      downloaded
-    );
+    const upgradedAttachment =
+      await window.Signal.Migrations.processNewAttachment(downloaded);
 
     await _addAttachmentToMessage(message, upgradedAttachment, { type, index });
 
@@ -243,7 +236,7 @@ async function _runJob(job?: AttachmentDownloadJobType): Promise<void> {
 
     if (currentAttempt >= 3) {
       logger.error(
-        `_runJob: ${currentAttempt} failed attempts, marking attachment ${id} from message ${logId} as permament error:`,
+        `_runJob: ${currentAttempt} failed attempts, marking attachment ${id} from message ${logId} as permanent error:`,
         error && error.stack ? error.stack : error
       );
 
@@ -282,7 +275,9 @@ async function _finishJob(
 ): Promise<void> {
   if (message) {
     logger.info(`attachment_downloads/_finishJob for job id: ${id}`);
-    await saveMessage(message.attributes);
+    await saveMessage(message.attributes, {
+      ourUuid: window.textsecure.storage.user.getCheckedUuid().toString(),
+    });
   }
 
   await removeAttachmentDownloadJob(id);
@@ -318,7 +313,7 @@ async function _addAttachmentToMessage(
         attachment
       );
       message.set({
-        body: attachment.error ? message.get('body') : stringFromBytes(data),
+        body: attachment.error ? message.get('body') : Bytes.toString(data),
         bodyPending: false,
       });
     } finally {

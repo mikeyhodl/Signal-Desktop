@@ -4,7 +4,7 @@
 import React, { forwardRef } from 'react';
 
 import { Input } from './Input';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 
 type PropsType = {
   disabled?: boolean;
@@ -22,10 +22,11 @@ export const GroupDescriptionInput = forwardRef<HTMLInputElement, PropsType>(
         i18n={i18n}
         onChange={onChangeValue}
         placeholder={i18n('setGroupMetadata__group-description-placeholder')}
-        maxLengthCount={256}
+        maxLengthCount={480}
+        maxByteCount={8192}
         ref={ref}
         value={value}
-        whenToShowRemainingCount={150}
+        whenToShowRemainingCount={380}
       />
     );
   }

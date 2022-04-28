@@ -6,10 +6,10 @@ import { action } from '@storybook/addon-actions';
 import { storiesOf } from '@storybook/react';
 
 import enMessages from '../../_locales/en/messages.json';
-import { Preferences, PropsType } from './Preferences';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './Preferences';
+import { Preferences } from './Preferences';
+import { setupI18n } from '../util/setupI18n';
 import { DEFAULT_CONVERSATION_COLOR } from '../types/Colors';
-import { ThemeType } from '../types/Util';
 import { PhoneNumberSharingMode } from '../util/phoneNumberSharingMode';
 import { PhoneNumberDiscoverability } from '../util/phoneNumberDiscoverability';
 
@@ -93,7 +93,6 @@ const createProps = (): PropsType => ({
     'dfbe6effe70b0611ba0fdc2a9ea3f39f6cb110e6687948f7e5f016c111b7329c',
   selectedMicrophone: availableMicrophones[0],
   selectedSpeaker: availableSpeakers[1],
-  theme: ThemeType.light,
   themeSetting: 'system',
   universalExpireTimer: 3600,
   whoCanFindMe: PhoneNumberDiscoverability.Discoverable,
@@ -103,6 +102,7 @@ const createProps = (): PropsType => ({
   addCustomColor: action('addCustomColor'),
   closeSettings: action('closeSettings'),
   doDeleteAllData: action('doDeleteAllData'),
+  doneRendering: action('doneRendering'),
   editCustomColor: action('editCustomColor'),
   getConversationsWithCustomColor: () => Promise.resolve([]),
   initialSpellCheckSetting: true,

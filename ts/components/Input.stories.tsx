@@ -1,4 +1,4 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useState } from 'react';
@@ -7,8 +7,9 @@ import { storiesOf } from '@storybook/react';
 import { text } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
 
-import { Input, PropsType } from './Input';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './Input';
+import { Input } from './Input';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
 
 const i18n = setupI18n('en', enMessages);
@@ -17,6 +18,7 @@ const stories = storiesOf('Components/Input', module);
 
 const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   disabled: Boolean(overrideProps.disabled),
+  disableSpellcheck: overrideProps.disableSpellcheck,
   expandable: Boolean(overrideProps.expandable),
   hasClearButton: Boolean(overrideProps.hasClearButton),
   i18n,
@@ -88,6 +90,14 @@ stories.add('disabled', () => (
   <Controller
     {...createProps({
       disabled: true,
+    })}
+  />
+));
+
+stories.add('spellcheck disabled', () => (
+  <Controller
+    {...createProps({
+      disableSpellcheck: true,
     })}
   />
 ));

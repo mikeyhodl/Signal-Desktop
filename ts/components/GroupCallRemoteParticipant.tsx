@@ -1,36 +1,37 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { CSSProperties } from 'react';
 import React, {
   useState,
   useRef,
   useMemo,
   useCallback,
   useEffect,
-  CSSProperties,
 } from 'react';
 import classNames from 'classnames';
 import { noop } from 'lodash';
-import {
-  GroupCallRemoteParticipantType,
-  VideoFrameSource,
-} from '../types/Calling';
-import { LocalizerType } from '../types/Util';
+import type { VideoFrameSource } from 'ringrtc';
+import type { GroupCallRemoteParticipantType } from '../types/Calling';
+import type { LocalizerType } from '../types/Util';
 import { AvatarColors } from '../types/Colors';
 import { CallBackgroundBlur } from './CallBackgroundBlur';
+import { CallingAudioIndicator } from './CallingAudioIndicator';
 import { Avatar, AvatarSize } from './Avatar';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { Intl } from './Intl';
 import { ContactName } from './conversation/ContactName';
-import { useIntersectionObserver } from '../util/hooks';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import { MAX_FRAME_SIZE } from '../calling/constants';
 
 const MAX_TIME_TO_SHOW_STALE_VIDEO_FRAMES = 5000;
+const MAX_TIME_TO_SHOW_STALE_SCREENSHARE_FRAMES = 60000;
 
 type BasePropsType = {
-  getFrameBuffer: () => ArrayBuffer;
+  getFrameBuffer: () => Buffer;
   getGroupCallVideoFrameSource: (demuxId: number) => VideoFrameSource;
   i18n: LocalizerType;
+  onVisibilityChanged?: (demuxId: number, isVisible: boolean) => unknown;
   remoteParticipant: GroupCallRemoteParticipantType;
 };
 
@@ -41,6 +42,7 @@ type InPipPropsType = {
 type InOverflowAreaPropsType = {
   height: number;
   isInPip?: false;
+  isSpeaking: boolean;
   width: number;
 };
 
@@ -54,7 +56,12 @@ export type PropsType = BasePropsType &
 
 export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
   props => {
-    const { getFrameBuffer, getGroupCallVideoFrameSource, i18n } = props;
+    const {
+      getFrameBuffer,
+      getGroupCallVideoFrameSource,
+      i18n,
+      onVisibilityChanged,
+    } = props;
 
     const {
       acceptedMessageRequest,
@@ -67,17 +74,16 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
       isMe,
       profileName,
       sharedGroupNames,
+      sharingScreen,
       title,
       videoAspectRatio,
     } = props.remoteParticipant;
 
-    const [hasReceivedVideoRecently, setHasReceivedVideoRecently] = useState(
-      false
-    );
+    const [hasReceivedVideoRecently, setHasReceivedVideoRecently] =
+      useState(false);
     const [isWide, setIsWide] = useState<boolean>(
       videoAspectRatio ? videoAspectRatio >= 1 : true
     );
-    const [hasHover, setHover] = useState(false);
     const [showBlockInfo, setShowBlockInfo] = useState(false);
 
     // We have some state (`hasReceivedVideoRecently`) and this ref. We can't have a
@@ -91,14 +97,17 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
     const lastReceivedVideoAt = useRef(-Infinity);
     const remoteVideoRef = useRef<HTMLCanvasElement | null>(null);
     const canvasContextRef = useRef<CanvasRenderingContext2D | null>(null);
+    const imageDataRef = useRef<ImageData | null>(null);
 
-    const [
-      intersectionRef,
-      intersectionObserverEntry,
-    ] = useIntersectionObserver();
+    const [intersectionRef, intersectionObserverEntry] =
+      useIntersectionObserver();
     const isVisible = intersectionObserverEntry
       ? intersectionObserverEntry.isIntersecting
       : true;
+
+    useEffect(() => {
+      onVisibilityChanged?.(demuxId, isVisible);
+    }, [demuxId, isVisible, onVisibilityChanged]);
 
     const wantsToShowVideo = hasRemoteVideo && !isBlocked && isVisible;
     const hasVideoToShow = wantsToShowVideo && hasReceivedVideoRecently;
@@ -109,10 +118,11 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
     );
 
     const renderVideoFrame = useCallback(() => {
-      if (
-        Date.now() - lastReceivedVideoAt.current >
-        MAX_TIME_TO_SHOW_STALE_VIDEO_FRAMES
-      ) {
+      const frameAge = Date.now() - lastReceivedVideoAt.current;
+      const maxFrameAge = sharingScreen
+        ? MAX_TIME_TO_SHOW_STALE_SCREENSHARE_FRAMES
+        : MAX_TIME_TO_SHOW_STALE_VIDEO_FRAMES;
+      if (frameAge > maxFrameAge) {
         setHasReceivedVideoRecently(false);
       }
 
@@ -130,9 +140,7 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
       //   for other participants, or pixel data from a previous frame. That's why we
       //   return early and use the `frameWidth` and `frameHeight`.
       const frameBuffer = getFrameBuffer();
-      const frameDimensions = videoFrameSource.receiveVideoFrame(
-        Buffer.from(frameBuffer)
-      );
+      const frameDimensions = videoFrameSource.receiveVideoFrame(frameBuffer);
       if (!frameDimensions) {
         return;
       }
@@ -150,21 +158,22 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
       canvasEl.width = frameWidth;
       canvasEl.height = frameHeight;
 
-      canvasContext.putImageData(
-        new ImageData(
-          new Uint8ClampedArray(frameBuffer, 0, frameWidth * frameHeight * 4),
-          frameWidth,
-          frameHeight
-        ),
-        0,
-        0
-      );
+      let imageData = imageDataRef.current;
+      if (
+        imageData?.width !== frameWidth ||
+        imageData?.height !== frameHeight
+      ) {
+        imageData = new ImageData(frameWidth, frameHeight);
+        imageDataRef.current = imageData;
+      }
+      imageData.data.set(frameBuffer.subarray(0, frameWidth * frameHeight * 4));
+      canvasContext.putImageData(imageData, 0, 0);
 
       lastReceivedVideoAt.current = Date.now();
 
       setHasReceivedVideoRecently(true);
       setIsWide(frameWidth > frameHeight);
-    }, [getFrameBuffer, videoFrameSource]);
+    }, [getFrameBuffer, videoFrameSource, sharingScreen]);
 
     useEffect(() => {
       if (!hasRemoteVideo) {
@@ -233,8 +242,6 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
       }
     }
 
-    const showHover = hasHover && !props.isInPip;
-
     return (
       <>
         {showBlockInfo && (
@@ -249,14 +256,7 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
                 <Intl
                   i18n={i18n}
                   id="calling__you-have-blocked"
-                  components={[
-                    <ContactName
-                      key="name"
-                      profileName={profileName}
-                      title={title}
-                      i18n={i18n}
-                    />,
-                  ]}
+                  components={[<ContactName key="name" title={title} />]}
                 />
               </div>
             }
@@ -268,24 +268,25 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
         <div
           className="module-ongoing-call__group-call-remote-participant"
           ref={intersectionRef}
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
           style={containerStyles}
         >
-          {showHover && (
+          {!props.isInPip && (
             <div
               className={classNames(
-                'module-ongoing-call__group-call-remote-participant--title',
+                'module-ongoing-call__group-call-remote-participant__info',
                 {
-                  'module-ongoing-call__group-call-remote-participant--audio-muted': !hasRemoteAudio,
+                  'module-ongoing-call__group-call-remote-participant__info--audio-muted':
+                    !hasRemoteAudio,
                 }
               )}
             >
               <ContactName
-                module="module-ongoing-call__group-call-remote-participant--contact-name"
-                profileName={profileName}
+                module="module-ongoing-call__group-call-remote-participant__info__contact-name"
                 title={title}
-                i18n={i18n}
+              />
+              <CallingAudioIndicator
+                hasAudio={hasRemoteAudio}
+                isSpeaking={props.isSpeaking}
               />
             </div>
           )}
@@ -332,6 +333,7 @@ export const GroupCallRemoteParticipant: React.FC<PropsType> = React.memo(
                 <Avatar
                   acceptedMessageRequest={acceptedMessageRequest}
                   avatarPath={avatarPath}
+                  badge={undefined}
                   color={color || AvatarColors[0]}
                   noteToSelf={false}
                   conversationType="direct"

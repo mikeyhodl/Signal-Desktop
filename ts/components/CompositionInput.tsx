@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -7,14 +7,17 @@ import Delta from 'quill-delta';
 import ReactQuill from 'react-quill';
 import classNames from 'classnames';
 import { Manager, Reference } from 'react-popper';
-import Quill, { KeyboardStatic, RangeStatic } from 'quill';
+import type { KeyboardStatic, RangeStatic } from 'quill';
+import Quill from 'quill';
 
 import { MentionCompletion } from '../quill/mentions/completion';
 import { EmojiBlot, EmojiCompletion } from '../quill/emoji';
-import { EmojiPickDataType } from './emoji/EmojiPicker';
+import type { EmojiPickDataType } from './emoji/EmojiPicker';
 import { convertShortName } from './emoji/lib';
-import { LocalizerType, BodyRangeType } from '../types/Util';
-import { ConversationType } from '../state/ducks/conversations';
+import type { LocalizerType, BodyRangeType, ThemeType } from '../types/Util';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
+import { isValidUuid } from '../types/UUID';
 import { MentionBlot } from '../quill/mentions/blot';
 import {
   matchEmojiImage,
@@ -35,6 +38,7 @@ import {
 import { SignalClipboard } from '../quill/signal-clipboard';
 import { DirectionalBlot } from '../quill/block/blot';
 import { getClassNamesFor } from '../util/getClassNamesFor';
+import * as log from '../logging/log';
 
 Quill.register('formats/emoji', EmojiBlot);
 Quill.register('formats/mention', MentionBlot);
@@ -57,14 +61,18 @@ export type InputApi = {
 };
 
 export type Props = {
+  children?: React.ReactNode;
   readonly i18n: LocalizerType;
   readonly disabled?: boolean;
+  readonly getPreferredBadge: PreferredBadgeSelectorType;
   readonly large?: boolean;
   readonly inputApi?: React.MutableRefObject<InputApi | undefined>;
   readonly skinTone?: EmojiPickDataType['skinTone'];
   readonly draftText?: string;
   readonly draftBodyRanges?: Array<BodyRangeType>;
   readonly moduleClassName?: string;
+  readonly theme: ThemeType;
+  readonly placeholder?: string;
   sortedGroupMembers?: Array<ConversationType>;
   onDirtyChange?(dirty: boolean): unknown;
   onEditorStateChange?(
@@ -79,8 +87,8 @@ export type Props = {
     mentions: Array<BodyRangeType>,
     timestamp: number
   ): unknown;
-  getQuotedMessage(): unknown;
-  clearQuotedMessage(): unknown;
+  getQuotedMessage?(): unknown;
+  clearQuotedMessage?(): unknown;
 };
 
 const MAX_LENGTH = 64 * 1024;
@@ -88,6 +96,7 @@ const BASE_CLASS_NAME = 'module-composition-input';
 
 export function CompositionInput(props: Props): React.ReactElement {
   const {
+    children,
     i18n,
     disabled,
     large,
@@ -95,26 +104,23 @@ export function CompositionInput(props: Props): React.ReactElement {
     moduleClassName,
     onPickEmoji,
     onSubmit,
+    placeholder,
     skinTone,
     draftText,
     draftBodyRanges,
+    getPreferredBadge,
     getQuotedMessage,
     clearQuotedMessage,
     sortedGroupMembers,
+    theme,
   } = props;
 
-  const [
-    emojiCompletionElement,
-    setEmojiCompletionElement,
-  ] = React.useState<JSX.Element>();
-  const [
-    lastSelectionRange,
-    setLastSelectionRange,
-  ] = React.useState<RangeStatic | null>(null);
-  const [
-    mentionCompletionElement,
-    setMentionCompletionElement,
-  ] = React.useState<JSX.Element>();
+  const [emojiCompletionElement, setEmojiCompletionElement] =
+    React.useState<JSX.Element>();
+  const [lastSelectionRange, setLastSelectionRange] =
+    React.useState<RangeStatic | null>(null);
+  const [mentionCompletionElement, setMentionCompletionElement] =
+    React.useState<JSX.Element>();
 
   const emojiCompletionRef = React.useRef<EmojiCompletion>();
   const mentionCompletionRef = React.useRef<MentionCompletion>();
@@ -231,7 +237,7 @@ export function CompositionInput(props: Props): React.ReactElement {
 
     const [text, mentions] = getTextAndMentions();
 
-    window.log.info(
+    log.info(
       `CompositionInput: Submitting message ${timestamp} with ${mentions.length} mentions`
     );
     onSubmit(text, mentions, timestamp);
@@ -339,8 +345,8 @@ export function CompositionInput(props: Props): React.ReactElement {
       }
     }
 
-    if (getQuotedMessage()) {
-      clearQuotedMessage();
+    if (getQuotedMessage?.()) {
+      clearQuotedMessage?.();
       return false;
     }
 
@@ -463,7 +469,7 @@ export function CompositionInput(props: Props): React.ReactElement {
 
     const currentMemberUuids = currentMembers
       .map(m => m.uuid)
-      .filter((uuid): uuid is string => uuid !== undefined);
+      .filter(isValidUuid);
 
     const newDelta = getDeltaToRemoveStaleMentions(ops, currentMemberUuids);
 
@@ -548,16 +554,18 @@ export function CompositionInput(props: Props): React.ReactElement {
               skinTone,
             },
             mentionCompletion: {
+              getPreferredBadge,
               me: sortedGroupMembers
                 ? sortedGroupMembers.find(foo => foo.isMe)
                 : undefined,
               memberRepositoryRef,
               setMentionPickerElement: setMentionCompletionElement,
               i18n,
+              theme,
             },
           }}
           formats={['emoji', 'mention']}
-          placeholder={i18n('sendMessage')}
+          placeholder={placeholder || i18n('sendMessage')}
           readOnly={disabled}
           ref={element => {
             if (element) {
@@ -599,9 +607,8 @@ export function CompositionInput(props: Props): React.ReactElement {
               );
               quillRef.current = quill;
               emojiCompletionRef.current = quill.getModule('emojiCompletion');
-              mentionCompletionRef.current = quill.getModule(
-                'mentionCompletion'
-              );
+              mentionCompletionRef.current =
+                quill.getModule('mentionCompletion');
             }
           }}
         />
@@ -632,9 +639,11 @@ export function CompositionInput(props: Props): React.ReactElement {
               onClick={focus}
               className={classNames(
                 getClassName('__input__scroller'),
-                large ? getClassName('__input__scroller--large') : null
+                large ? getClassName('__input__scroller--large') : null,
+                children ? getClassName('__input--with-children') : null
               )}
             >
+              {children}
               {reactQuill}
               {emojiCompletionElement}
               {mentionCompletionElement}

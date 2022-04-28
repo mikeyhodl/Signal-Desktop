@@ -1,7 +1,8 @@
 // Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 import Measure from 'react-measure';
 import classNames from 'classnames';
 import {
@@ -16,8 +17,9 @@ import { DisappearingTimeDialog } from '../DisappearingTimeDialog';
 import { Avatar, AvatarSize } from '../Avatar';
 import { InContactsIcon } from '../InContactsIcon';
 
-import { LocalizerType } from '../../types/Util';
-import { ConversationType } from '../../state/ducks/conversations';
+import type { LocalizerType, ThemeType } from '../../types/Util';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { BadgeType } from '../../badges/types';
 import { getMuteOptions } from '../../util/getMuteOptions';
 import * as expirationTimer from '../../util/expirationTimer';
 import { missingCaseError } from '../../util/missingCaseError';
@@ -31,11 +33,13 @@ export enum OutgoingCallButtonStyle {
 }
 
 export type PropsDataType = {
+  badge?: BadgeType;
   conversationTitle?: string;
   isMissingMandatoryProfileSharing?: boolean;
   outgoingCallButtonStyle: OutgoingCallButtonStyle;
   showBackButton?: boolean;
   isSMSOnly?: boolean;
+  theme: ThemeType;
 } & Pick<
   ConversationType,
   | 'acceptedMessageRequest'
@@ -66,17 +70,13 @@ export type PropsDataType = {
 export type PropsActionsType = {
   onSetMuteNotifications: (seconds: number) => void;
   onSetDisappearingMessages: (seconds: number) => void;
-  onShowContactModal: (contactId: string) => void;
   onDeleteMessages: () => void;
-  onResetSession: () => void;
   onSearchInConversation: () => void;
   onOutgoingAudioCallInConversation: () => void;
   onOutgoingVideoCallInConversation: () => void;
   onSetPin: (value: boolean) => void;
 
-  onShowChatColorEditor: () => void;
   onShowConversationDetails: () => void;
-  onShowSafetyNumber: () => void;
   onShowAllMedia: () => void;
   onShowGroupMembers: () => void;
   onGoBack: () => void;
@@ -113,12 +113,15 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private menuTriggerRef: React.RefObject<any>;
 
+  public headerRef: React.RefObject<HTMLDivElement>;
+
   public constructor(props: PropsType) {
     super(props);
 
     this.state = { isNarrow: false, modalState: ModalState.NothingOpen };
 
     this.menuTriggerRef = React.createRef();
+    this.headerRef = React.createRef();
     this.showMenuBound = this.showMenu.bind(this);
   }
 
@@ -163,6 +166,7 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
           <InContactsIcon
             className="module-ConversationHeader__header__info__title__in-contacts-icon"
             i18n={i18n}
+            tooltipContainerRef={this.headerRef}
           />
         ) : null}
       </div>
@@ -189,6 +193,7 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
     const {
       acceptedMessageRequest,
       avatarPath,
+      badge,
       color,
       i18n,
       type,
@@ -197,6 +202,7 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
       phoneNumber,
       profileName,
       sharedGroupNames,
+      theme,
       title,
       unblurredAvatarPath,
     } = this.props;
@@ -206,6 +212,7 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
         <Avatar
           acceptedMessageRequest={acceptedMessageRequest}
           avatarPath={avatarPath}
+          badge={badge}
           color={color}
           conversationType={type}
           i18n={i18n}
@@ -217,6 +224,7 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
           profileName={profileName}
           sharedGroupNames={sharedGroupNames}
           size={AvatarSize.THIRTY_TWO}
+          theme={theme}
           unblurredAvatarPath={unblurredAvatarPath}
         />
       </span>
@@ -365,32 +373,28 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
 
   private renderMenu(triggerId: string): ReactNode {
     const {
-      i18n,
       acceptedMessageRequest,
       canChangeTimer,
       expireTimer,
+      groupVersion,
+      i18n,
       isArchived,
-      isMe,
+      isMissingMandatoryProfileSharing,
       isPinned,
-      type,
+      left,
       markedUnread,
       muteExpiresAt,
-      isMissingMandatoryProfileSharing,
-      left,
-      groupVersion,
+      onArchive,
       onDeleteMessages,
-      onResetSession,
+      onMarkUnread,
+      onMoveToInbox,
       onSetDisappearingMessages,
       onSetMuteNotifications,
+      onSetPin,
       onShowAllMedia,
-      onShowChatColorEditor,
       onShowConversationDetails,
       onShowGroupMembers,
-      onShowSafetyNumber,
-      onArchive,
-      onMarkUnread,
-      onSetPin,
-      onMoveToInbox,
+      type,
     } = this.props;
 
     const muteOptions = getMuteOptions(muteExpiresAt, i18n);
@@ -463,11 +467,11 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
     return (
       <ContextMenu id={triggerId}>
         {disableTimerChanges ? null : (
-          <SubMenu hoverDelay={1} title={disappearingTitle}>
+          <SubMenu hoverDelay={1} title={disappearingTitle} rtl>
             {expireDurations}
           </SubMenu>
         )}
-        <SubMenu hoverDelay={1} title={muteTitle}>
+        <SubMenu hoverDelay={1} title={muteTitle} rtl>
           {muteOptions.map(item => (
             <MenuItem
               key={item.name}
@@ -480,14 +484,11 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
             </MenuItem>
           ))}
         </SubMenu>
-        {!isGroup ? (
-          <MenuItem onClick={onShowChatColorEditor}>
-            {i18n('showChatColorEditor')}
-          </MenuItem>
-        ) : null}
-        {hasGV2AdminEnabled ? (
+        {!isGroup || hasGV2AdminEnabled ? (
           <MenuItem onClick={onShowConversationDetails}>
-            {i18n('showConversationDetails')}
+            {isGroup
+              ? i18n('showConversationDetails')
+              : i18n('showConversationDetails--direct')}
           </MenuItem>
         ) : null}
         {isGroup && !hasGV2AdminEnabled ? (
@@ -496,14 +497,6 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
           </MenuItem>
         ) : null}
         <MenuItem onClick={onShowAllMedia}>{i18n('viewRecentMedia')}</MenuItem>
-        {!isGroup && !isMe ? (
-          <MenuItem onClick={onShowSafetyNumber}>
-            {i18n('showSafetyNumber')}
-          </MenuItem>
-        ) : null}
-        {!isGroup && acceptedMessageRequest ? (
-          <MenuItem onClick={onResetSession}>{i18n('resetSession')}</MenuItem>
-        ) : null}
         <MenuItem divider />
         {!markedUnread ? (
           <MenuItem onClick={onMarkUnread}>{i18n('markUnread')}</MenuItem>
@@ -530,15 +523,8 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
   }
 
   private renderHeader(): ReactNode {
-    const {
-      conversationTitle,
-      groupVersion,
-      id,
-      isMe,
-      onShowContactModal,
-      onShowConversationDetails,
-      type,
-    } = this.props;
+    const { conversationTitle, groupVersion, onShowConversationDetails, type } =
+      this.props;
 
     if (conversationTitle !== undefined) {
       return (
@@ -555,11 +541,9 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
     let onClick: undefined | (() => void);
     switch (type) {
       case 'direct':
-        onClick = isMe
-          ? undefined
-          : () => {
-              onShowContactModal(id);
-            };
+        onClick = () => {
+          onShowConversationDetails();
+        };
         break;
       case 'group': {
         const hasGV2AdminEnabled = groupVersion === 2;
@@ -596,17 +580,16 @@ export class ConversationHeader extends React.Component<PropsType, StateType> {
       );
     }
 
-    return <div className="module-ConversationHeader__header">{contents}</div>;
+    return (
+      <div className="module-ConversationHeader__header" ref={this.headerRef}>
+        {contents}
+      </div>
+    );
   }
 
-  public render(): ReactNode {
-    const {
-      id,
-      isSMSOnly,
-      i18n,
-      onSetDisappearingMessages,
-      expireTimer,
-    } = this.props;
+  public override render(): ReactNode {
+    const { id, isSMSOnly, i18n, onSetDisappearingMessages, expireTimer } =
+      this.props;
     const { isNarrow, modalState } = this.state;
     const triggerId = `conversation-${id}`;
 

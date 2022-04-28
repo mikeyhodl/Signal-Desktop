@@ -5,11 +5,12 @@ import React from 'react';
 
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
 
 import { AvatarColors } from '../types/Colors';
-import { AvatarEditor, PropsType } from './AvatarEditor';
+import type { PropsType } from './AvatarEditor';
+import { AvatarEditor } from './AvatarEditor';
 import { getDefaultAvatars } from '../types/Avatar';
 import { createAvatarData } from '../util/createAvatarData';
 

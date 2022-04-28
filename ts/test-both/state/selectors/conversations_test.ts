@@ -1,21 +1,23 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
 
 import {
-  OneTimeModalState,
   ComposerStep,
+  ConversationVerificationState,
+  OneTimeModalState,
+} from '../../../state/ducks/conversationsEnums';
+import type {
   ConversationLookupType,
   ConversationType,
-  getEmptyState,
 } from '../../../state/ducks/conversations';
+import { getEmptyState } from '../../../state/ducks/conversations';
 import {
   _getConversationComparator,
   _getLeftPaneLists,
   getAllComposableConversations,
   getCandidateContactsForNewGroup,
-  getCantAddContactForModal,
   getComposableContacts,
   getComposableGroups,
   getComposeGroupAvatar,
@@ -25,8 +27,12 @@ import {
   getComposeSelectedContacts,
   getContactNameColorSelector,
   getConversationByIdSelector,
+  getConversationIdsStoppingSend,
+  getConversationIdsStoppedForVerification,
   getConversationsByTitleSelector,
   getConversationSelector,
+  getConversationsStoppingSend,
+  getConversationsStoppedForVerification,
   getFilteredCandidateContactsForNewGroup,
   getFilteredComposeContacts,
   getFilteredComposeGroups,
@@ -34,16 +40,21 @@ import {
   getMaximumGroupSizeModalState,
   getPlaceholderContact,
   getRecommendedGroupSizeModalState,
-  getSelectedConversation,
   getSelectedConversationId,
   hasGroupCreationError,
   isCreatingGroup,
 } from '../../../state/selectors/conversations';
 import { noopAction } from '../../../state/ducks/noop';
-import { StateType, reducer as rootReducer } from '../../../state/reducer';
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import type { StateType } from '../../../state/reducer';
+import { reducer as rootReducer } from '../../../state/reducer';
+import { setupI18n } from '../../../util/setupI18n';
+import { UUID } from '../../../types/UUID';
+import type { UUIDStringType } from '../../../types/UUID';
 import enMessages from '../../../../_locales/en/messages.json';
-import { getDefaultConversation } from '../../helpers/getDefaultConversation';
+import {
+  getDefaultConversation,
+  getDefaultConversationWithUuid,
+} from '../../helpers/getDefaultConversation';
 import {
   defaultStartDirectConversationComposerState,
   defaultChooseGroupMembersComposerState,
@@ -61,6 +72,19 @@ describe('both/state/selectors/conversations', () => {
       searchableTitle: `${id} title`,
       title: `${id} title`,
     });
+  }
+
+  function makeConversationWithUuid(
+    id: string
+  ): ConversationType & { uuid: UUIDStringType } {
+    return getDefaultConversationWithUuid(
+      {
+        id,
+        searchableTitle: `${id} title`,
+        title: `${id} title`,
+      },
+      UUID.fromPrefix(id).toString()
+    );
   }
 
   const i18n = setupI18n('en', enMessages);
@@ -266,6 +290,92 @@ describe('both/state/selectors/conversations', () => {
     });
   });
 
+  describe('#getConversationsStoppingSend', () => {
+    it('returns an empty array if there are no conversations stopping send', () => {
+      const state = getEmptyRootState();
+
+      assert.isEmpty(getConversationsStoppingSend(state));
+    });
+
+    it('returns all conversations stopping send', () => {
+      const convo1 = makeConversation('abc');
+      const convo2 = makeConversation('def');
+      const state: StateType = {
+        ...getEmptyRootState(),
+        conversations: {
+          ...getEmptyState(),
+          conversationLookup: {
+            def: convo2,
+            abc: convo1,
+          },
+          verificationDataByConversation: {
+            'convo a': {
+              type: ConversationVerificationState.PendingVerification as const,
+              conversationsNeedingVerification: ['abc'],
+            },
+            'convo b': {
+              type: ConversationVerificationState.PendingVerification as const,
+              conversationsNeedingVerification: ['def', 'abc'],
+            },
+          },
+        },
+      };
+
+      assert.sameDeepMembers(getConversationIdsStoppingSend(state), [
+        'abc',
+        'def',
+      ]);
+
+      assert.sameDeepMembers(getConversationsStoppingSend(state), [
+        convo1,
+        convo2,
+      ]);
+    });
+  });
+
+  describe('#getConversationStoppedForVerification', () => {
+    it('returns an empty array if there are no conversations stopping send', () => {
+      const state = getEmptyRootState();
+
+      assert.isEmpty(getConversationsStoppingSend(state));
+    });
+
+    it('returns all conversations stopping send', () => {
+      const convoA = makeConversation('convo a');
+      const convoB = makeConversation('convo b');
+      const state: StateType = {
+        ...getEmptyRootState(),
+        conversations: {
+          ...getEmptyState(),
+          conversationLookup: {
+            'convo a': convoA,
+            'convo b': convoB,
+          },
+          verificationDataByConversation: {
+            'convo a': {
+              type: ConversationVerificationState.PendingVerification as const,
+              conversationsNeedingVerification: ['abc'],
+            },
+            'convo b': {
+              type: ConversationVerificationState.PendingVerification as const,
+              conversationsNeedingVerification: ['def', 'abc'],
+            },
+          },
+        },
+      };
+
+      assert.sameDeepMembers(getConversationIdsStoppedForVerification(state), [
+        'convo a',
+        'convo b',
+      ]);
+
+      assert.sameDeepMembers(getConversationsStoppedForVerification(state), [
+        convoA,
+        convoB,
+      ]);
+    });
+  });
+
   describe('#getInvitedContactsForNewlyCreatedGroup', () => {
     it('returns an empty array if there are no invited contacts', () => {
       const state = getEmptyRootState();
@@ -274,15 +384,17 @@ describe('both/state/selectors/conversations', () => {
     });
 
     it('returns "hydrated" invited contacts', () => {
+      const abc = makeConversationWithUuid('abc');
+      const def = makeConversationWithUuid('def');
       const state = {
         ...getEmptyRootState(),
         conversations: {
           ...getEmptyState(),
-          conversationLookup: {
-            abc: makeConversation('abc'),
-            def: makeConversation('def'),
+          conversationsByUuid: {
+            [abc.uuid]: abc,
+            [def.uuid]: def,
           },
-          invitedConversationIdsForNewlyCreatedGroup: ['def', 'abc'],
+          invitedUuidsForNewlyCreatedGroup: [def.uuid, abc.uuid],
         },
       };
       const result = getInvitedContactsForNewlyCreatedGroup(state);
@@ -487,7 +599,7 @@ describe('both/state/selectors/conversations', () => {
         'convo-6': {
           ...makeConversation('convo-6'),
           profileSharing: true,
-          name: 'Should Be Droped (no title)',
+          name: 'Should Be Dropped (no title)',
           title: null,
         },
         'convo-7': {
@@ -865,8 +977,7 @@ describe('both/state/selectors/conversations', () => {
       const result = getFilteredComposeContacts(state);
 
       const ids = result.map(contact => contact.id);
-      // NOTE: convo-6 matches because you can't write "Sharing" without "in"
-      assert.deepEqual(ids, ['convo-1', 'convo-5', 'convo-6']);
+      assert.deepEqual(ids, ['convo-1', 'convo-5']);
     });
 
     it('can search for note to self', () => {
@@ -1049,53 +1160,6 @@ describe('both/state/selectors/conversations', () => {
     });
   });
 
-  describe('#getCantAddContactForModal', () => {
-    it('returns undefined if not in the "choose group members" composer step', () => {
-      assert.isUndefined(getCantAddContactForModal(getEmptyRootState()));
-
-      assert.isUndefined(
-        getCantAddContactForModal({
-          ...getEmptyRootState(),
-          conversations: {
-            ...getEmptyState(),
-            composer: defaultStartDirectConversationComposerState,
-          },
-        })
-      );
-    });
-
-    it("returns undefined if there's no contact marked", () => {
-      assert.isUndefined(
-        getCantAddContactForModal({
-          ...getEmptyRootState(),
-          conversations: {
-            ...getEmptyState(),
-            composer: defaultChooseGroupMembersComposerState,
-          },
-        })
-      );
-    });
-
-    it('returns the marked contact', () => {
-      const conversation = makeConversation('abc123');
-
-      assert.deepEqual(
-        getCantAddContactForModal({
-          ...getEmptyRootState(),
-          conversations: {
-            ...getEmptyState(),
-            conversationLookup: { abc123: conversation },
-            composer: {
-              ...defaultChooseGroupMembersComposerState,
-              cantAddContactIdForModal: 'abc123',
-            },
-          },
-        }),
-        conversation
-      );
-    });
-  });
-
   describe('#getComposerConversationSearchTerm', () => {
     it("returns the composer's contact search term", () => {
       assert.strictEqual(
@@ -1134,11 +1198,7 @@ describe('both/state/selectors/conversations', () => {
           title: 'No timestamp',
           unreadCount: 1,
           isSelected: false,
-          typingContact: {
-            ...getDefaultConversation(),
-            name: 'Someone There',
-            phoneNumber: '+18005551111',
-          },
+          typingContactId: UUID.generate().toString(),
 
           acceptedMessageRequest: true,
         }),
@@ -1159,11 +1219,7 @@ describe('both/state/selectors/conversations', () => {
           title: 'B',
           unreadCount: 1,
           isSelected: false,
-          typingContact: {
-            ...getDefaultConversation(),
-            name: 'Someone There',
-            phoneNumber: '+18005551111',
-          },
+          typingContactId: UUID.generate().toString(),
 
           acceptedMessageRequest: true,
         }),
@@ -1184,11 +1240,7 @@ describe('both/state/selectors/conversations', () => {
           title: 'C',
           unreadCount: 1,
           isSelected: false,
-          typingContact: {
-            ...getDefaultConversation(),
-            name: 'Someone There',
-            phoneNumber: '+18005551111',
-          },
+          typingContactId: UUID.generate().toString(),
 
           acceptedMessageRequest: true,
         }),
@@ -1209,11 +1261,7 @@ describe('both/state/selectors/conversations', () => {
           title: 'A',
           unreadCount: 1,
           isSelected: false,
-          typingContact: {
-            ...getDefaultConversation(),
-            name: 'Someone There',
-            phoneNumber: '+18005551111',
-          },
+          typingContactId: UUID.generate().toString(),
 
           acceptedMessageRequest: true,
         }),
@@ -1234,21 +1282,14 @@ describe('both/state/selectors/conversations', () => {
           title: 'First!',
           unreadCount: 1,
           isSelected: false,
-          typingContact: {
-            ...getDefaultConversation(),
-            name: 'Someone There',
-            phoneNumber: '+18005551111',
-          },
+          typingContactId: UUID.generate().toString(),
 
           acceptedMessageRequest: true,
         }),
       };
       const comparator = _getConversationComparator();
-      const {
-        archivedConversations,
-        conversations,
-        pinnedConversations,
-      } = _getLeftPaneLists(data, comparator);
+      const { archivedConversations, conversations, pinnedConversations } =
+        _getLeftPaneLists(data, comparator);
 
       assert.strictEqual(conversations[0].name, 'First!');
       assert.strictEqual(conversations[1].name, 'Á');
@@ -1283,11 +1324,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin Two',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1309,11 +1346,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin Three',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1335,11 +1368,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin One',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1347,16 +1376,8 @@ describe('both/state/selectors/conversations', () => {
 
         const pinnedConversationIds = ['pin1', 'pin2', 'pin3'];
         const comparator = _getConversationComparator();
-        const {
-          archivedConversations,
-          conversations,
-          pinnedConversations,
-        } = _getLeftPaneLists(
-          data,
-          comparator,
-          undefined,
-          pinnedConversationIds
-        );
+        const { archivedConversations, conversations, pinnedConversations } =
+          _getLeftPaneLists(data, comparator, undefined, pinnedConversationIds);
 
         assert.strictEqual(pinnedConversations[0].name, 'Pin One');
         assert.strictEqual(pinnedConversations[1].name, 'Pin Two');
@@ -1386,11 +1407,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin Two',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1411,11 +1428,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin Three',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1436,11 +1449,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin One',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1462,11 +1471,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin One',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1487,11 +1492,7 @@ describe('both/state/selectors/conversations', () => {
             title: 'Pin One',
             unreadCount: 1,
             isSelected: false,
-            typingContact: {
-              ...getDefaultConversation(),
-              name: 'Someone There',
-              phoneNumber: '+18005551111',
-            },
+            typingContactId: UUID.generate().toString(),
 
             acceptedMessageRequest: true,
           }),
@@ -1499,16 +1500,8 @@ describe('both/state/selectors/conversations', () => {
 
         const pinnedConversationIds = ['pin1', 'pin2', 'pin3'];
         const comparator = _getConversationComparator();
-        const {
-          archivedConversations,
-          conversations,
-          pinnedConversations,
-        } = _getLeftPaneLists(
-          data,
-          comparator,
-          undefined,
-          pinnedConversationIds
-        );
+        const { archivedConversations, conversations, pinnedConversations } =
+          _getLeftPaneLists(data, comparator, undefined, pinnedConversationIds);
 
         assert.strictEqual(pinnedConversations[0].name, 'Pin One');
         assert.strictEqual(pinnedConversations[1].name, 'Pin Two');
@@ -1583,14 +1576,11 @@ describe('both/state/selectors/conversations', () => {
           ...getEmptyState(),
           composer: {
             ...defaultSetGroupMetadataComposerState,
-            groupAvatar: new Uint8Array([1, 2, 3]).buffer,
+            groupAvatar: new Uint8Array([1, 2, 3]),
           },
         },
       };
-      assert.deepEqual(
-        getComposeGroupAvatar(state),
-        new Uint8Array([1, 2, 3]).buffer
-      );
+      assert.deepEqual(getComposeGroupAvatar(state), new Uint8Array([1, 2, 3]));
     });
   });
 
@@ -1698,54 +1688,18 @@ describe('both/state/selectors/conversations', () => {
     });
   });
 
-  describe('#getSelectedConversation', () => {
-    it('returns undefined if no conversation is selected', () => {
-      const state = {
-        ...getEmptyRootState(),
-        conversations: {
-          ...getEmptyState(),
-          conversationLookup: {
-            abc123: makeConversation('abc123'),
-          },
-        },
-      };
-      assert.isUndefined(getSelectedConversation(state));
-    });
-
-    it('returns the selected conversation', () => {
-      const conversation = makeConversation('abc123');
-      const state = {
-        ...getEmptyRootState(),
-        conversations: {
-          ...getEmptyState(),
-          conversationLookup: {
-            abc123: conversation,
-          },
-          selectedConversationId: 'abc123',
-        },
-      };
-      assert.strictEqual(getSelectedConversation(state), conversation);
-    });
-  });
-
   describe('#getContactNameColorSelector', () => {
-    function makeConversationWithUuid(id: string): ConversationType {
-      const convo = makeConversation(id);
-      convo.uuid = id;
-      return convo;
-    }
-
     it('returns the right color order sorted by UUID ASC', () => {
       const group = makeConversation('group');
       group.type = 'group';
       group.sortedGroupMembers = [
-        makeConversationWithUuid('zyx'),
-        makeConversationWithUuid('vut'),
-        makeConversationWithUuid('srq'),
-        makeConversationWithUuid('pon'),
-        makeConversationWithUuid('mlk'),
-        makeConversationWithUuid('jih'),
-        makeConversationWithUuid('gfe'),
+        makeConversationWithUuid('fff'),
+        makeConversationWithUuid('f00'),
+        makeConversationWithUuid('e00'),
+        makeConversationWithUuid('d00'),
+        makeConversationWithUuid('c00'),
+        makeConversationWithUuid('b00'),
+        makeConversationWithUuid('a00'),
       ];
       const state = {
         ...getEmptyRootState(),
@@ -1759,13 +1713,13 @@ describe('both/state/selectors/conversations', () => {
 
       const contactNameColorSelector = getContactNameColorSelector(state);
 
-      assert.equal(contactNameColorSelector('group', 'gfe'), '200');
-      assert.equal(contactNameColorSelector('group', 'jih'), '120');
-      assert.equal(contactNameColorSelector('group', 'mlk'), '300');
-      assert.equal(contactNameColorSelector('group', 'pon'), '010');
-      assert.equal(contactNameColorSelector('group', 'srq'), '210');
-      assert.equal(contactNameColorSelector('group', 'vut'), '330');
-      assert.equal(contactNameColorSelector('group', 'zyx'), '230');
+      assert.equal(contactNameColorSelector('group', 'a00'), '200');
+      assert.equal(contactNameColorSelector('group', 'b00'), '120');
+      assert.equal(contactNameColorSelector('group', 'c00'), '300');
+      assert.equal(contactNameColorSelector('group', 'd00'), '010');
+      assert.equal(contactNameColorSelector('group', 'e00'), '210');
+      assert.equal(contactNameColorSelector('group', 'f00'), '330');
+      assert.equal(contactNameColorSelector('group', 'fff'), '230');
     });
 
     it('returns the right colors for direct conversation', () => {

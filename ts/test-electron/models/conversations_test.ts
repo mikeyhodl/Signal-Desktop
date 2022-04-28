@@ -3,6 +3,7 @@
 
 import { assert } from 'chai';
 import { SendStatus } from '../../messages/MessageSendState';
+import { UUID } from '../../types/UUID';
 
 describe('Conversations', () => {
   async function resetConversationController(): Promise<void> {
@@ -16,14 +17,15 @@ describe('Conversations', () => {
 
   it('updates lastMessage even in race conditions with db', async () => {
     const ourNumber = '+15550000000';
-    const ourUuid = window.getGuid();
+    const ourUuid = UUID.generate().toString();
+    const ourPni = UUID.generate().toString();
 
     // Creating a fake conversation
     const conversation = new window.Whisper.Conversation({
       avatars: [],
-      id: window.getGuid(),
+      id: UUID.generate().toString(),
       e164: '+15551234567',
-      uuid: window.getGuid(),
+      uuid: UUID.generate().toString(),
       type: 'private',
       inbox_position: 0,
       isPinned: false,
@@ -38,11 +40,12 @@ describe('Conversations', () => {
     await window.textsecure.storage.user.setCredentials({
       number: ourNumber,
       uuid: ourUuid,
+      pni: ourPni,
       deviceId: 2,
       deviceName: 'my device',
       password: 'password',
     });
-    await window.ConversationController.loadPromise();
+    await window.ConversationController.load();
 
     await window.Signal.Data.saveConversation(conversation.attributes);
 
@@ -56,7 +59,7 @@ describe('Conversations', () => {
       hasAttachments: false,
       hasFileAttachments: false,
       hasVisualMediaAttachments: false,
-      id: window.getGuid(),
+      id: UUID.generate().toString(),
       received_at: now,
       sent_at: now,
       timestamp: now,
@@ -72,6 +75,7 @@ describe('Conversations', () => {
     // Saving to db and updating the convo's last message
     await window.Signal.Data.saveMessage(message.attributes, {
       forceSave: true,
+      ourUuid,
     });
     message = window.MessageController.register(message.id, message);
     await window.Signal.Data.updateConversation(conversation.attributes);

@@ -5,22 +5,29 @@ import { debounce, uniq, without } from 'lodash';
 import PQueue from 'p-queue';
 
 import dataInterface from './sql/Client';
-import {
+import type {
   ConversationModelCollectionType,
+  ConversationAttributesType,
   ConversationAttributesTypeType,
 } from './model-types.d';
-import { ConversationModel } from './models/conversations';
+import type { ConversationModel } from './models/conversations';
+import { getContactId } from './messages/helpers';
 import { maybeDeriveGroupV2Id } from './groups';
 import { assert } from './util/assert';
-import { isValidGuid } from './util/isValidGuid';
 import { map, reduce } from './util/iterables';
 import { isGroupV1, isGroupV2 } from './util/whatTypeOfConversation';
+import { UUID, isValidUuid } from './types/UUID';
+import { Address } from './types/Address';
+import { QualifiedAddress } from './types/QualifiedAddress';
+import * as log from './logging/log';
+import { sleep } from './util/sleep';
+import { isNotNil } from './util/isNotNil';
 
 const MAX_MESSAGE_BODY_LENGTH = 64 * 1024;
 
 const {
   getAllConversations,
-  getAllGroupsInvolvingId,
+  getAllGroupsInvolvingUuid,
   getMessagesBySentAt,
   migrateConversationMessages,
   removeConversation,
@@ -49,7 +56,10 @@ export function start(): void {
       this.on('add remove change:unreadCount', debouncedUpdateUnreadCount);
       window.Whisper.events.on('updateUnreadCount', debouncedUpdateUnreadCount);
       this.on('add', (model: ConversationModel): void => {
-        this.initMuteExpirationTimer(model);
+        // If the conversation is muted we set a timeout so when the mute expires
+        // we can reset the mute state on the model. If the mute has already expired
+        // then we reset the state right away.
+        model.startMuteTimer();
       });
     },
     addActive(model: ConversationModel) {
@@ -57,25 +67,6 @@ export function start(): void {
         this.add(model);
       } else {
         this.remove(model);
-      }
-    },
-    // If the conversation is muted we set a timeout so when the mute expires
-    // we can reset the mute state on the model. If the mute has already expired
-    // then we reset the state right away.
-    initMuteExpirationTimer(model: ConversationModel): void {
-      const muteExpiresAt = model.get('muteExpiresAt');
-      // This check for `muteExpiresAt` is likely redundant, but is needed to appease
-      //   TypeScript.
-      if (model.isMuted() && muteExpiresAt) {
-        window.Signal.Services.onTimeout(
-          muteExpiresAt,
-          () => {
-            model.set({ muteExpiresAt: undefined });
-          },
-          model.getMuteTimeoutId()
-        );
-      } else if (muteExpiresAt) {
-        model.set({ muteExpiresAt: undefined });
       }
     },
     updateUnreadCount() {
@@ -126,19 +117,13 @@ export function start(): void {
 }
 
 export class ConversationController {
-  private _initialFetchComplete: boolean | undefined;
+  private _initialFetchComplete = false;
 
-  private _initialPromise: Promise<void> = Promise.resolve();
+  private _initialPromise: undefined | Promise<void>;
 
-  private _conversations: ConversationModelCollectionType;
+  private _conversationOpenStart = new Map<string, number>();
 
-  constructor(conversations?: ConversationModelCollectionType) {
-    if (!conversations) {
-      throw new Error('ConversationController: need conversation collection!');
-    }
-
-    this._conversations = conversations;
-  }
+  constructor(private _conversations: ConversationModelCollectionType) {}
 
   get(id?: string | null): ConversationModel | undefined {
     if (!this._initialFetchComplete) {
@@ -156,7 +141,7 @@ export class ConversationController {
   }
 
   dangerouslyCreateAndAdd(
-    attributes: Partial<ConversationModel>
+    attributes: Partial<ConversationAttributesType>
   ): ConversationModel {
     return this._conversations.add(attributes);
   }
@@ -192,7 +177,7 @@ export class ConversationController {
       return conversation;
     }
 
-    const id = window.getGuid();
+    const id = UUID.generate().toString();
 
     if (type === 'group') {
       conversation = this._conversations.add({
@@ -204,7 +189,7 @@ export class ConversationController {
         version: 2,
         ...additionalInitialProps,
       });
-    } else if (window.isValidGuid(identifier)) {
+    } else if (isValidUuid(identifier)) {
       conversation = this._conversations.add({
         id,
         uuid: identifier,
@@ -229,7 +214,7 @@ export class ConversationController {
     const create = async () => {
       if (!conversation.isValid()) {
         const validationError = conversation.validationError || {};
-        window.log.error(
+        log.error(
           'Contact is not valid. Not saving, but adding to collection:',
           conversation.idForLogging(),
           validationError.stack
@@ -240,11 +225,11 @@ export class ConversationController {
 
       try {
         if (isGroupV1(conversation.attributes)) {
-          await maybeDeriveGroupV2Id(conversation);
+          maybeDeriveGroupV2Id(conversation);
         }
         await saveConversation(conversation.attributes);
       } catch (error) {
-        window.log.error(
+        log.error(
           'Conversation save failed! ',
           identifier,
           type,
@@ -267,7 +252,7 @@ export class ConversationController {
     type: ConversationAttributesTypeType,
     additionalInitialProps = {}
   ): Promise<ConversationModel> {
-    await this._initialPromise;
+    await this.load();
     const conversation = this.getOrCreate(id, type, additionalInitialProps);
 
     if (conversation) {
@@ -295,8 +280,13 @@ export class ConversationController {
 
   getOurConversationId(): string | undefined {
     const e164 = window.textsecure.storage.user.getNumber();
-    const uuid = window.textsecure.storage.user.getUuid();
-    return this.ensureContactIds({ e164, uuid, highTrust: true });
+    const uuid = window.textsecure.storage.user.getUuid()?.toString();
+    return this.ensureContactIds({
+      e164,
+      uuid,
+      highTrust: true,
+      reason: 'getOurConversationId',
+    });
   }
 
   getOurConversationIdOrThrow(): string {
@@ -325,7 +315,6 @@ export class ConversationController {
     return conversation;
   }
 
-  // eslint-disable-next-line class-methods-use-this
   areWePrimaryDevice(): boolean {
     const ourDeviceId = window.textsecure.storage.user.getDeviceId();
 
@@ -343,11 +332,20 @@ export class ConversationController {
     e164,
     uuid,
     highTrust,
-  }: {
-    e164?: string | null;
-    uuid?: string | null;
-    highTrust?: boolean;
-  }): string | undefined {
+    reason,
+  }:
+    | {
+        e164?: string | null;
+        uuid?: string | null;
+        highTrust?: false;
+        reason?: void;
+      }
+    | {
+        e164?: string | null;
+        uuid?: string | null;
+        highTrust: true;
+        reason: string;
+      }): string | undefined {
     // Check for at least one parameter being provided. This is necessary
     // because this path can be called on startup to resolve our own ID before
     // our phone number or UUID are known. The existing behavior in these
@@ -364,8 +362,9 @@ export class ConversationController {
 
     // 1. Handle no match at all
     if (!convoE164 && !convoUuid) {
-      window.log.info(
-        'ensureContactIds: Creating new contact, no matches found'
+      log.info(
+        'ensureContactIds: Creating new contact, no matches found',
+        highTrust ? reason : 'no reason'
       );
       const newConvo = this.getOrCreate(identifier, 'private');
       if (highTrust && e164) {
@@ -374,7 +373,7 @@ export class ConversationController {
       if (normalizedUuid) {
         newConvo.updateUuid(normalizedUuid);
       }
-      if (highTrust && e164 && normalizedUuid) {
+      if ((highTrust && e164) || normalizedUuid) {
         updateConversation(newConvo.attributes);
       }
 
@@ -384,7 +383,7 @@ export class ConversationController {
     }
     if (convoE164 && !convoUuid) {
       const haveUuid = Boolean(normalizedUuid);
-      window.log.info(
+      log.info(
         `ensureContactIds: e164-only match found (have UUID: ${haveUuid})`
       );
       // If we are only searching based on e164 anyway, then return the first result
@@ -395,22 +394,26 @@ export class ConversationController {
       // Fill in the UUID for an e164-only contact
       if (normalizedUuid && !convoE164.get('uuid')) {
         if (highTrust) {
-          window.log.info('ensureContactIds: Adding UUID to e164-only match');
+          log.info(
+            `ensureContactIds: Adding UUID (${uuid}) to e164-only match ` +
+              `(${e164}), reason: ${reason}`
+          );
           convoE164.updateUuid(normalizedUuid);
           updateConversation(convoE164.attributes);
         }
         return convoE164.get('id');
       }
 
-      window.log.info(
+      log.info(
         'ensureContactIds: e164 already had UUID, creating a new contact'
       );
       // If existing e164 match already has UUID, create a new contact...
       const newConvo = this.getOrCreate(normalizedUuid, 'private');
 
       if (highTrust) {
-        window.log.info(
-          'ensureContactIds: Moving e164 from old contact to new'
+        log.info(
+          `ensureContactIds: Moving e164 (${e164}) from old contact ` +
+            `(${convoE164.get('uuid')}) to new (${uuid}), reason: ${reason}`
         );
 
         // Remove the e164 from the old contact...
@@ -428,7 +431,10 @@ export class ConversationController {
     }
     if (!convoE164 && convoUuid) {
       if (e164 && highTrust) {
-        window.log.info('ensureContactIds: Adding e164 to UUID-only match');
+        log.info(
+          `ensureContactIds: Adding e164 (${e164}) to UUID-only match ` +
+            `(${uuid}), reason: ${reason}`
+        );
         convoUuid.updateE164(e164);
         updateConversation(convoUuid.attributes);
       }
@@ -450,8 +456,10 @@ export class ConversationController {
     if (highTrust) {
       // Conflict: If e164 match already has a UUID, we remove its e164.
       if (convoE164.get('uuid') && convoE164.get('uuid') !== normalizedUuid) {
-        window.log.info(
-          'ensureContactIds: e164 match had different UUID than incoming pair, removing its e164.'
+        log.info(
+          `ensureContactIds: e164 match (${e164}) had different ` +
+            `UUID(${convoE164.get('uuid')}) than incoming pair (${uuid}), ` +
+            `removing its e164, reason: ${reason}`
         );
 
         // Remove the e164 from the old contact...
@@ -465,7 +473,7 @@ export class ConversationController {
         return convoUuid.get('id');
       }
 
-      window.log.warn(
+      log.warn(
         `ensureContactIds: Found a split contact - UUID ${normalizedUuid} and E164 ${e164}. Merging.`
       );
 
@@ -484,9 +492,7 @@ export class ConversationController {
         })
         .catch(error => {
           const errorText = error && error.stack ? error.stack : error;
-          window.log.warn(
-            `ensureContactIds error combining contacts: ${errorText}`
-          );
+          log.warn(`ensureContactIds error combining contacts: ${errorText}`);
         });
     }
 
@@ -494,7 +500,7 @@ export class ConversationController {
   }
 
   async checkForConflicts(): Promise<void> {
-    window.log.info('checkForConflicts: starting...');
+    log.info('checkForConflicts: starting...');
     const byUuid = Object.create(null);
     const byE164 = Object.create(null);
     const byGroupV2Id = Object.create(null);
@@ -520,9 +526,7 @@ export class ConversationController {
         if (!existing) {
           byUuid[uuid] = conversation;
         } else {
-          window.log.warn(
-            `checkForConflicts: Found conflict with uuid ${uuid}`
-          );
+          log.warn(`checkForConflicts: Found conflict with uuid ${uuid}`);
 
           // Keep the newer one if it has an e164, otherwise keep existing
           if (conversation.get('e164')) {
@@ -550,7 +554,7 @@ export class ConversationController {
             existing.get('uuid') &&
             conversation.get('uuid') !== existing.get('uuid')
           ) {
-            window.log.warn(
+            log.warn(
               `checkForConflicts: Found two matches on e164 ${e164} with different truthy UUIDs. Dropping e164 on older.`
             );
 
@@ -562,9 +566,7 @@ export class ConversationController {
             continue;
           }
 
-          window.log.warn(
-            `checkForConflicts: Found conflict with e164 ${e164}`
-          );
+          log.warn(`checkForConflicts: Found conflict with e164 ${e164}`);
 
           // Keep the newer one if it has a UUID, otherwise keep existing
           if (conversation.get('uuid')) {
@@ -582,8 +584,7 @@ export class ConversationController {
 
       let groupV2Id: undefined | string;
       if (isGroupV1(conversation.attributes)) {
-        // eslint-disable-next-line no-await-in-loop
-        await maybeDeriveGroupV2Id(conversation);
+        maybeDeriveGroupV2Id(conversation);
         groupV2Id = conversation.get('derivedGroupV2Id');
         assert(
           groupV2Id,
@@ -601,7 +602,7 @@ export class ConversationController {
           const logParenthetical = isGroupV1(conversation.attributes)
             ? ' (derived from a GV1 group ID)'
             : '';
-          window.log.warn(
+          log.warn(
             `checkForConflicts: Found conflict with group V2 ID ${groupV2Id}${logParenthetical}`
           );
 
@@ -621,7 +622,7 @@ export class ConversationController {
       }
     }
 
-    window.log.info('checkForConflicts: complete!');
+    log.info('checkForConflicts: complete!');
   }
 
   async combineConversations(
@@ -639,15 +640,16 @@ export class ConversationController {
     }
 
     const obsoleteId = obsolete.get('id');
+    const obsoleteUuid = obsolete.getUuid();
     const currentId = current.get('id');
-    window.log.warn('combineConversations: Combining two conversations', {
+    log.warn('combineConversations: Combining two conversations', {
       obsolete: obsoleteId,
       current: currentId,
     });
 
-    if (conversationType === 'private') {
+    if (conversationType === 'private' && obsoleteUuid) {
       if (!current.get('profileKey') && obsolete.get('profileKey')) {
-        window.log.warn(
+        log.warn(
           'combineConversations: Copying profile key from old to new contact'
         );
 
@@ -658,29 +660,38 @@ export class ConversationController {
         }
       }
 
-      window.log.warn(
+      log.warn(
         'combineConversations: Delete all sessions tied to old conversationId'
       );
-      const deviceIds = await window.textsecure.storage.protocol.getDeviceIds(
-        obsoleteId
-      );
+      const ourUuid = window.textsecure.storage.user.getCheckedUuid();
+      const deviceIds = await window.textsecure.storage.protocol.getDeviceIds({
+        ourUuid,
+        identifier: obsoleteUuid.toString(),
+      });
       await Promise.all(
         deviceIds.map(async deviceId => {
-          await window.textsecure.storage.protocol.removeSession(
-            `${obsoleteId}.${deviceId}`
+          const addr = new QualifiedAddress(
+            ourUuid,
+            new Address(obsoleteUuid, deviceId)
           );
+          await window.textsecure.storage.protocol.removeSession(addr);
         })
       );
 
-      window.log.warn(
+      log.warn(
         'combineConversations: Delete all identity information tied to old conversationId'
       );
-      await window.textsecure.storage.protocol.removeIdentityKey(obsoleteId);
 
-      window.log.warn(
+      if (obsoleteUuid) {
+        await window.textsecure.storage.protocol.removeIdentityKey(
+          obsoleteUuid
+        );
+      }
+
+      log.warn(
         'combineConversations: Ensure that all V1 groups have new conversationId instead of old'
       );
-      const groups = await this.getAllGroupsInvolvingId(obsoleteId);
+      const groups = await this.getAllGroupsInvolvingUuid(obsoleteUuid);
       groups.forEach(group => {
         const members = group.get('members');
         const withoutObsolete = without(members, obsoleteId);
@@ -695,23 +706,21 @@ export class ConversationController {
 
     // Note: we explicitly don't want to update V2 groups
 
-    window.log.warn(
+    log.warn(
       'combineConversations: Delete the obsolete conversation from the database'
     );
-    await removeConversation(obsoleteId, {
-      Conversation: window.Whisper.Conversation,
-    });
+    await removeConversation(obsoleteId);
 
-    window.log.warn('combineConversations: Update messages table');
+    log.warn('combineConversations: Update messages table');
     await migrateConversationMessages(obsoleteId, currentId);
 
-    window.log.warn(
+    log.warn(
       'combineConversations: Eliminate old conversation from ConversationController lookups'
     );
     this._conversations.remove(obsolete);
     this._conversations.resetLookups();
 
-    window.log.warn('combineConversations: Complete!', {
+    log.warn('combineConversations: Complete!', {
       obsolete: obsoleteId,
       current: currentId,
     });
@@ -732,29 +741,24 @@ export class ConversationController {
    * conversation the message belongs to OR null if a conversation isn't
    * found.
    */
-  // eslint-disable-next-line class-methods-use-this
   async getConversationForTargetMessage(
     targetFromId: string,
     targetTimestamp: number
   ): Promise<ConversationModel | null | undefined> {
-    const messages = await getMessagesBySentAt(targetTimestamp, {
-      MessageCollection: window.Whisper.MessageCollection,
-    });
-    const targetMessage = messages.find(m => m.getContactId() === targetFromId);
+    const messages = await getMessagesBySentAt(targetTimestamp);
+    const targetMessage = messages.find(m => getContactId(m) === targetFromId);
 
     if (targetMessage) {
-      return targetMessage.getConversation();
+      return this.get(targetMessage.conversationId);
     }
 
     return null;
   }
 
-  async getAllGroupsInvolvingId(
-    conversationId: string
+  async getAllGroupsInvolvingUuid(
+    uuid: UUID
   ): Promise<Array<ConversationModel>> {
-    const groups = await getAllGroupsInvolvingId(conversationId, {
-      ConversationCollection: window.Whisper.ConversationCollection,
-    });
+    const groups = await getAllGroupsInvolvingUuid(uuid.toString());
     return groups.map(group => {
       const existing = this.get(group.id);
       if (existing) {
@@ -771,111 +775,165 @@ export class ConversationController {
     );
   }
 
-  async loadPromise(): Promise<void> {
-    return this._initialPromise;
-  }
-
   reset(): void {
-    this._initialPromise = Promise.resolve();
+    delete this._initialPromise;
     this._initialFetchComplete = false;
     this._conversations.reset([]);
   }
 
-  isFetchComplete(): boolean | undefined {
-    return this._initialFetchComplete;
+  load(): Promise<void> {
+    this._initialPromise ||= this.doLoad();
+    return this._initialPromise;
   }
 
-  async load(): Promise<void> {
-    window.log.info('ConversationController: starting initial fetch');
+  // A number of things outside conversation.attributes affect conversation re-rendering.
+  //   If it's scoped to a given conversation, it's easy to trigger('change'). There are
+  //   important values in storage and the storage service which change rendering pretty
+  //   radically, so this function is necessary to force regeneration of props.
+  async forceRerender(identifiers?: Array<string>): Promise<void> {
+    let count = 0;
+    const conversations = identifiers
+      ? identifiers.map(identifier => this.get(identifier)).filter(isNotNil)
+      : this._conversations.models.slice();
+    log.info(
+      `forceRerender: Starting to loop through ${conversations.length} conversations`
+    );
+
+    for (let i = 0, max = conversations.length; i < max; i += 1) {
+      const conversation = conversations[i];
+
+      if (conversation.cachedProps) {
+        conversation.oldCachedProps = conversation.cachedProps;
+        conversation.cachedProps = null;
+
+        conversation.trigger('props-change', conversation, false);
+        count += 1;
+      }
+
+      if (count % 10 === 0) {
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(300);
+      }
+    }
+    log.info(`forceRerender: Updated ${count} conversations`);
+  }
+
+  onConvoOpenStart(conversationId: string): void {
+    this._conversationOpenStart.set(conversationId, Date.now());
+  }
+
+  onConvoMessageMount(conversationId: string): void {
+    const loadStart = this._conversationOpenStart.get(conversationId);
+    if (loadStart === undefined) {
+      return;
+    }
+
+    this._conversationOpenStart.delete(conversationId);
+    this.get(conversationId)?.onOpenComplete(loadStart);
+  }
+
+  repairPinnedConversations(): void {
+    const pinnedIds = window.storage.get('pinnedConversationIds', []);
+
+    for (const id of pinnedIds) {
+      const convo = this.get(id);
+
+      if (!convo || convo.get('isPinned')) {
+        continue;
+      }
+
+      log.warn(
+        `ConversationController: Repairing ${convo.idForLogging()}'s isPinned`
+      );
+      convo.set('isPinned', true);
+
+      window.Signal.Data.updateConversation(convo.attributes);
+    }
+  }
+
+  private async doLoad(): Promise<void> {
+    log.info('ConversationController: starting initial fetch');
 
     if (this._conversations.length) {
       throw new Error('ConversationController: Already loaded!');
     }
 
-    const load = async () => {
-      try {
-        const collection = await getAllConversations({
-          ConversationCollection: window.Whisper.ConversationCollection,
-        });
+    try {
+      const collection = await getAllConversations();
 
-        // Get rid of temporary conversations
-        const temporaryConversations = collection.filter(conversation =>
-          Boolean(conversation.get('isTemporary'))
+      // Get rid of temporary conversations
+      const temporaryConversations = collection.filter(conversation =>
+        Boolean(conversation.isTemporary)
+      );
+
+      if (temporaryConversations.length) {
+        log.warn(
+          `ConversationController: Removing ${temporaryConversations.length} temporary conversations`
         );
-
-        if (temporaryConversations.length) {
-          window.log.warn(
-            `ConversationController: Removing ${temporaryConversations.length} temporary conversations`
-          );
-        }
-        const queue = new PQueue({ concurrency: 3, timeout: 1000 * 60 * 2 });
-        queue.addAll(
-          temporaryConversations.map(item => async () => {
-            await removeConversation(item.id, {
-              Conversation: window.Whisper.Conversation,
-            });
-          })
-        );
-        await queue.onIdle();
-
-        // Hydrate the final set of conversations
-        this._conversations.add(
-          collection.filter(conversation => !conversation.get('isTemporary'))
-        );
-
-        this._initialFetchComplete = true;
-
-        await Promise.all(
-          this._conversations.map(async conversation => {
-            try {
-              // Hydrate contactCollection, now that initial fetch is complete
-              conversation.fetchContacts();
-
-              const isChanged = await maybeDeriveGroupV2Id(conversation);
-              if (isChanged) {
-                updateConversation(conversation.attributes);
-              }
-
-              // In case a too-large draft was saved to the database
-              const draft = conversation.get('draft');
-              if (draft && draft.length > MAX_MESSAGE_BODY_LENGTH) {
-                conversation.set({
-                  draft: draft.slice(0, MAX_MESSAGE_BODY_LENGTH),
-                });
-                updateConversation(conversation.attributes);
-              }
-
-              // Clean up the conversations that have UUID as their e164.
-              const e164 = conversation.get('e164');
-              const uuid = conversation.get('uuid');
-              if (isValidGuid(e164) && uuid) {
-                conversation.set({ e164: undefined });
-                updateConversation(conversation.attributes);
-
-                window.log.info(
-                  `Cleaning up conversation(${uuid}) with invalid e164`
-                );
-              }
-            } catch (error) {
-              window.log.error(
-                'ConversationController.load/map: Failed to prepare a conversation',
-                error && error.stack ? error.stack : error
-              );
-            }
-          })
-        );
-        window.log.info('ConversationController: done with initial fetch');
-      } catch (error) {
-        window.log.error(
-          'ConversationController: initial fetch failed',
-          error && error.stack ? error.stack : error
-        );
-        throw error;
       }
-    };
+      const queue = new PQueue({
+        concurrency: 3,
+        timeout: 1000 * 60 * 2,
+        throwOnTimeout: true,
+      });
+      queue.addAll(
+        temporaryConversations.map(item => async () => {
+          await removeConversation(item.id);
+        })
+      );
+      await queue.onIdle();
 
-    this._initialPromise = load();
+      // Hydrate the final set of conversations
+      this._conversations.add(
+        collection.filter(conversation => !conversation.isTemporary)
+      );
 
-    return this._initialPromise;
+      this._initialFetchComplete = true;
+
+      await Promise.all(
+        this._conversations.map(async conversation => {
+          try {
+            // Hydrate contactCollection, now that initial fetch is complete
+            conversation.fetchContacts();
+
+            const isChanged = maybeDeriveGroupV2Id(conversation);
+            if (isChanged) {
+              updateConversation(conversation.attributes);
+            }
+
+            // In case a too-large draft was saved to the database
+            const draft = conversation.get('draft');
+            if (draft && draft.length > MAX_MESSAGE_BODY_LENGTH) {
+              conversation.set({
+                draft: draft.slice(0, MAX_MESSAGE_BODY_LENGTH),
+              });
+              updateConversation(conversation.attributes);
+            }
+
+            // Clean up the conversations that have UUID as their e164.
+            const e164 = conversation.get('e164');
+            const uuid = conversation.get('uuid');
+            if (isValidUuid(e164) && uuid) {
+              conversation.set({ e164: undefined });
+              updateConversation(conversation.attributes);
+
+              log.info(`Cleaning up conversation(${uuid}) with invalid e164`);
+            }
+          } catch (error) {
+            log.error(
+              'ConversationController.load/map: Failed to prepare a conversation',
+              error && error.stack ? error.stack : error
+            );
+          }
+        })
+      );
+      log.info('ConversationController: done with initial fetch');
+    } catch (error) {
+      log.error(
+        'ConversationController: initial fetch failed',
+        error && error.stack ? error.stack : error
+      );
+      throw error;
+    }
   }
 }

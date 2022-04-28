@@ -1,49 +1,49 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useEffect, useCallback, useMemo } from 'react';
-import Measure, { MeasuredComponentProps } from 'react-measure';
-import { isNumber } from 'lodash';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import type { MeasuredComponentProps } from 'react-measure';
+import Measure from 'react-measure';
+import classNames from 'classnames';
+import { clamp, isNumber, noop } from 'lodash';
 
-import {
-  LeftPaneHelper,
-  FindDirection,
-  ToFindType,
-} from './leftPane/LeftPaneHelper';
-import {
-  LeftPaneInboxHelper,
-  LeftPaneInboxPropsType,
-} from './leftPane/LeftPaneInboxHelper';
-import {
-  LeftPaneSearchHelper,
-  LeftPaneSearchPropsType,
-} from './leftPane/LeftPaneSearchHelper';
-import {
-  LeftPaneArchiveHelper,
-  LeftPaneArchivePropsType,
-} from './leftPane/LeftPaneArchiveHelper';
-import {
-  LeftPaneComposeHelper,
-  LeftPaneComposePropsType,
-} from './leftPane/LeftPaneComposeHelper';
-import {
-  LeftPaneChooseGroupMembersHelper,
-  LeftPaneChooseGroupMembersPropsType,
-} from './leftPane/LeftPaneChooseGroupMembersHelper';
-import {
-  LeftPaneSetGroupMetadataHelper,
-  LeftPaneSetGroupMetadataPropsType,
-} from './leftPane/LeftPaneSetGroupMetadataHelper';
+import type { LeftPaneHelper, ToFindType } from './leftPane/LeftPaneHelper';
+import { FindDirection } from './leftPane/LeftPaneHelper';
+import type { LeftPaneInboxPropsType } from './leftPane/LeftPaneInboxHelper';
+import { LeftPaneInboxHelper } from './leftPane/LeftPaneInboxHelper';
+import type { LeftPaneSearchPropsType } from './leftPane/LeftPaneSearchHelper';
+import { LeftPaneSearchHelper } from './leftPane/LeftPaneSearchHelper';
+import type { LeftPaneArchivePropsType } from './leftPane/LeftPaneArchiveHelper';
+import { LeftPaneArchiveHelper } from './leftPane/LeftPaneArchiveHelper';
+import type { LeftPaneComposePropsType } from './leftPane/LeftPaneComposeHelper';
+import { LeftPaneComposeHelper } from './leftPane/LeftPaneComposeHelper';
+import type { LeftPaneChooseGroupMembersPropsType } from './leftPane/LeftPaneChooseGroupMembersHelper';
+import { LeftPaneChooseGroupMembersHelper } from './leftPane/LeftPaneChooseGroupMembersHelper';
+import type { LeftPaneSetGroupMetadataPropsType } from './leftPane/LeftPaneSetGroupMetadataHelper';
+import { LeftPaneSetGroupMetadataHelper } from './leftPane/LeftPaneSetGroupMetadataHelper';
 
 import * as OS from '../OS';
-import { LocalizerType, ScrollBehavior } from '../types/Util';
-import { usePrevious } from '../util/hooks';
+import type { LocalizerType, ThemeType } from '../types/Util';
+import { ScrollBehavior } from '../types/Util';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
+import { usePrevious } from '../hooks/usePrevious';
 import { missingCaseError } from '../util/missingCaseError';
+import type { WidthBreakpoint } from './_util';
+import { getConversationListWidthBreakpoint } from './_util';
+import * as KeyboardLayout from '../services/keyboardLayout';
+import {
+  MIN_WIDTH,
+  SNAP_WIDTH,
+  MIN_FULL_WIDTH,
+  MAX_WIDTH,
+  getWidthFromPreferredWidth,
+} from '../util/leftPaneWidth';
+import type { LookupConversationWithoutUuidActionsType } from '../util/lookupConversationWithoutUuid';
 
 import { ConversationList } from './ConversationList';
 import { ContactCheckboxDisabledReason } from './conversationList/ContactCheckbox';
 
-import {
+import type {
   DeleteAvatarFromDiskActionType,
   ReplaceAvatarActionType,
   SaveAvatarToDiskActionType,
@@ -81,33 +81,39 @@ export type PropsType = {
     | ({
         mode: LeftPaneMode.SetGroupMetadata;
       } & LeftPaneSetGroupMetadataPropsType);
+  getPreferredBadge: PreferredBadgeSelectorType;
   i18n: LocalizerType;
+  preferredWidthFromStorage: number;
   selectedConversationId: undefined | string;
   selectedMessageId: undefined | string;
-  regionCode: string;
+  regionCode: string | undefined;
   challengeStatus: 'idle' | 'required' | 'pending';
   setChallengeStatus: (status: 'idle') => void;
+  crashReportCount: number;
+  theme: ThemeType;
 
   // Action Creators
-  cantAddContactToGroup: (conversationId: string) => void;
+  clearConversationSearch: () => void;
   clearGroupCreationError: () => void;
-  closeCantAddContactToGroupModal: () => void;
+  clearSearch: () => void;
   closeMaximumGroupSizeModal: () => void;
   closeRecommendedGroupSizeModal: () => void;
   createGroup: () => void;
-  startNewConversationFromPhoneNumber: (e164: string) => void;
   openConversationInternal: (_: {
     conversationId: string;
     messageId?: string;
     switchToAssociatedView?: boolean;
   }) => void;
+  savePreferredLeftPaneWidth: (_: number) => void;
+  searchInConversation: (conversationId: string) => unknown;
   setComposeSearchTerm: (composeSearchTerm: string) => void;
-  setComposeGroupAvatar: (_: undefined | ArrayBuffer) => void;
+  setComposeGroupAvatar: (_: undefined | Uint8Array) => void;
   setComposeGroupName: (_: string) => void;
   setComposeGroupExpireTimer: (_: number) => void;
   showArchivedConversations: () => void;
   showInbox: () => void;
   startComposing: () => void;
+  startSearch: () => unknown;
   showChooseGroupMembers: () => void;
   startSettingGroupMetadata: () => void;
   toggleConversationInChooseMembers: (conversationId: string) => void;
@@ -115,38 +121,56 @@ export type PropsType = {
   composeReplaceAvatar: ReplaceAvatarActionType;
   composeSaveAvatarToDisk: SaveAvatarToDiskActionType;
   toggleComposeEditingAvatar: () => unknown;
+  updateSearchTerm: (_: string) => void;
 
   // Render Props
-  renderExpiredBuildDialog: () => JSX.Element;
+  renderExpiredBuildDialog: (
+    _: Readonly<{ containerWidthBreakpoint: WidthBreakpoint }>
+  ) => JSX.Element;
   renderMainHeader: () => JSX.Element;
   renderMessageSearchResult: (id: string) => JSX.Element;
-  renderNetworkStatus: () => JSX.Element;
-  renderRelinkDialog: () => JSX.Element;
-  renderUpdateDialog: () => JSX.Element;
+  renderNetworkStatus: (
+    _: Readonly<{ containerWidthBreakpoint: WidthBreakpoint }>
+  ) => JSX.Element;
+  renderRelinkDialog: (
+    _: Readonly<{ containerWidthBreakpoint: WidthBreakpoint }>
+  ) => JSX.Element;
+  renderUpdateDialog: (
+    _: Readonly<{ containerWidthBreakpoint: WidthBreakpoint }>
+  ) => JSX.Element;
   renderCaptchaDialog: (props: { onSkip(): void }) => JSX.Element;
-};
+  renderCrashReportDialog: () => JSX.Element;
+
+  showConversation: (conversationId: string) => void;
+} & LookupConversationWithoutUuidActionsType;
 
 export const LeftPane: React.FC<PropsType> = ({
-  cantAddContactToGroup,
   challengeStatus,
+  crashReportCount,
+  clearConversationSearch,
   clearGroupCreationError,
-  closeCantAddContactToGroupModal,
+  clearSearch,
   closeMaximumGroupSizeModal,
   closeRecommendedGroupSizeModal,
   composeDeleteAvatarFromDisk,
   composeReplaceAvatar,
   composeSaveAvatarToDisk,
   createGroup,
+  getPreferredBadge,
   i18n,
   modeSpecificProps,
   openConversationInternal,
+  preferredWidthFromStorage,
   renderCaptchaDialog,
+  renderCrashReportDialog,
   renderExpiredBuildDialog,
   renderMainHeader,
   renderMessageSearchResult,
   renderNetworkStatus,
   renderRelinkDialog,
   renderUpdateDialog,
+  savePreferredLeftPaneWidth,
+  searchInConversation,
   selectedConversationId,
   selectedMessageId,
   setChallengeStatus,
@@ -158,11 +182,23 @@ export const LeftPane: React.FC<PropsType> = ({
   showChooseGroupMembers,
   showInbox,
   startComposing,
-  startNewConversationFromPhoneNumber,
-  startSettingGroupMetadata,
-  toggleComposeEditingAvatar,
+  startSearch,
+  showUserNotFoundModal,
+  setIsFetchingUUID,
+  lookupConversationWithoutUuid,
   toggleConversationInChooseMembers,
+  showConversation,
+  startSettingGroupMetadata,
+  theme,
+  toggleComposeEditingAvatar,
+  updateSearchTerm,
 }) => {
+  const [preferredWidth, setPreferredWidth] = useState(
+    // This clamp is present just in case we get a bogus value from storage.
+    clamp(preferredWidthFromStorage, MIN_WIDTH, MAX_WIDTH)
+  );
+  const [isResizing, setIsResizing] = useState(false);
+
   const previousModeSpecificProps = usePrevious(
     modeSpecificProps,
     modeSpecificProps
@@ -179,7 +215,7 @@ export const LeftPane: React.FC<PropsType> = ({
   //    but React doesn't know that they're the same, so you can lose focus as you change
   //    modes.
   // 2. These components render virtualized lists, which are somewhat slow to initialize.
-  //    Switching between modes can cause noticable hiccups.
+  //    Switching between modes can cause noticeable hiccups.
   //
   // To get around those problems, we use "helpers" which all correspond to the same
   //   interface.
@@ -257,10 +293,11 @@ export const LeftPane: React.FC<PropsType> = ({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const { ctrlKey, shiftKey, altKey, metaKey, key } = event;
+      const { ctrlKey, shiftKey, altKey, metaKey } = event;
       const commandOrCtrl = OS.isMacOS() ? metaKey : ctrlKey;
+      const key = KeyboardLayout.lookup(event);
 
-      if (event.key === 'Escape') {
+      if (key === 'Escape') {
         const backAction = helper.getBackAction({
           showInbox,
           startComposing,
@@ -296,9 +333,8 @@ export const LeftPane: React.FC<PropsType> = ({
 
       const numericIndex = keyboardKeyToNumericIndex(event.key);
       if (commandOrCtrl && isNumber(numericIndex)) {
-        conversationToOpen = helper.getConversationAndMessageAtIndex(
-          numericIndex
-        );
+        conversationToOpen =
+          helper.getConversationAndMessageAtIndex(numericIndex);
       } else {
         let toFind: undefined | ToFindType;
         if (
@@ -333,6 +369,12 @@ export const LeftPane: React.FC<PropsType> = ({
         event.preventDefault();
         event.stopPropagation();
       }
+
+      helper.onKeyDown(event, {
+        searchInConversation,
+        selectedConversationId,
+        startSearch,
+      });
     };
 
     document.addEventListener('keydown', onKeyDown);
@@ -342,16 +384,85 @@ export const LeftPane: React.FC<PropsType> = ({
   }, [
     helper,
     openConversationInternal,
+    searchInConversation,
     selectedConversationId,
     selectedMessageId,
     showChooseGroupMembers,
     showInbox,
     startComposing,
+    startSearch,
+  ]);
+
+  const requiresFullWidth = helper.requiresFullWidth();
+
+  useEffect(() => {
+    if (!isResizing) {
+      return noop;
+    }
+
+    const onMouseMove = (event: MouseEvent) => {
+      let width: number;
+      if (requiresFullWidth) {
+        width = Math.max(event.clientX, MIN_FULL_WIDTH);
+      } else if (event.clientX < SNAP_WIDTH) {
+        width = MIN_WIDTH;
+      } else {
+        width = clamp(event.clientX, MIN_FULL_WIDTH, MAX_WIDTH);
+      }
+      setPreferredWidth(Math.min(width, MAX_WIDTH));
+
+      event.preventDefault();
+    };
+
+    const stopResizing = () => {
+      setIsResizing(false);
+    };
+
+    document.body.addEventListener('mousemove', onMouseMove);
+    document.body.addEventListener('mouseup', stopResizing);
+    document.body.addEventListener('mouseleave', stopResizing);
+
+    return () => {
+      document.body.removeEventListener('mousemove', onMouseMove);
+      document.body.removeEventListener('mouseup', stopResizing);
+      document.body.removeEventListener('mouseleave', stopResizing);
+    };
+  }, [isResizing, requiresFullWidth]);
+
+  useEffect(() => {
+    if (!isResizing) {
+      return noop;
+    }
+
+    document.body.classList.add('is-resizing-left-pane');
+    return () => {
+      document.body.classList.remove('is-resizing-left-pane');
+    };
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing || preferredWidth === preferredWidthFromStorage) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      savePreferredLeftPaneWidth(preferredWidth);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [
+    isResizing,
+    preferredWidth,
+    preferredWidthFromStorage,
+    savePreferredLeftPaneWidth,
   ]);
 
   const preRowsNode = helper.getPreRowsNode({
+    clearConversationSearch,
     clearGroupCreationError,
-    closeCantAddContactToGroupModal,
+    clearSearch,
     closeMaximumGroupSizeModal,
     closeRecommendedGroupSizeModal,
     composeDeleteAvatarFromDisk,
@@ -359,14 +470,11 @@ export const LeftPane: React.FC<PropsType> = ({
     composeSaveAvatarToDisk,
     createGroup,
     i18n,
-    setComposeGroupAvatar,
-    setComposeGroupName,
-    setComposeGroupExpireTimer,
-    toggleComposeEditingAvatar,
-    onChangeComposeSearchTerm: event => {
-      setComposeSearchTerm(event.target.value);
-    },
     removeSelectedContact: toggleConversationInChooseMembers,
+    setComposeGroupAvatar,
+    setComposeGroupExpireTimer,
+    setComposeGroupName,
+    toggleComposeEditingAvatar,
   });
   const footerContents = helper.getFooterContents({
     createGroup,
@@ -413,13 +521,26 @@ export const LeftPane: React.FC<PropsType> = ({
   //   It also ensures that we scroll to the top when switching views.
   const listKey = preRowsNode ? 1 : 0;
 
+  const width = getWidthFromPreferredWidth(preferredWidth, {
+    requiresFullWidth,
+  });
+
+  const widthBreakpoint = getConversationListWidthBreakpoint(width);
+
   // We disable this lint rule because we're trying to capture bubbled events. See [the
   //   lint rule's docs][0].
   //
   // [0]: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/645900a0e296ca7053dbf6cd9e12cc85849de2d5/docs/rules/no-static-element-interactions.md#case-the-event-handler-is-only-being-used-to-capture-bubbled-events
   /* eslint-disable jsx-a11y/no-static-element-interactions */
   return (
-    <div className="module-left-pane">
+    <div
+      className={classNames(
+        'module-left-pane',
+        isResizing && 'module-left-pane--is-resizing',
+        `module-left-pane--width-${widthBreakpoint}`
+      )}
+      style={{ width }}
+    >
       {/* eslint-enable jsx-a11y/no-static-element-interactions */}
       <div className="module-left-pane__header">
         {helper.getHeaderContents({
@@ -429,10 +550,23 @@ export const LeftPane: React.FC<PropsType> = ({
           showChooseGroupMembers,
         }) || renderMainHeader()}
       </div>
-      {renderExpiredBuildDialog()}
-      {renderRelinkDialog()}
-      {renderNetworkStatus()}
-      {renderUpdateDialog()}
+      {helper.getSearchInput({
+        clearConversationSearch,
+        clearSearch,
+        i18n,
+        onChangeComposeSearchTerm: event => {
+          setComposeSearchTerm(event.target.value);
+        },
+        updateSearchTerm,
+      })}
+      <div className="module-left-pane__dialogs">
+        {renderExpiredBuildDialog({
+          containerWidthBreakpoint: widthBreakpoint,
+        })}
+        {renderRelinkDialog({ containerWidthBreakpoint: widthBreakpoint })}
+        {renderNetworkStatus({ containerWidthBreakpoint: widthBreakpoint })}
+        {renderUpdateDialog({ containerWidthBreakpoint: widthBreakpoint })}
+      </div>
       {preRowsNode && <React.Fragment key={0}>{preRowsNode}</React.Fragment>}
       <Measure bounds>
         {({ contentRect, measureRef }: MeasuredComponentProps) => (
@@ -446,7 +580,11 @@ export const LeftPane: React.FC<PropsType> = ({
                 tabIndex={-1}
               >
                 <ConversationList
-                  dimensions={contentRect.bounds}
+                  dimensions={{
+                    width,
+                    height: contentRect.bounds?.height || 0,
+                  }}
+                  getPreferredBadge={getPreferredBadge}
                   getRow={getRow}
                   i18n={i18n}
                   onClickArchiveButton={showArchivedConversations}
@@ -462,13 +600,14 @@ export const LeftPane: React.FC<PropsType> = ({
                       case ContactCheckboxDisabledReason.MaximumContactsSelected:
                         // These are no-ops.
                         break;
-                      case ContactCheckboxDisabledReason.NotCapable:
-                        cantAddContactToGroup(conversationId);
-                        break;
                       default:
                         throw missingCaseError(disabledReason);
                     }
                   }}
+                  showUserNotFoundModal={showUserNotFoundModal}
+                  setIsFetchingUUID={setIsFetchingUUID}
+                  lookupConversationWithoutUuid={lookupConversationWithoutUuid}
+                  showConversation={showConversation}
                   onSelectConversation={onSelectConversation}
                   renderMessageSearchResult={renderMessageSearchResult}
                   rowCount={helper.getRowCount()}
@@ -477,9 +616,7 @@ export const LeftPane: React.FC<PropsType> = ({
                   scrollable={isScrollable}
                   shouldRecomputeRowHeights={shouldRecomputeRowHeights}
                   showChooseGroupMembers={showChooseGroupMembers}
-                  startNewConversationFromPhoneNumber={
-                    startNewConversationFromPhoneNumber
-                  }
+                  theme={theme}
                 />
               </div>
             </div>
@@ -489,12 +626,22 @@ export const LeftPane: React.FC<PropsType> = ({
       {footerContents && (
         <div className="module-left-pane__footer">{footerContents}</div>
       )}
+      <>
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+        <div
+          className="module-left-pane__resize-grab-area"
+          onMouseDown={() => {
+            setIsResizing(true);
+          }}
+        />
+      </>
       {challengeStatus !== 'idle' &&
         renderCaptchaDialog({
           onSkip() {
             setChallengeStatus('idle');
           },
         })}
+      {crashReportCount > 0 && renderCrashReportDialog()}
     </div>
   );
 };

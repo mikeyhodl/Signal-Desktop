@@ -8,12 +8,13 @@ import { storiesOf } from '@storybook/react';
 import { select, text, withKnobs } from '@storybook/addon-knobs';
 import { random, range, sample, sortBy } from 'lodash';
 
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import { setupI18n } from '../../../util/setupI18n';
 import enMessages from '../../../../_locales/en/messages.json';
-import { MIMEType } from '../../../types/MIME';
-import { MediaItemType } from '../../../types/MediaItem';
+import type { MIMEType } from '../../../types/MIME';
+import type { MediaItemType } from '../../../types/MediaItem';
 
-import { AttachmentSection, Props } from './AttachmentSection';
+import type { Props } from './AttachmentSection';
+import { AttachmentSection } from './AttachmentSection';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -30,7 +31,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const days = (n: number) => n * DAY_MS;
 const tokens = ['foo', 'bar', 'baz', 'qux', 'quux'];
 
-const contentTypes = ({
+const contentTypes = {
   gif: 'image/gif',
   jpg: 'image/jpeg',
   png: 'image/png',
@@ -38,7 +39,7 @@ const contentTypes = ({
   docx: 'application/text',
   pdf: 'application/pdf',
   txt: 'application/text',
-} as unknown) as Record<string, MIMEType>;
+} as unknown as Record<string, MIMEType>;
 
 const createRandomFile = (
   startTime: number,

@@ -8,10 +8,10 @@ import LinkifyIt from 'linkify-it';
 import { maybeParseUrl } from '../util/url';
 import { replaceEmojiWithSpaces } from '../util/emoji';
 
-import { AttachmentType } from './Attachment';
+import type { AttachmentType } from './Attachment';
 
 export type LinkPreviewImage = AttachmentType & {
-  data: ArrayBuffer;
+  data: Uint8Array;
 };
 
 export type LinkPreviewResult = {
@@ -28,9 +28,34 @@ export type LinkPreviewWithDomain = {
 
 const linkify = LinkifyIt();
 
-export function isLinkSafeToPreview(href: string): boolean {
+export function shouldPreviewHref(href: string): boolean {
   const url = maybeParseUrl(href);
-  return Boolean(url && url.protocol === 'https:' && !isLinkSneaky(href));
+  return Boolean(
+    url &&
+      url.protocol === 'https:' &&
+      url.hostname !== 'debuglogs.org' &&
+      !isLinkSneaky(href)
+  );
+}
+
+const DIRECTIONAL_OVERRIDES = /[\u202c\u202d\u202e]/;
+const UNICODE_DRAWING = /[\u2500-\u25FF]/;
+
+export function shouldLinkifyMessage(
+  message: string | null | undefined
+): boolean {
+  if (!message) {
+    return true;
+  }
+
+  if (DIRECTIONAL_OVERRIDES.test(message)) {
+    return false;
+  }
+  if (UNICODE_DRAWING.test(message)) {
+    return false;
+  }
+
+  return true;
 }
 
 export function isStickerPack(link = ''): boolean {
@@ -42,6 +67,10 @@ export function isGroupLink(link = ''): boolean {
 }
 
 export function findLinks(text: string, caretLocation?: number): Array<string> {
+  if (!shouldLinkifyMessage(text)) {
+    return [];
+  }
+
   const haveCaretLocation = isNumber(caretLocation);
   const textLength = text ? text.length : 0;
 
@@ -69,9 +98,13 @@ export function findLinks(text: string, caretLocation?: number): Array<string> {
   );
 }
 
-export function getDomain(href: string): string | undefined {
+export function getDomain(href: string): string {
   const url = maybeParseUrl(href);
-  return url ? url.hostname : undefined;
+  if (!url || !url.hostname) {
+    throw new Error('getDomain: Unable to extract hostname from href');
+  }
+
+  return url.hostname;
 }
 
 // See <https://tools.ietf.org/html/rfc3986>.
@@ -152,7 +185,7 @@ export function isLinkSneaky(href: string): boolean {
     return true;
   }
 
-  // This is necesary because getDomain returns domains in punycode form.
+  // This is necessary because getDomain returns domains in punycode form.
   const unicodeDomain = nodeUrl.domainToUnicode
     ? nodeUrl.domainToUnicode(url.hostname)
     : url.hostname;

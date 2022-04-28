@@ -4,9 +4,9 @@
 // The list of permissions is here:
 //   https://electronjs.org/docs/api/session#sessetpermissionrequesthandlerhandler
 
-import { session as ElectronSession } from 'electron';
+import type { session as ElectronSession } from 'electron';
 
-import { ConfigType } from './config';
+import type { ConfigType } from './base_config';
 
 const PERMISSIONS: Record<string, boolean> = {
   // Allowed

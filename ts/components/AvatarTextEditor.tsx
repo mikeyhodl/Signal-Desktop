@@ -1,9 +1,8 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { ChangeEvent, ClipboardEvent } from 'react';
 import React, {
-  ChangeEvent,
-  ClipboardEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -15,11 +14,11 @@ import { noop } from 'lodash';
 import * as grapheme from '../util/grapheme';
 import { AvatarColorPicker } from './AvatarColorPicker';
 import { AvatarColors } from '../types/Colors';
-import { AvatarDataType } from '../types/Avatar';
+import type { AvatarDataType } from '../types/Avatar';
 import { AvatarModalButtons } from './AvatarModalButtons';
 import { BetterAvatarBubble } from './BetterAvatarBubble';
-import { LocalizerType } from '../types/Util';
-import { avatarDataToArrayBuffer } from '../util/avatarDataToArrayBuffer';
+import type { LocalizerType } from '../types/Util';
+import { avatarDataToBytes } from '../util/avatarDataToBytes';
 import { createAvatarData } from '../util/createAvatarData';
 import {
   getFittedFontSize,
@@ -27,7 +26,7 @@ import {
 } from '../util/avatarTextSizeCalculator';
 
 type DoneHandleType = (
-  avatarBuffer: ArrayBuffer,
+  avatarBuffer: Uint8Array,
   avatarData: AvatarDataType
 ) => unknown;
 
@@ -48,9 +47,10 @@ export const AvatarTextEditor = ({
   onDone,
 }: PropsType): JSX.Element => {
   const initialText = useMemo(() => avatarData?.text || '', [avatarData]);
-  const initialColor = useMemo(() => avatarData?.color || AvatarColors[0], [
-    avatarData,
-  ]);
+  const initialColor = useMemo(
+    () => avatarData?.color || AvatarColors[0],
+    [avatarData]
+  );
 
   const [inputText, setInputText] = useState(initialText);
   const [fontSize, setFontSize] = useState(getFontSizes(BUBBLE_SIZE).text);
@@ -111,7 +111,7 @@ export const AvatarTextEditor = ({
       text: inputText,
     });
 
-    const buffer = await avatarDataToArrayBuffer(newAvatarData);
+    const buffer = await avatarDataToBytes(newAvatarData);
 
     onDoneRef.current(buffer, newAvatarData);
   }, [inputText, selectedColor]);

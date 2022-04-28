@@ -1,51 +1,60 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { z } from 'zod';
 import { isNumber } from 'lodash';
-import { CallbackResultType } from '../textsecure/Types.d';
+import type { CallbackResultType } from '../textsecure/Types.d';
 import dataInterface from '../sql/Client';
+import * as log from '../logging/log';
+import {
+  OutgoingMessageError,
+  SendMessageNetworkError,
+  SendMessageProtoError,
+  UnregisteredUserError,
+} from '../textsecure/Errors';
+import { SEALED_SENDER } from '../types/SealedSender';
 
-const { insertSentProto } = dataInterface;
+const { insertSentProto, updateConversation } = dataInterface;
 
-export const SEALED_SENDER = {
-  UNKNOWN: 0,
-  ENABLED: 1,
-  DISABLED: 2,
-  UNRESTRICTED: 3,
-};
+export const sendTypesEnum = z.enum([
+  'blockSyncRequest',
+  'pniIdentitySyncRequest',
+  'callingMessage', // excluded from send log
+  'configurationSyncRequest',
+  'contactSyncRequest',
+  'deleteForEveryone',
+  'deliveryReceipt',
+  'expirationTimerUpdate',
+  'fetchLatestManifestSync',
+  'fetchLocalProfileSync',
+  'groupChange',
+  'groupSyncRequest',
+  'keySyncRequest',
+  'legacyGroupChange',
+  'message',
+  'messageRequestSync',
+  'nullMessage',
+  'profileKeyUpdate',
+  'reaction',
+  'readReceipt',
+  'readSync',
+  'resendFromLog', // excluded from send log
+  'resetSession',
+  'retryRequest', // excluded from send log
+  'senderKeyDistributionMessage',
+  'sentSync',
+  'stickerPackSync',
+  'typing', // excluded from send log
+  'verificationSync',
+  'viewOnceSync',
+  'viewSync',
+  'viewedReceipt',
+]);
 
-export type SendTypesType =
-  | 'callingMessage' // excluded from send log
-  | 'deleteForEveryone'
-  | 'deliveryReceipt'
-  | 'expirationTimerUpdate'
-  | 'groupChange'
-  | 'legacyGroupChange'
-  | 'message'
-  | 'messageRetry'
-  | 'nullMessage' // excluded from send log
-  | 'otherSync'
-  | 'profileKeyUpdate'
-  | 'reaction'
-  | 'readReceipt'
-  | 'readSync'
-  | 'resendFromLog' // excluded from send log
-  | 'resetSession'
-  | 'retryRequest' // excluded from send log
-  | 'senderKeyDistributionMessage'
-  | 'sentSync'
-  | 'typing' // excluded from send log
-  | 'verificationSync'
-  | 'viewOnceSync'
-  | 'viewSync'
-  | 'viewedReceipt';
+export type SendTypesType = z.infer<typeof sendTypesEnum>;
 
 export function shouldSaveProto(sendType: SendTypesType): boolean {
   if (sendType === 'callingMessage') {
-    return false;
-  }
-
-  if (sendType === 'nullMessage') {
     return false;
   }
 
@@ -62,6 +71,53 @@ export function shouldSaveProto(sendType: SendTypesType): boolean {
   }
 
   return true;
+}
+
+function processError(error: unknown): void {
+  if (
+    error instanceof OutgoingMessageError ||
+    error instanceof SendMessageNetworkError
+  ) {
+    const conversation = window.ConversationController.getOrCreate(
+      error.identifier,
+      'private'
+    );
+    if (error.code === 401 || error.code === 403) {
+      if (
+        conversation.get('sealedSender') === SEALED_SENDER.ENABLED ||
+        conversation.get('sealedSender') === SEALED_SENDER.UNRESTRICTED
+      ) {
+        log.warn(
+          `handleMessageSend: Got 401/403 for ${conversation.idForLogging()}, removing profile key`
+        );
+
+        conversation.setProfileKey(undefined);
+      }
+      if (conversation.get('sealedSender') === SEALED_SENDER.UNKNOWN) {
+        log.warn(
+          `handleMessageSend: Got 401/403 for ${conversation.idForLogging()}, setting sealedSender = DISABLED`
+        );
+        conversation.set('sealedSender', SEALED_SENDER.DISABLED);
+        updateConversation(conversation.attributes);
+      }
+    }
+    if (error.code === 404) {
+      log.warn(
+        `handleMessageSend: Got 404 for ${conversation.idForLogging()}, marking unregistered.`
+      );
+      conversation.setUnregistered();
+    }
+  }
+  if (error instanceof UnregisteredUserError) {
+    const conversation = window.ConversationController.getOrCreate(
+      error.identifier,
+      'private'
+    );
+    log.warn(
+      `handleMessageSend: Got 404 for ${conversation.idForLogging()}, marking unregistered.`
+    );
+    conversation.setUnregistered();
+  }
 }
 
 export async function handleMessageSend(
@@ -83,12 +139,17 @@ export async function handleMessageSend(
 
     return result;
   } catch (err) {
-    if (err) {
+    processError(err);
+
+    if (err instanceof SendMessageProtoError) {
       await handleMessageSendResult(
         err.failoverIdentifiers,
         err.unidentifiedDeliveries
       );
+
+      err.errors?.forEach(processError);
     }
+
     throw err;
   }
 }
@@ -105,7 +166,7 @@ async function handleMessageSendResult(
         conversation &&
         conversation.get('sealedSender') !== SEALED_SENDER.DISABLED
       ) {
-        window.log.info(
+        log.info(
           `Setting sealedSender to DISABLED for conversation ${conversation.idForLogging()}`
         );
         conversation.set({
@@ -125,14 +186,14 @@ async function handleMessageSendResult(
         conversation.get('sealedSender') === SEALED_SENDER.UNKNOWN
       ) {
         if (conversation.get('accessKey')) {
-          window.log.info(
+          log.info(
             `Setting sealedSender to ENABLED for conversation ${conversation.idForLogging()}`
           );
           conversation.set({
             sealedSender: SEALED_SENDER.ENABLED,
           });
         } else {
-          window.log.info(
+          log.info(
             `Setting sealedSender to UNRESTRICTED for conversation ${conversation.idForLogging()}`
           );
           conversation.set({
@@ -162,7 +223,7 @@ async function maybeSaveToSendLog(
   }
 
   if (!isNumber(contentHint) || !contentProto || !recipients || !timestamp) {
-    window.log.warn(
+    log.warn(
       `handleMessageSend: Missing necessary information to save to log for ${sendType} message ${timestamp}`
     );
     return;
@@ -170,7 +231,7 @@ async function maybeSaveToSendLog(
 
   const identifiers = Object.keys(recipients);
   if (identifiers.length === 0) {
-    window.log.warn(
+    log.warn(
       `handleMessageSend: ${sendType} message ${timestamp} had no recipients`
     );
     return;

@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Signal Messenger, LLC
+// Copyright 2018-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /* eslint-disable no-console */
@@ -8,8 +8,9 @@ import normalizePath from 'normalize-path';
 import pMap from 'p-map';
 import FastGlob from 'fast-glob';
 
-import { ExceptionType, REASONS, RuleType } from './types';
-import { ENCODING, loadJSON, sortExceptions } from './util';
+import type { ExceptionType, RuleType } from './types';
+import { REASONS } from './types';
+import { ENCODING, loadJSON, sortExceptions, writeExceptions } from './util';
 
 const ALL_REASONS = REASONS.join('|');
 
@@ -29,6 +30,9 @@ const excludedFilesRegexp = RegExp(
     '\\.d\\.ts$',
     '.+\\.stories\\.js',
     '.+\\.stories\\.tsx',
+
+    // Compiled files
+    '^ts/.+\\.js',
 
     // High-traffic files in our project
     '^app/.+(ts|js)',
@@ -73,6 +77,7 @@ const excludedFilesRegexp = RegExp(
     '^.github/.+',
 
     // Modules we trust
+    '^node_modules/@signalapp/libsignal-client/.+',
     '^node_modules/core-js-pure/.+',
     '^node_modules/core-js/.+',
     '^node_modules/fbjs/.+',
@@ -104,30 +109,35 @@ const excludedFilesRegexp = RegExp(
 
     // Modules used only in test/development scenarios
     '^node_modules/@babel/.+',
+    '^node_modules/@chanzuckerberg/axe-storybook-testing/.+',
+    '^node_modules/@signalapp/mock-server/.+',
     '^node_modules/@svgr/.+',
     '^node_modules/@types/.+',
     '^node_modules/@webassemblyjs/.+',
     '^node_modules/@electron/.+',
     '^node_modules/ajv/.+',
+    '^node_modules/ajv-keywords/.+',
     '^node_modules/amdefine/.+',
+    '^node_modules/ansi-styles/.+',
     '^node_modules/ansi-colors/.+',
     '^node_modules/anymatch/.+',
     '^node_modules/app-builder-lib/.+',
-    '^node_modules/archiver-utils/.+', // Used by spectron
-    '^node_modules/archiver/.+', // Used by spectron
     '^node_modules/asn1\\.js/.+',
     '^node_modules/autoprefixer/.+',
     '^node_modules/babel.+',
     '^node_modules/bluebird/.+',
     '^node_modules/body-parser/.+',
     '^node_modules/bower/.+',
+    '^node_modules/braces/.+',
     '^node_modules/buble/.+',
     '^node_modules/builder-util-runtime/.+',
     '^node_modules/builder-util/.+',
     '^node_modules/catharsis/.+',
     '^node_modules/chai/.+',
+    '^node_modules/chokidar/.+',
     '^node_modules/clean-css/.+',
     '^node_modules/cli-table2/.+',
+    '^node_modules/cliui/.+',
     '^node_modules/codemirror/.+',
     '^node_modules/coffee-script/.+',
     '^node_modules/compression/.+',
@@ -137,6 +147,7 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/css-selector-tokenizer/.+',
     '^node_modules/css-tree/.+',
     '^node_modules/csso/.+',
+    '^node_modules/default-gateway/.+',
     '^node_modules/degenerator/.+',
     '^node_modules/detect-port-alt/.+',
     '^node_modules/dmg-builder/.+',
@@ -150,24 +161,21 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/es-abstract/.+',
     '^node_modules/es5-shim/.+', // Currently only used in storybook
     '^node_modules/es6-shim/.+', // Currently only used in storybook
+    '^node_modules/esbuild/.+',
     '^node_modules/escodegen/.+',
     '^node_modules/eslint.+',
     '^node_modules/@typescript-eslint.+',
     '^node_modules/esprima/.+',
     '^node_modules/express/.+',
+    '^node_modules/fast-glob/.+',
     '^node_modules/file-loader/.+',
     '^node_modules/file-system-cache/.+', // Currently only used in storybook
     '^node_modules/finalhandler/.+',
+    '^node_modules/foreground-chat/.+',
     '^node_modules/fsevents/.+',
+    '^node_modules/gauge/.+',
+    '^node_modules/global-agent/.+',
     '^node_modules/globule/.+',
-    '^node_modules/grunt-cli/.+',
-    '^node_modules/grunt-contrib-concat/.+',
-    '^node_modules/grunt-contrib-watch/.+',
-    '^node_modules/grunt-gitinfo/.+',
-    '^node_modules/grunt-legacy-log-utils/.+',
-    '^node_modules/grunt-legacy-log/.+',
-    '^node_modules/grunt-legacy-util/.+',
-    '^node_modules/grunt/.+',
     '^node_modules/handle-thing/.+',
     '^node_modules/handlebars/.+', // Used by nyc#istanbul-reports
     '^node_modules/har-validator/.+',
@@ -179,23 +187,29 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/istanbul.+',
     '^node_modules/jimp/.+',
     '^node_modules/jquery/.+',
-    '^node_modules/jsdoc/.+',
+    '^node_modules/jake/.+',
     '^node_modules/jss-global/.+',
     '^node_modules/jss/.+',
+    '^node_modules/liftup/.+',
     '^node_modules/livereload-js/.+',
     '^node_modules/lolex/.+',
+    '^node_modules/log-symbols/.+',
     '^node_modules/magic-string/.+',
     '^node_modules/markdown-it/.+',
+    '^node_modules/meow/.+',
     '^node_modules/minimatch/.+',
     '^node_modules/mocha/.+',
+    '^node_modules/needle/.+',
     '^node_modules/nise/.+',
-    '^node_modules/node-sass-import-once/.+',
-    '^node_modules/node-sass/.+',
+    '^node_modules/node-gyp/.+',
     '^node_modules/npm-run-all/.+',
     '^node_modules/nsp/.+',
     '^node_modules/nyc/.+',
+    '^node_modules/optionator/.+',
     '^node_modules/plist/.+',
     '^node_modules/phantomjs-prebuilt/.+',
+    '^node_modules/playwright/.+',
+    '^node_modules/playwright-core/.+',
     '^node_modules/postcss.+',
     '^node_modules/preserve/.+',
     '^node_modules/prettier/.+',
@@ -213,6 +227,8 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/resolve/.+',
     '^node_modules/sass-graph/.+',
     '^node_modules/sass-loader/.+',
+    '^node_modules/sass/.+',
+    '^node_modules/schema-utils/.+',
     '^node_modules/scss-tokenizer/.+',
     '^node_modules/send/.+',
     '^node_modules/serve-index/.+',
@@ -220,7 +236,6 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/snapdragon-util/.+',
     '^node_modules/snapdragon/.+',
     '^node_modules/sockjs-client/.+',
-    '^node_modules/spectron/.+',
     '^node_modules/style-loader/.+',
     '^node_modules/svgo/.+',
     '^node_modules/terser/.+',
@@ -250,6 +265,7 @@ const excludedFilesRegexp = RegExp(
     '^node_modules/yargs/.+',
     '^node_modules/find-yarn-workspace-root/.+',
     '^node_modules/update-notifier/.+',
+    '^node_modules/windows-release/.+',
 
     // Used by Storybook
     '^node_modules/@emotion/.+',
@@ -306,7 +322,11 @@ function setupRules(allRules: Array<RuleType>) {
   });
 }
 
-async function main(): Promise<void> {
+async function main(argv: ReadonlyArray<string>): Promise<void> {
+  const shouldRemoveUnusedExceptions = argv.includes(
+    '--remove-unused-exceptions'
+  );
+
   const now = new Date();
 
   const rules: Array<RuleType> = loadJSON(rulesPath);
@@ -378,10 +398,26 @@ async function main(): Promise<void> {
     { concurrency: 100 }
   );
 
+  let unusedExceptionsLogMessage: string;
+
+  if (shouldRemoveUnusedExceptions && unusedExceptions.length) {
+    unusedExceptionsLogMessage = `${unusedExceptions.length} unused exceptions (automatically removed),`;
+
+    const unusedExceptionsSet = new Set(unusedExceptions);
+    const newExceptions = exceptions.filter(
+      exception => !unusedExceptionsSet.has(exception)
+    );
+    writeExceptions(exceptionsPath, newExceptions);
+
+    unusedExceptions = [];
+  } else {
+    unusedExceptionsLogMessage = `${unusedExceptions.length} unused exceptions,`;
+  }
+
   console.log(
     `${scannedCount} files scanned.`,
     `${results.length} questionable lines,`,
-    `${unusedExceptions.length} unused exceptions,`,
+    unusedExceptionsLogMessage,
     `${exceptions.length} total exceptions.`
   );
 
@@ -395,14 +431,16 @@ async function main(): Promise<void> {
 
   if (unusedExceptions.length) {
     console.log();
-    console.log('Unused exceptions!');
+    console.log(
+      'Unused exceptions! Run with --remove-unused-exceptions to automatically remove them.'
+    );
     console.log(JSON.stringify(sortExceptions(unusedExceptions), null, '  '));
   }
 
   process.exit(1);
 }
 
-main().catch(err => {
+main(process.argv).catch(err => {
   console.error(err);
   process.exit(1);
 });

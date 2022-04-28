@@ -45,7 +45,7 @@ exports.processNext = async ({
       }
     );
   } catch (error) {
-    window.log.error(
+    window.SignalContext.log.error(
       'processNext error:',
       error && error.stack ? error.stack : error
     );
@@ -65,7 +65,13 @@ exports.processNext = async ({
   const upgradeDuration = Date.now() - upgradeStartTime;
 
   const saveStartTime = Date.now();
-  await Promise.all(upgradedMessages.map(message => saveMessage(message)));
+  await Promise.all(
+    upgradedMessages.map(message =>
+      saveMessage(message, {
+        ourUuid: window.textsecure.storage.user.getCheckedUuid().toString(),
+      })
+    )
+  );
   const saveDuration = Date.now() - saveStartTime;
 
   const totalDuration = Date.now() - startTime;

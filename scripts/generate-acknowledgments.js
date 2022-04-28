@@ -1,7 +1,6 @@
 // Copyright 2020 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/* eslint-disable no-console */
 const assert = require('assert');
 const fs = require('fs');
 const { join } = require('path');
@@ -15,8 +14,7 @@ const {
 
 const SKIPPED_DEPENDENCIES = new Set([
   'ringrtc',
-  'zkgroup',
-  '@signalapp/signal-client',
+  '@signalapp/libsignal-client',
 ]);
 
 const rootDir = join(__dirname, '..');

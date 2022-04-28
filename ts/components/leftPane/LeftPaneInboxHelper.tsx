@@ -1,23 +1,32 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { last } from 'lodash';
-import React, { ReactChild } from 'react';
+import type { ReactChild } from 'react';
+import React from 'react';
 
 import { Intl } from '../Intl';
-import { LeftPaneHelper, ToFindType } from './LeftPaneHelper';
+import type { ToFindType } from './LeftPaneHelper';
+import type { ConversationType } from '../../state/ducks/conversations';
+import { LeftPaneHelper } from './LeftPaneHelper';
 import { getConversationInDirection } from './getConversationInDirection';
-import { Row, RowType } from '../ConversationList';
-import { PropsData as ConversationListItemPropsType } from '../conversationList/ConversationListItem';
-import { LocalizerType } from '../../types/Util';
+import type { Row } from '../ConversationList';
+import { RowType } from '../ConversationList';
+import type { PropsData as ConversationListItemPropsType } from '../conversationList/ConversationListItem';
+import type { LocalizerType } from '../../types/Util';
+import { handleKeydownForSearch } from './handleKeydownForSearch';
+import { LeftPaneSearchInput } from '../LeftPaneSearchInput';
 
 export type LeftPaneInboxPropsType = {
   conversations: ReadonlyArray<ConversationListItemPropsType>;
   archivedConversations: ReadonlyArray<ConversationListItemPropsType>;
   pinnedConversations: ReadonlyArray<ConversationListItemPropsType>;
+  isAboutToSearchInAConversation: boolean;
+  startSearchCounter: number;
+  searchDisabled: boolean;
+  searchTerm: string;
+  searchConversation: undefined | ConversationType;
 };
-
-/* eslint-disable class-methods-use-this */
 
 export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> {
   private readonly conversations: ReadonlyArray<ConversationListItemPropsType>;
@@ -26,16 +35,36 @@ export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> 
 
   private readonly pinnedConversations: ReadonlyArray<ConversationListItemPropsType>;
 
+  private readonly isAboutToSearchInAConversation: boolean;
+
+  private readonly startSearchCounter: number;
+
+  private readonly searchDisabled: boolean;
+
+  private readonly searchTerm: string;
+
+  private readonly searchConversation: undefined | ConversationType;
+
   constructor({
     conversations,
     archivedConversations,
     pinnedConversations,
+    isAboutToSearchInAConversation,
+    startSearchCounter,
+    searchDisabled,
+    searchTerm,
+    searchConversation,
   }: Readonly<LeftPaneInboxPropsType>) {
     super();
 
     this.conversations = conversations;
     this.archivedConversations = archivedConversations;
     this.pinnedConversations = pinnedConversations;
+    this.isAboutToSearchInAConversation = isAboutToSearchInAConversation;
+    this.startSearchCounter = startSearchCounter;
+    this.searchDisabled = searchDisabled;
+    this.searchTerm = searchTerm;
+    this.searchConversation = searchConversation;
   }
 
   getRowCount(): number {
@@ -49,9 +78,36 @@ export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> 
     );
   }
 
-  getPreRowsNode({
+  override getSearchInput({
+    clearConversationSearch,
+    clearSearch,
     i18n,
-  }: Readonly<{ i18n: LocalizerType }>): null | ReactChild {
+    updateSearchTerm,
+  }: Readonly<{
+    clearConversationSearch: () => unknown;
+    clearSearch: () => unknown;
+    i18n: LocalizerType;
+    updateSearchTerm: (searchTerm: string) => unknown;
+  }>): ReactChild {
+    return (
+      <LeftPaneSearchInput
+        clearConversationSearch={clearConversationSearch}
+        clearSearch={clearSearch}
+        disabled={this.searchDisabled}
+        i18n={i18n}
+        searchConversation={this.searchConversation}
+        searchTerm={this.searchTerm}
+        startSearchCounter={this.startSearchCounter}
+        updateSearchTerm={updateSearchTerm}
+      />
+    );
+  }
+
+  override getPreRowsNode({
+    i18n,
+  }: Readonly<{
+    i18n: LocalizerType;
+  }>): ReactChild | null {
     if (this.getRowCount() === 0) {
       return (
         <div className="module-left-pane__empty">
@@ -144,7 +200,7 @@ export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> 
     return undefined;
   }
 
-  getRowIndexToScrollTo(
+  override getRowIndexToScrollTo(
     selectedConversationId: undefined | string
   ): undefined | number {
     if (!selectedConversationId) {
@@ -176,6 +232,18 @@ export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> 
     return undefined;
   }
 
+  override requiresFullWidth(): boolean {
+    const hasNoConversations =
+      !this.conversations.length &&
+      !this.pinnedConversations.length &&
+      !this.archivedConversations.length;
+    return (
+      hasNoConversations ||
+      this.isAboutToSearchInAConversation ||
+      Boolean(this.startSearchCounter)
+    );
+  }
+
   shouldRecomputeRowHeights(old: Readonly<LeftPaneInboxPropsType>): boolean {
     return old.pinnedConversations.length !== this.pinnedConversations.length;
   }
@@ -202,6 +270,17 @@ export class LeftPaneInboxHelper extends LeftPaneHelper<LeftPaneInboxPropsType> 
       toFind,
       selectedConversationId
     );
+  }
+
+  override onKeyDown(
+    event: KeyboardEvent,
+    options: Readonly<{
+      searchInConversation: (conversationId: string) => unknown;
+      selectedConversationId: undefined | string;
+      startSearch: () => unknown;
+    }>
+  ): void {
+    handleKeydownForSearch(event, options);
   }
 
   private hasPinnedAndNonpinned(): boolean {

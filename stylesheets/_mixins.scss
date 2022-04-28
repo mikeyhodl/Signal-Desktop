@@ -1,26 +1,35 @@
-// Copyright 2016-2021 Signal Messenger, LLC
+// Copyright 2016-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // Fonts
 
-@mixin font-title-1 {
+@mixin font-family {
   font-family: $inter;
-  font-weight: 700;
-  font-size: 28px;
-  line-height: 34px;
+  &:lang(ja) {
+    font-family: 'SF Pro JP', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3',
+      メイリオ, Meiryo, 'ＭＳ Ｐゴシック', 'Helvetica Neue', Helvetica, Arial,
+      sans-serif;
+  }
+}
+
+@mixin font-title-1 {
+  @include font-family;
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 32px;
   letter-spacing: -0.56px;
 }
 
 @mixin font-title-2 {
-  font-family: $inter;
-  font-weight: 700;
+  @include font-family;
+  font-weight: 600;
   font-size: 20px;
   line-height: 26px;
   letter-spacing: -0.34px;
 }
 
 @mixin font-body-1 {
-  font-family: $inter;
+  @include font-family;
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.08px;
@@ -40,7 +49,7 @@
 }
 
 @mixin font-body-2 {
-  font-family: $inter;
+  @include font-family;
   font-size: 13px;
   line-height: 18px;
   letter-spacing: -0.03px;
@@ -60,14 +69,14 @@
 }
 
 @mixin font-subtitle {
-  font-family: $inter;
+  @include font-family;
   font-size: 11px;
   line-height: 16px;
   letter-spacing: 0;
 }
 
 @mixin font-caption {
-  font-family: $inter;
+  @include font-family;
   font-size: 11px;
   line-height: 14px;
   letter-spacing: 0.06px;
@@ -164,20 +173,8 @@
     -webkit-mask-origin: $mask-origin;
   }
   background-color: $color;
-}
-
-@mixin header-icon-white($svg) {
-  @include color-svg($svg, $color-white-alpha-80);
-  &:focus,
-  &:hover {
-    @include color-svg($svg, $color-white);
-  }
-}
-@mixin header-icon-black($svg) {
-  @include color-svg($svg, $color-black-alpha-40);
-  &:focus,
-  &:hover {
-    @include color-svg($svg, black);
+  @media (forced-colors: active) {
+    background-color: WindowText;
   }
 }
 
@@ -211,6 +208,10 @@
 
 @mixin popper-shadow() {
   box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.3), 0px 0px 8px rgba(0, 0, 0, 0.05);
+
+  @media (forced-colors: active) {
+    border: 1px solid WindowText;
+  }
 }
 
 @mixin button-reset {
@@ -223,6 +224,21 @@
   cursor: pointer;
   outline: inherit;
   text-align: inherit;
+
+  @media (forced-colors: active) {
+    border: 1px solid WindowText;
+  }
+}
+
+@mixin staged-attachment-close-button {
+  @include button-reset;
+
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  z-index: $z-index-above-base;
 }
 
 @mixin calling-text-shadow {
@@ -230,8 +246,11 @@
 }
 
 @mixin lonely-local-video-preview {
-  object-fit: cover;
-  opacity: 0.6;
+  max-height: calc(100% - 24px);
+  height: auto;
+  transform: rotateY(180deg);
+  width: calc(100% - 24px);
+  border-radius: 8px;
 }
 
 // --- Buttons
@@ -556,16 +575,131 @@
 @mixin avatar-colors {
   @each $color, $value in $avatar-colors {
     &--#{$color} {
-      background-color: map-get($value, 'bg');
-      color: map-get($value, 'fg');
+      --bg: #{map-get($value, 'bg')};
+      --fg: #{map-get($value, 'fg')};
+
+      background-color: var(--bg);
+      color: var(--fg);
 
       &--icon {
-        background-color: map-get($value, 'fg');
+        background-color: var(--fg);
         @include dark-theme {
           // For specificity
-          background-color: map-get($value, 'fg');
+          background-color: var(--fg);
         }
       }
     }
+  }
+}
+
+@mixin scrollbar {
+  &::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    visibility: hidden;
+    width: 6px;
+
+    @include light-theme {
+      background: $color-black-alpha-40;
+    }
+    @include dark-theme {
+      background: $color-white-alpha-40;
+    }
+  }
+
+  &::-webkit-scrollbar {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    visibility: visible;
+  }
+}
+
+@mixin normal-input {
+  @include font-body-1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-width: 2px;
+  border-style: solid;
+  width: 100%;
+
+  @include light-theme {
+    background: $color-white;
+    color: $color-black;
+    border-color: $color-gray-15;
+
+    &:disabled {
+      background: $color-gray-02;
+      border-color: $color-gray-05;
+      color: $color-gray-90;
+    }
+  }
+
+  @include dark-theme {
+    background: $color-gray-80;
+    color: $color-gray-05;
+    border-color: $color-gray-45;
+
+    &:disabled {
+      background: $color-gray-95;
+      border-color: $color-gray-60;
+      color: $color-gray-20;
+    }
+  }
+
+  &:focus {
+    outline: none;
+
+    @include light-theme {
+      border-color: $color-ultramarine;
+    }
+    @include dark-theme {
+      border-color: $color-ultramarine-light;
+    }
+  }
+}
+
+@mixin install-screen {
+  align-items: center;
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  line-height: 30px;
+  user-select: none;
+  width: 100vw;
+
+  @include light-theme {
+    background: $color-gray-02;
+    color: $color-black;
+  }
+
+  @include dark-theme {
+    background: $color-gray-95;
+    color: $color-white;
+  }
+
+  h1 {
+    @include font-title-2;
+  }
+
+  h2 {
+    @include font-body-1;
+    font-weight: normal;
+  }
+}
+
+@mixin timeline-floating-header-node {
+  @include rounded-corners;
+  box-shadow: 0 1px 4px $color-black-alpha-20;
+
+  @include light-theme {
+    background: $color-white;
+  }
+  @include dark-theme {
+    background: $color-gray-80;
   }
 }

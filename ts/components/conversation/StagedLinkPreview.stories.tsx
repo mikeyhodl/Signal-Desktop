@@ -6,11 +6,12 @@ import { storiesOf } from '@storybook/react';
 import { date, text, withKnobs } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
 
-import { AttachmentType } from '../../types/Attachment';
+import type { AttachmentType } from '../../types/Attachment';
 import { stringToMIMEType } from '../../types/MIME';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
-import { Props, StagedLinkPreview } from './StagedLinkPreview';
+import type { Props } from './StagedLinkPreview';
+import { StagedLinkPreview } from './StagedLinkPreview';
 
 const LONG_TITLE =
   "This is a super-sweet site. And it's got some really amazing content in store for you if you just click that link. Can you click that link for me?";
@@ -32,6 +33,7 @@ const createAttachment = (
   ),
   fileName: text('attachment fileName', props.fileName || ''),
   url: text('attachment url', props.url || ''),
+  size: 24325,
 });
 
 const createProps = (overrideProps: Partial<Props> = {}): Props => ({

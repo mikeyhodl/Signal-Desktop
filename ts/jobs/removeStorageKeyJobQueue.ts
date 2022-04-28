@@ -1,6 +1,5 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable class-methods-use-this */
 
 import { z } from 'zod';
 
@@ -8,7 +7,7 @@ import { JobQueue } from './JobQueue';
 import { jobQueueDatabaseStore } from './JobQueueDatabaseStore';
 
 const removeStorageKeyJobDataSchema = z.object({
-  key: z.enum(['senderCertificateWithUuid']),
+  key: z.enum(['senderCertificateWithUuid', 'challenge:retry-message-ids']),
 });
 
 type RemoveStorageKeyJobData = z.infer<typeof removeStorageKeyJobDataSchema>;

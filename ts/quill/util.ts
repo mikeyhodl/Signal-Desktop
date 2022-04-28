@@ -3,11 +3,11 @@
 
 import emojiRegex from 'emoji-regex';
 import Delta from 'quill-delta';
-import { LeafBlot, DeltaOperation } from 'quill';
-import Op from 'quill-delta/dist/Op';
+import type { LeafBlot, DeltaOperation } from 'quill';
+import type Op from 'quill-delta/dist/Op';
 
-import { BodyRangeType } from '../types/Util';
-import { MentionBlot } from './mentions/blot';
+import type { BodyRangeType } from '../types/Util';
+import type { MentionBlot } from './mentions/blot';
 
 export type MentionBlotValue = {
   uuid: string;
@@ -65,9 +65,10 @@ export const getTextAndMentionsFromOps = (
   const mentions: Array<BodyRangeType> = [];
 
   const text = ops
-    .reduce((acc, op) => {
+    .reduce((acc, op, index) => {
       if (typeof op.insert === 'string') {
-        return acc + op.insert;
+        const toAdd = index === 0 ? op.insert.trimStart() : op.insert;
+        return acc + toAdd;
       }
 
       if (isInsertEmojiOp(op)) {
@@ -87,23 +88,20 @@ export const getTextAndMentionsFromOps = (
 
       return acc;
     }, '')
-    .trim();
+    .trimEnd(); // Trimming the start of this string will mess up mention indices
 
   return [text, mentions];
 };
 
 export const getBlotTextPartitions = (
-  blot: LeafBlot,
+  blotText: string | undefined,
   index: number
 ): [string, string] => {
-  if (blot !== undefined && blot.text !== undefined) {
-    const leftLeafText = blot.text.substr(0, index);
-    const rightLeafText = blot.text.substr(index);
+  const lowerCaseBlotText = (blotText || '').toLowerCase();
+  const leftLeafText = lowerCaseBlotText.substr(0, index);
+  const rightLeafText = lowerCaseBlotText.substr(index);
 
-    return [leftLeafText, rightLeafText];
-  }
-
-  return ['', ''];
+  return [leftLeafText, rightLeafText];
 };
 
 export const matchBlotTextPartitions = (
@@ -112,7 +110,7 @@ export const matchBlotTextPartitions = (
   leftRegExp: RegExp,
   rightRegExp?: RegExp
 ): Array<RegExpMatchArray | null> => {
-  const [leftText, rightText] = getBlotTextPartitions(blot, index);
+  const [leftText, rightText] = getBlotTextPartitions(blot.text, index);
 
   const leftMatch = leftRegExp.exec(leftText);
   let rightMatch = null;

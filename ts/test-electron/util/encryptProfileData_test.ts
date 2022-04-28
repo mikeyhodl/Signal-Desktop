@@ -2,54 +2,64 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
-import { v4 as uuid } from 'uuid';
 
-import Crypto from '../../textsecure/Crypto';
+import * as Bytes from '../../Bytes';
 import {
-  arrayBufferToBase64,
-  base64ToArrayBuffer,
-  stringFromBytes,
   trimForDisplay,
+  getRandomBytes,
+  decryptProfileName,
+  decryptProfile,
 } from '../../Crypto';
+import type { ConversationType } from '../../state/ducks/conversations';
+import { UUID } from '../../types/UUID';
 import { encryptProfileData } from '../../util/encryptProfileData';
 
 describe('encryptProfileData', () => {
-  it('encrypts and decrypts properly', async () => {
-    const keyBuffer = Crypto.getRandomBytes(32);
-    const conversation = {
+  let keyBuffer: Uint8Array;
+  let conversation: ConversationType;
+
+  beforeEach(() => {
+    keyBuffer = getRandomBytes(32);
+    conversation = {
       aboutEmoji: '🐢',
       aboutText: 'I like turtles',
       familyName: 'Kid',
       firstName: 'Zombie',
-      profileKey: arrayBufferToBase64(keyBuffer),
-      uuid: uuid(),
+      profileKey: Bytes.toBase64(keyBuffer),
+      uuid: UUID.generate().toString(),
 
       // To satisfy TS
       acceptedMessageRequest: true,
+      badges: [],
       id: '',
       isMe: true,
       sharedGroupNames: [],
       title: '',
       type: 'direct' as const,
     };
+  });
 
-    const [encrypted] = await encryptProfileData(conversation);
+  it('encrypts and decrypts properly', async () => {
+    const [encrypted] = await encryptProfileData(conversation, {
+      oldAvatar: undefined,
+      newAvatar: undefined,
+    });
 
     assert.isDefined(encrypted.version);
     assert.isDefined(encrypted.name);
     assert.isDefined(encrypted.commitment);
 
-    const decryptedProfileNameBytes = await Crypto.decryptProfileName(
+    const decryptedProfileNameBytes = decryptProfileName(
       encrypted.name,
       keyBuffer
     );
     assert.equal(
-      stringFromBytes(decryptedProfileNameBytes.given),
+      Bytes.toString(decryptedProfileNameBytes.given),
       conversation.firstName
     );
     if (decryptedProfileNameBytes.family) {
       assert.equal(
-        stringFromBytes(decryptedProfileNameBytes.family),
+        Bytes.toString(decryptedProfileNameBytes.family),
         conversation.familyName
       );
     } else {
@@ -57,12 +67,12 @@ describe('encryptProfileData', () => {
     }
 
     if (encrypted.about) {
-      const decryptedAboutBytes = await Crypto.decryptProfile(
-        base64ToArrayBuffer(encrypted.about),
+      const decryptedAboutBytes = decryptProfile(
+        Bytes.fromBase64(encrypted.about),
         keyBuffer
       );
       assert.equal(
-        stringFromBytes(trimForDisplay(decryptedAboutBytes)),
+        Bytes.toString(trimForDisplay(decryptedAboutBytes)),
         conversation.aboutText
       );
     } else {
@@ -70,16 +80,34 @@ describe('encryptProfileData', () => {
     }
 
     if (encrypted.aboutEmoji) {
-      const decryptedAboutEmojiBytes = await Crypto.decryptProfile(
-        base64ToArrayBuffer(encrypted.aboutEmoji),
+      const decryptedAboutEmojiBytes = await decryptProfile(
+        Bytes.fromBase64(encrypted.aboutEmoji),
         keyBuffer
       );
       assert.equal(
-        stringFromBytes(trimForDisplay(decryptedAboutEmojiBytes)),
+        Bytes.toString(trimForDisplay(decryptedAboutEmojiBytes)),
         conversation.aboutEmoji
       );
     } else {
       assert.isDefined(encrypted.aboutEmoji);
     }
+  });
+
+  it('sets sameAvatar to true when avatars are the same', async () => {
+    const [encrypted] = await encryptProfileData(conversation, {
+      oldAvatar: new Uint8Array([1, 2, 3]),
+      newAvatar: new Uint8Array([1, 2, 3]),
+    });
+
+    assert.isTrue(encrypted.sameAvatar);
+  });
+
+  it('sets sameAvatar to false when avatars are different', async () => {
+    const [encrypted] = await encryptProfileData(conversation, {
+      oldAvatar: new Uint8Array([1, 2, 3]),
+      newAvatar: new Uint8Array([4, 5, 6, 7]),
+    });
+
+    assert.isFalse(encrypted.sameAvatar);
   });
 });

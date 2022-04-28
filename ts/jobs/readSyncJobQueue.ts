@@ -1,48 +1,44 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/* eslint-disable class-methods-use-this */
-
-import * as z from 'zod';
 import * as durations from '../util/durations';
-import type { LoggerType } from '../logging/log';
+import type { LoggerType } from '../types/Logging';
 import { exponentialBackoffMaxAttempts } from '../util/exponentialBackoff';
-import { runReadOrViewSyncJob } from './helpers/runReadOrViewSyncJob';
+import type { SyncType } from './helpers/syncHelpers';
+import {
+  SyncTypeList,
+  parseRawSyncDataArray,
+  runSyncJob,
+} from './helpers/syncHelpers';
+import { strictAssert } from '../util/assert';
+import { isRecord } from '../util/isRecord';
 
 import { JobQueue } from './JobQueue';
 import { jobQueueDatabaseStore } from './JobQueueDatabaseStore';
 
 const MAX_RETRY_TIME = durations.DAY;
 
-const readSyncJobDataSchema = z.object({
-  readSyncs: z.array(
-    z.object({
-      messageId: z.string().optional(),
-      senderE164: z.string().optional(),
-      senderUuid: z.string().optional(),
-      timestamp: z.number(),
-    })
-  ),
-});
-
-export type ReadSyncJobData = z.infer<typeof readSyncJobDataSchema>;
+export type ReadSyncJobData = {
+  readSyncs: Array<SyncType>;
+};
 
 export class ReadSyncJobQueue extends JobQueue<ReadSyncJobData> {
   protected parseData(data: unknown): ReadSyncJobData {
-    return readSyncJobDataSchema.parse(data);
+    strictAssert(isRecord(data), 'data is not an object');
+    return { readSyncs: parseRawSyncDataArray(data.readSyncs) };
   }
 
   protected async run(
     { data, timestamp }: Readonly<{ data: ReadSyncJobData; timestamp: number }>,
     { attempt, log }: Readonly<{ attempt: number; log: LoggerType }>
   ): Promise<void> {
-    await runReadOrViewSyncJob({
+    await runSyncJob({
       attempt,
-      isView: false,
       log,
       maxRetryTime: MAX_RETRY_TIME,
       syncs: data.readSyncs,
       timestamp,
+      type: SyncTypeList.Read,
     });
   }
 }

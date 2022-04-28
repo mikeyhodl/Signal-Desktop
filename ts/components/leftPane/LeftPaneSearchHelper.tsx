@@ -1,12 +1,18 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactChild } from 'react';
+import type { ReactChild } from 'react';
+import React from 'react';
 
-import { LeftPaneHelper, ToFindType } from './LeftPaneHelper';
-import { LocalizerType } from '../../types/Util';
-import { Row, RowType } from '../ConversationList';
-import { PropsData as ConversationListItemPropsType } from '../conversationList/ConversationListItem';
+import type { ToFindType } from './LeftPaneHelper';
+import { LeftPaneHelper } from './LeftPaneHelper';
+import type { LocalizerType } from '../../types/Util';
+import type { Row } from '../ConversationList';
+import { RowType } from '../ConversationList';
+import type { PropsData as ConversationListItemPropsType } from '../conversationList/ConversationListItem';
+import { handleKeydownForSearch } from './handleKeydownForSearch';
+import type { ConversationType } from '../../state/ducks/conversations';
+import { LeftPaneSearchInput } from '../LeftPaneSearchInput';
 
 import { Intl } from '../Intl';
 import { Emojify } from '../conversation/Emojify';
@@ -14,7 +20,7 @@ import { assert } from '../../util/assert';
 
 // The "correct" thing to do is to measure the size of the left pane and render enough
 //   search results for the container height. But (1) that's slow (2) the list is
-//   virtualized (3) 99 rows is over 6000px tall, taller than most monitors (4) it's fine
+//   virtualized (3) 99 rows is over 7500px tall, taller than most monitors (4) it's fine
 //   if, in some extremely tall window, we have some empty space. So we just hard-code a
 //   fairly big number.
 const SEARCH_RESULTS_FAKE_ROW_COUNT = 99;
@@ -33,11 +39,16 @@ export type LeftPaneSearchPropsType = {
   searchConversationName?: string;
   primarySendsSms: boolean;
   searchTerm: string;
+  startSearchCounter: number;
+  searchDisabled: boolean;
+  searchConversation: undefined | ConversationType;
 };
 
 const searchResultKeys: Array<
   'conversationResults' | 'contactResults' | 'messageResults'
 > = ['conversationResults', 'contactResults', 'messageResults'];
+
+/* eslint-disable class-methods-use-this */
 
 export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType> {
   private readonly conversationResults: MaybeLoadedSearchResultsType<ConversationListItemPropsType>;
@@ -55,30 +66,70 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
 
   private readonly searchTerm: string;
 
+  private readonly startSearchCounter: number;
+
+  private readonly searchDisabled: boolean;
+
+  private readonly searchConversation: undefined | ConversationType;
+
   constructor({
-    conversationResults,
     contactResults,
+    conversationResults,
     messageResults,
-    searchConversationName,
     primarySendsSms,
+    searchConversation,
+    searchConversationName,
+    searchDisabled,
     searchTerm,
+    startSearchCounter,
   }: Readonly<LeftPaneSearchPropsType>) {
     super();
 
-    this.conversationResults = conversationResults;
     this.contactResults = contactResults;
+    this.conversationResults = conversationResults;
     this.messageResults = messageResults;
-    this.searchConversationName = searchConversationName;
     this.primarySendsSms = primarySendsSms;
+    this.searchConversation = searchConversation;
+    this.searchConversationName = searchConversationName;
+    this.searchDisabled = searchDisabled;
     this.searchTerm = searchTerm;
+    this.startSearchCounter = startSearchCounter;
   }
 
-  getPreRowsNode({
+  override getSearchInput({
+    clearConversationSearch,
+    clearSearch,
     i18n,
-  }: Readonly<{ i18n: LocalizerType }>): null | ReactChild {
+    updateSearchTerm,
+  }: Readonly<{
+    clearConversationSearch: () => unknown;
+    clearSearch: () => unknown;
+    i18n: LocalizerType;
+    updateSearchTerm: (searchTerm: string) => unknown;
+  }>): ReactChild {
+    return (
+      <LeftPaneSearchInput
+        clearConversationSearch={clearConversationSearch}
+        clearSearch={clearSearch}
+        disabled={this.searchDisabled}
+        i18n={i18n}
+        searchConversation={this.searchConversation}
+        searchTerm={this.searchTerm}
+        startSearchCounter={this.startSearchCounter}
+        updateSearchTerm={updateSearchTerm}
+      />
+    );
+  }
+
+  override getPreRowsNode({
+    i18n,
+  }: Readonly<{
+    i18n: LocalizerType;
+  }>): ReactChild | null {
     const mightHaveSearchResults = this.allResults().some(
       searchResult => searchResult.isLoading || searchResult.results.length
     );
+
     if (mightHaveSearchResults) {
       return null;
     }
@@ -138,8 +189,7 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
   }
 
   // This is currently unimplemented. See DESKTOP-1170.
-  // eslint-disable-next-line class-methods-use-this
-  getRowIndexToScrollTo(
+  override getRowIndexToScrollTo(
     _selectedConversationId: undefined | string
   ): undefined | number {
     return undefined;
@@ -158,9 +208,8 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
       return undefined;
     }
 
-    const conversationRowCount = getRowCountForLoadedSearchResults(
-      conversationResults
-    );
+    const conversationRowCount =
+      getRowCountForLoadedSearchResults(conversationResults);
     const contactRowCount = getRowCountForLoadedSearchResults(contactResults);
     const messageRowCount = getRowCountForLoadedSearchResults(messageResults);
 
@@ -229,7 +278,7 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
       : undefined;
   }
 
-  isScrollable(): boolean {
+  override isScrollable(): boolean {
     return !this.isLoading();
   }
 
@@ -250,7 +299,6 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
   }
 
   // This is currently unimplemented. See DESKTOP-1170.
-  // eslint-disable-next-line class-methods-use-this
   getConversationAndMessageAtIndex(
     _conversationIndex: number
   ): undefined | { conversationId: string; messageId?: string } {
@@ -258,13 +306,23 @@ export class LeftPaneSearchHelper extends LeftPaneHelper<LeftPaneSearchPropsType
   }
 
   // This is currently unimplemented. See DESKTOP-1170.
-  // eslint-disable-next-line class-methods-use-this
   getConversationAndMessageInDirection(
     _toFind: Readonly<ToFindType>,
     _selectedConversationId: undefined | string,
     _selectedMessageId: unknown
   ): undefined | { conversationId: string } {
     return undefined;
+  }
+
+  override onKeyDown(
+    event: KeyboardEvent,
+    options: Readonly<{
+      searchInConversation: (conversationId: string) => unknown;
+      selectedConversationId: undefined | string;
+      startSearch: () => unknown;
+    }>
+  ): void {
+    handleKeydownForSearch(event, options);
   }
 
   private allResults() {

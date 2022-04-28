@@ -1,13 +1,14 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { MouseEvent, useEffect, useState } from 'react';
+import type { MouseEvent } from 'react';
+import React, { useEffect, useState } from 'react';
 import { noop } from 'lodash';
-import { AvatarDataType } from '../types/Avatar';
+import type { AvatarDataType } from '../types/Avatar';
 import { BetterAvatarBubble } from './BetterAvatarBubble';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { Spinner } from './Spinner';
-import { avatarDataToArrayBuffer } from '../util/avatarDataToArrayBuffer';
+import { avatarDataToBytes } from '../util/avatarDataToBytes';
 
 type AvatarSize = 48 | 80;
 
@@ -15,7 +16,7 @@ export type PropsType = {
   avatarData: AvatarDataType;
   i18n: LocalizerType;
   isSelected?: boolean;
-  onClick: (avatarBuffer: ArrayBuffer | undefined) => unknown;
+  onClick: (avatarBuffer: Uint8Array | undefined) => unknown;
   onDelete: () => unknown;
   size?: AvatarSize;
 };
@@ -28,7 +29,7 @@ export const BetterAvatar = ({
   onDelete,
   size = 48,
 }: PropsType): JSX.Element => {
-  const [avatarBuffer, setAvatarBuffer] = useState<ArrayBuffer | undefined>(
+  const [avatarBuffer, setAvatarBuffer] = useState<Uint8Array | undefined>(
     avatarData.buffer
   );
   const [avatarURL, setAvatarURL] = useState<string | undefined>(undefined);
@@ -37,7 +38,7 @@ export const BetterAvatar = ({
     let shouldCancel = false;
 
     async function makeAvatar() {
-      const buffer = await avatarDataToArrayBuffer(avatarData);
+      const buffer = await avatarDataToBytes(avatarData);
       if (!shouldCancel) {
         setAvatarBuffer(buffer);
       }
@@ -56,7 +57,7 @@ export const BetterAvatar = ({
     };
   }, [avatarBuffer, avatarData]);
 
-  // Convert avatar's ArrayBuffer to a URL object
+  // Convert avatar's Uint8Array to a URL object
   useEffect(() => {
     if (avatarBuffer) {
       const url = URL.createObjectURL(new Blob([avatarBuffer]));
@@ -94,7 +95,7 @@ export const BetterAvatar = ({
       style={{
         backgroundImage: avatarURL ? `url(${avatarURL})` : undefined,
         backgroundSize: size,
-        // +8 so that the size is the acutal size we want, 8 is the invisible
+        // +8 so that the size is the actual size we want, 8 is the invisible
         // padding around the bubble to make room for the selection border
         height: size + 8,
         width: size + 8,

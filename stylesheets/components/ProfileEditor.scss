@@ -35,6 +35,12 @@
       }
     }
 
+    &--username {
+      &::after {
+        -webkit-mask: url(../images/icons/v2/at-24.svg) no-repeat center;
+      }
+    }
+
     &--bio {
       &::after {
         -webkit-mask: url(../images/icons/v2/compose-outline-24.svg) no-repeat
@@ -71,6 +77,13 @@
     }
   }
 
+  &__error {
+    @include font-body-2;
+    margin: 16px 0;
+
+    color: $color-accent-red;
+  }
+
   &__info {
     @include font-body-2;
     margin: 16px 0;
@@ -83,7 +96,14 @@
     }
 
     a {
+      font-weight: 600;
       text-decoration: none;
+    }
+
+    // To account for missing error section - 16px previous margin, 34px for
+    //   16px margin of error plus 18px line height.
+    &--no-error {
+      margin-bottom: 50px;
     }
   }
 }

@@ -1,15 +1,18 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
 
-import { ConversationDetailsIcon } from './ConversationDetailsIcon';
+import { ConversationDetailsIcon, IconType } from './ConversationDetailsIcon';
 import { SignalService as Proto } from '../../../protobuf';
-import { ConversationType } from '../../../state/ducks/conversations';
-import { LocalizerType } from '../../../types/Util';
+import type { ConversationType } from '../../../state/ducks/conversations';
+import type { LocalizerType } from '../../../types/Util';
 import { PanelRow } from './PanelRow';
 import { PanelSection } from './PanelSection';
 import { Select } from '../../Select';
+
+import { useDelayedRestoreFocus } from '../../../hooks/useRestoreFocus';
+import { useUniqueId } from '../../../hooks/useUniqueId';
 
 const AccessControlEnum = Proto.AccessControl.AccessRequired;
 
@@ -32,9 +35,14 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
   isAdmin,
   setAccessControlAddFromInviteLinkSetting,
 }) => {
+  const groupLinkSelectId = useUniqueId();
+  const approveSelectId = useUniqueId();
+
   if (conversation === undefined) {
     throw new Error('GroupLinkManagement rendered without a conversation');
   }
+
+  const [focusRef] = useDelayedRestoreFocus();
 
   const createEventHandler = (handleEvent: (x: boolean) => void) => {
     return (value: string) => {
@@ -57,10 +65,15 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
       <PanelSection>
         <PanelRow
           info={groupLinkInfo}
-          label={i18n('ConversationDetails--group-link')}
+          label={
+            <label htmlFor={groupLinkSelectId}>
+              {i18n('ConversationDetails--group-link')}
+            </label>
+          }
           right={
             isAdmin ? (
               <Select
+                id={groupLinkSelectId}
                 onChange={createEventHandler(changeHasGroupLink)}
                 options={[
                   {
@@ -72,6 +85,7 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
                     value: 'false',
                   },
                 ]}
+                ref={focusRef}
                 value={String(Boolean(hasGroupLink))}
               />
             ) : null
@@ -86,10 +100,11 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
               icon={
                 <ConversationDetailsIcon
                   ariaLabel={i18n('GroupLinkManagement--share')}
-                  icon="share"
+                  icon={IconType.share}
                 />
               }
               label={i18n('GroupLinkManagement--share')}
+              ref={!isAdmin ? focusRef : undefined}
               onClick={() => {
                 if (conversation.groupLink) {
                   copyGroupLink(conversation.groupLink);
@@ -101,7 +116,7 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
                 icon={
                   <ConversationDetailsIcon
                     ariaLabel={i18n('GroupLinkManagement--reset')}
-                    icon="reset"
+                    icon={IconType.reset}
                   />
                 }
                 label={i18n('GroupLinkManagement--reset')}
@@ -114,9 +129,14 @@ export const GroupLinkManagement: React.ComponentType<PropsType> = ({
             <PanelSection>
               <PanelRow
                 info={i18n('GroupLinkManagement--approve-info')}
-                label={i18n('GroupLinkManagement--approve-label')}
+                label={
+                  <label htmlFor={approveSelectId}>
+                    {i18n('GroupLinkManagement--approve-label')}
+                  </label>
+                }
                 right={
                   <Select
+                    id={approveSelectId}
                     onChange={createEventHandler(
                       setAccessControlAddFromInviteLinkSetting
                     )}

@@ -6,8 +6,9 @@ import { action } from '@storybook/addon-actions';
 import { boolean, text } from '@storybook/addon-knobs';
 import { storiesOf } from '@storybook/react';
 
-import { PropsType, SafetyNumberViewer } from './SafetyNumberViewer';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './SafetyNumberViewer';
+import { SafetyNumberViewer } from './SafetyNumberViewer';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
 
@@ -50,12 +51,6 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   generateSafetyNumber: action('generate-safety-number'),
   i18n,
   safetyNumber: text('safetyNumber', overrideProps.safetyNumber || 'XXX'),
-  safetyNumberChanged: boolean(
-    'safetyNumberChanged',
-    overrideProps.safetyNumberChanged !== undefined
-      ? overrideProps.safetyNumberChanged
-      : false
-  ),
   toggleVerified: action('toggle-verified'),
   verificationDisabled: boolean(
     'verificationDisabled',
@@ -63,7 +58,7 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
       ? overrideProps.verificationDisabled
       : false
   ),
-  onClose: overrideProps.onClose,
+  onClose: action('onClose'),
 });
 
 const story = storiesOf('Components/SafetyNumberViewer', module);
@@ -90,16 +85,6 @@ story.add('Verification Disabled', () => {
     <SafetyNumberViewer
       {...createProps({
         verificationDisabled: true,
-      })}
-    />
-  );
-});
-
-story.add('Safety Number Changed', () => {
-  return (
-    <SafetyNumberViewer
-      {...createProps({
-        safetyNumberChanged: true,
       })}
     />
   );

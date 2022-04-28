@@ -1,4 +1,4 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -7,10 +7,13 @@ import { get, noop } from 'lodash';
 import { Manager, Popper, Reference } from 'react-popper';
 import { createPortal } from 'react-dom';
 import { Emoji } from './Emoji';
-import { EmojiPicker, Props as EmojiPickerProps } from './EmojiPicker';
-import { LocalizerType } from '../../types/Util';
+import type { Props as EmojiPickerProps } from './EmojiPicker';
+import { EmojiPicker } from './EmojiPicker';
+import type { LocalizerType } from '../../types/Util';
+import * as KeyboardLayout from '../../services/keyboardLayout';
 
 export type OwnProps = {
+  readonly className?: string;
   readonly closeOnPick?: boolean;
   readonly emoji?: string;
   readonly i18n: LocalizerType;
@@ -25,6 +28,7 @@ export type Props = OwnProps &
 
 export const EmojiButton = React.memo(
   ({
+    className,
     closeOnPick,
     emoji,
     i18n,
@@ -83,10 +87,11 @@ export const EmojiButton = React.memo(
     // Install keyboard shortcut to open emoji picker
     React.useEffect(() => {
       const handleKeydown = (event: KeyboardEvent) => {
-        const { ctrlKey, key, metaKey, shiftKey } = event;
+        const { ctrlKey, metaKey, shiftKey } = event;
         const commandKey = get(window, 'platform') === 'darwin' && metaKey;
         const controlKey = get(window, 'platform') !== 'darwin' && ctrlKey;
         const commandOrCtrl = commandKey || controlKey;
+        const key = KeyboardLayout.lookup(event);
 
         // We don't want to open up if the conversation has any panels open
         const panels = document.querySelectorAll('.conversation .panel');
@@ -116,7 +121,7 @@ export const EmojiButton = React.memo(
               type="button"
               ref={ref}
               onClick={handleClickButton}
-              className={classNames({
+              className={classNames(className, {
                 'module-emoji-button__button': true,
                 'module-emoji-button__button--active': open,
                 'module-emoji-button__button--has-emoji': Boolean(emoji),

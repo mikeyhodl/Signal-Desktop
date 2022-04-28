@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -7,13 +7,21 @@ import { action } from '@storybook/addon-actions';
 import { select } from '@storybook/addon-knobs';
 import { storiesOf } from '@storybook/react';
 
-import { LeftPane, LeftPaneMode, PropsType } from './LeftPane';
+import type { PropsType } from './LeftPane';
+import { LeftPane, LeftPaneMode } from './LeftPane';
 import { CaptchaDialog } from './CaptchaDialog';
-import { ConversationType } from '../state/ducks/conversations';
+import { CrashReportDialog } from './CrashReportDialog';
+import type { ConversationType } from '../state/ducks/conversations';
 import { MessageSearchResult } from './conversationList/MessageSearchResult';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
+import { ThemeType } from '../types/Util';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
+import { StorybookThemeContext } from '../../.storybook/StorybookThemeContext';
+import {
+  makeFakeLookupConversationWithoutUuid,
+  useUuidFetchState,
+} from '../test-both/helpers/fakeLookupConversationWithoutUuid';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -30,6 +38,13 @@ const defaultConversations: Array<ConversationType> = [
     title: 'Marc Barraca',
   }),
 ];
+
+const defaultSearchProps = {
+  searchConversation: undefined,
+  searchDisabled: false,
+  searchTerm: 'hello',
+  startSearchCounter: 0,
+};
 
 const defaultGroups: Array<ConversationType> = [
   getDefaultConversation({
@@ -68,93 +83,135 @@ const pinnedConversations: Array<ConversationType> = [
 ];
 
 const defaultModeSpecificProps = {
+  ...defaultSearchProps,
   mode: LeftPaneMode.Inbox as const,
   pinnedConversations,
   conversations: defaultConversations,
   archivedConversations: defaultArchivedConversations,
+  isAboutToSearchInAConversation: false,
 };
 
 const emptySearchResultsGroup = { isLoading: false, results: [] };
 
-const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
-  cantAddContactToGroup: action('cantAddContactToGroup'),
-  clearGroupCreationError: action('clearGroupCreationError'),
-  closeCantAddContactToGroupModal: action('closeCantAddContactToGroupModal'),
-  closeMaximumGroupSizeModal: action('closeMaximumGroupSizeModal'),
-  closeRecommendedGroupSizeModal: action('closeRecommendedGroupSizeModal'),
-  composeDeleteAvatarFromDisk: action('composeDeleteAvatarFromDisk'),
-  composeReplaceAvatar: action('composeReplaceAvatar'),
-  composeSaveAvatarToDisk: action('composeSaveAvatarToDisk'),
-  createGroup: action('createGroup'),
-  i18n,
-  modeSpecificProps: defaultModeSpecificProps,
-  openConversationInternal: action('openConversationInternal'),
-  regionCode: 'US',
-  challengeStatus: select(
-    'challengeStatus',
-    ['idle', 'required', 'pending'],
-    'idle'
-  ),
-  setChallengeStatus: action('setChallengeStatus'),
-  renderExpiredBuildDialog: () => <div />,
-  renderMainHeader: () => <div />,
-  renderMessageSearchResult: (id: string) => (
-    <MessageSearchResult
-      body="Lorem ipsum wow"
-      bodyRanges={[]}
-      conversationId="marc-convo"
-      from={defaultConversations[0]}
-      i18n={i18n}
-      id={id}
-      openConversationInternal={action('openConversationInternal')}
-      sentAt={1587358800000}
-      snippet="Lorem <<left>>ipsum<<right>> wow"
-      to={defaultConversations[1]}
-    />
-  ),
-  renderNetworkStatus: () => <div />,
-  renderRelinkDialog: () => <div />,
-  renderUpdateDialog: () => <div />,
-  renderCaptchaDialog: () => (
-    <CaptchaDialog
-      i18n={i18n}
-      isPending={overrideProps.challengeStatus === 'pending'}
-      onContinue={action('onCaptchaContinue')}
-      onSkip={action('onCaptchaSkip')}
-    />
-  ),
-  selectedConversationId: undefined,
-  selectedMessageId: undefined,
-  setComposeSearchTerm: action('setComposeSearchTerm'),
-  setComposeGroupAvatar: action('setComposeGroupAvatar'),
-  setComposeGroupName: action('setComposeGroupName'),
-  setComposeGroupExpireTimer: action('setComposeGroupExpireTimer'),
-  showArchivedConversations: action('showArchivedConversations'),
-  showInbox: action('showInbox'),
-  startComposing: action('startComposing'),
-  showChooseGroupMembers: action('showChooseGroupMembers'),
-  startNewConversationFromPhoneNumber: action(
-    'startNewConversationFromPhoneNumber'
-  ),
-  startSettingGroupMetadata: action('startSettingGroupMetadata'),
-  toggleComposeEditingAvatar: action('toggleComposeEditingAvatar'),
-  toggleConversationInChooseMembers: action(
-    'toggleConversationInChooseMembers'
-  ),
+const useProps = (overrideProps: Partial<PropsType> = {}): PropsType => {
+  let modeSpecificProps =
+    overrideProps.modeSpecificProps ?? defaultModeSpecificProps;
 
-  ...overrideProps,
-});
+  const [uuidFetchState, setIsFetchingUUID] = useUuidFetchState(
+    'uuidFetchState' in modeSpecificProps
+      ? modeSpecificProps.uuidFetchState
+      : {}
+  );
+
+  if ('uuidFetchState' in modeSpecificProps) {
+    modeSpecificProps = {
+      ...modeSpecificProps,
+      uuidFetchState,
+    };
+  }
+
+  return {
+    clearConversationSearch: action('clearConversationSearch'),
+    clearGroupCreationError: action('clearGroupCreationError'),
+    clearSearch: action('clearSearch'),
+    closeMaximumGroupSizeModal: action('closeMaximumGroupSizeModal'),
+    closeRecommendedGroupSizeModal: action('closeRecommendedGroupSizeModal'),
+    composeDeleteAvatarFromDisk: action('composeDeleteAvatarFromDisk'),
+    composeReplaceAvatar: action('composeReplaceAvatar'),
+    composeSaveAvatarToDisk: action('composeSaveAvatarToDisk'),
+    createGroup: action('createGroup'),
+    getPreferredBadge: () => undefined,
+    i18n,
+    preferredWidthFromStorage: 320,
+    openConversationInternal: action('openConversationInternal'),
+    regionCode: 'US',
+    challengeStatus: select(
+      'challengeStatus',
+      ['idle', 'required', 'pending'],
+      'idle'
+    ),
+    crashReportCount: select('challengeReportCount', [0, 1], 0),
+    setChallengeStatus: action('setChallengeStatus'),
+    lookupConversationWithoutUuid: makeFakeLookupConversationWithoutUuid(),
+    showUserNotFoundModal: action('showUserNotFoundModal'),
+    setIsFetchingUUID,
+    showConversation: action('showConversation'),
+    renderExpiredBuildDialog: () => <div />,
+    renderMainHeader: () => <div />,
+    renderMessageSearchResult: (id: string) => (
+      <MessageSearchResult
+        body="Lorem ipsum wow"
+        bodyRanges={[]}
+        conversationId="marc-convo"
+        from={defaultConversations[0]}
+        getPreferredBadge={() => undefined}
+        i18n={i18n}
+        id={id}
+        openConversationInternal={action('openConversationInternal')}
+        sentAt={1587358800000}
+        snippet="Lorem <<left>>ipsum<<right>> wow"
+        theme={ThemeType.light}
+        to={defaultConversations[1]}
+      />
+    ),
+    renderNetworkStatus: () => <div />,
+    renderRelinkDialog: () => <div />,
+    renderUpdateDialog: () => <div />,
+    renderCaptchaDialog: () => (
+      <CaptchaDialog
+        i18n={i18n}
+        isPending={overrideProps.challengeStatus === 'pending'}
+        onContinue={action('onCaptchaContinue')}
+        onSkip={action('onCaptchaSkip')}
+      />
+    ),
+    renderCrashReportDialog: () => (
+      <CrashReportDialog
+        i18n={i18n}
+        isPending={false}
+        uploadCrashReports={action('uploadCrashReports')}
+        eraseCrashReports={action('eraseCrashReports')}
+      />
+    ),
+    selectedConversationId: undefined,
+    selectedMessageId: undefined,
+    savePreferredLeftPaneWidth: action('savePreferredLeftPaneWidth'),
+    searchInConversation: action('searchInConversation'),
+    setComposeSearchTerm: action('setComposeSearchTerm'),
+    setComposeGroupAvatar: action('setComposeGroupAvatar'),
+    setComposeGroupName: action('setComposeGroupName'),
+    setComposeGroupExpireTimer: action('setComposeGroupExpireTimer'),
+    showArchivedConversations: action('showArchivedConversations'),
+    showInbox: action('showInbox'),
+    startComposing: action('startComposing'),
+    showChooseGroupMembers: action('showChooseGroupMembers'),
+    startSearch: action('startSearch'),
+    startSettingGroupMetadata: action('startSettingGroupMetadata'),
+    theme: React.useContext(StorybookThemeContext),
+    toggleComposeEditingAvatar: action('toggleComposeEditingAvatar'),
+    toggleConversationInChooseMembers: action(
+      'toggleConversationInChooseMembers'
+    ),
+    updateSearchTerm: action('updateSearchTerm'),
+
+    ...overrideProps,
+
+    modeSpecificProps,
+  };
+};
 
 // Inbox stories
 
 story.add('Inbox: no conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations: [],
         conversations: [],
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -162,12 +219,14 @@ story.add('Inbox: no conversations', () => (
 
 story.add('Inbox: only pinned conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations,
         conversations: [],
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -175,12 +234,14 @@ story.add('Inbox: only pinned conversations', () => (
 
 story.add('Inbox: only non-pinned conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations: [],
         conversations: defaultConversations,
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -188,12 +249,14 @@ story.add('Inbox: only non-pinned conversations', () => (
 
 story.add('Inbox: only archived conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations: [],
         conversations: [],
         archivedConversations: defaultArchivedConversations,
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -201,12 +264,14 @@ story.add('Inbox: only archived conversations', () => (
 
 story.add('Inbox: pinned and archived conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations,
         conversations: [],
         archivedConversations: defaultArchivedConversations,
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -214,12 +279,14 @@ story.add('Inbox: pinned and archived conversations', () => (
 
 story.add('Inbox: non-pinned and archived conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations: [],
         conversations: defaultConversations,
         archivedConversations: defaultArchivedConversations,
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
@@ -227,32 +294,34 @@ story.add('Inbox: non-pinned and archived conversations', () => (
 
 story.add('Inbox: pinned and non-pinned conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations,
         conversations: defaultConversations,
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
       },
     })}
   />
 ));
 
 story.add('Inbox: pinned, non-pinned, and archived conversations', () => (
-  <LeftPane {...createProps()} />
+  <LeftPane {...useProps()} />
 ));
 
 // Search stories
 
 story.add('Search: no results when searching everywhere', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: emptySearchResultsGroup,
         contactResults: emptySearchResultsGroup,
         messageResults: emptySearchResultsGroup,
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -261,13 +330,13 @@ story.add('Search: no results when searching everywhere', () => (
 
 story.add('Search: no results when searching everywhere (SMS)', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: emptySearchResultsGroup,
         contactResults: emptySearchResultsGroup,
         messageResults: emptySearchResultsGroup,
-        searchTerm: 'foo bar',
         primarySendsSms: true,
       },
     })}
@@ -276,14 +345,14 @@ story.add('Search: no results when searching everywhere (SMS)', () => (
 
 story.add('Search: no results when searching in a conversation', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: emptySearchResultsGroup,
         contactResults: emptySearchResultsGroup,
         messageResults: emptySearchResultsGroup,
         searchConversationName: 'Bing Bong',
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -292,13 +361,13 @@ story.add('Search: no results when searching in a conversation', () => (
 
 story.add('Search: all results loading', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: { isLoading: true },
         contactResults: { isLoading: true },
         messageResults: { isLoading: true },
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -307,8 +376,9 @@ story.add('Search: all results loading', () => (
 
 story.add('Search: some results loading', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: {
           isLoading: false,
@@ -316,7 +386,6 @@ story.add('Search: some results loading', () => (
         },
         contactResults: { isLoading: true },
         messageResults: { isLoading: true },
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -325,8 +394,9 @@ story.add('Search: some results loading', () => (
 
 story.add('Search: has conversations and contacts, but not messages', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: {
           isLoading: false,
@@ -334,7 +404,6 @@ story.add('Search: has conversations and contacts, but not messages', () => (
         },
         contactResults: { isLoading: false, results: defaultConversations },
         messageResults: { isLoading: false, results: [] },
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -343,8 +412,9 @@ story.add('Search: has conversations and contacts, but not messages', () => (
 
 story.add('Search: all results', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Search,
         conversationResults: {
           isLoading: false,
@@ -358,7 +428,6 @@ story.add('Search: all results', () => (
             { id: 'msg2', conversationId: 'bar' },
           ],
         },
-        searchTerm: 'foo bar',
         primarySendsSms: false,
       },
     })}
@@ -369,10 +438,13 @@ story.add('Search: all results', () => (
 
 story.add('Archive: no archived conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Archive,
         archivedConversations: [],
+        searchConversation: undefined,
+        searchTerm: '',
+        startSearchCounter: 0,
       },
     })}
   />
@@ -380,10 +452,27 @@ story.add('Archive: no archived conversations', () => (
 
 story.add('Archive: archived conversations', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Archive,
         archivedConversations: defaultConversations,
+        searchConversation: undefined,
+        searchTerm: '',
+        startSearchCounter: 0,
+      },
+    })}
+  />
+));
+
+story.add('Archive: searching a conversation', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Archive,
+        archivedConversations: defaultConversations,
+        searchConversation: undefined,
+        searchTerm: '',
+        startSearchCounter: 0,
       },
     })}
   />
@@ -391,13 +480,15 @@ story.add('Archive: archived conversations', () => (
 
 // Compose stories
 
-story.add('Compose: no contacts or groups', () => (
+story.add('Compose: no results', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: [],
         composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: '',
       },
@@ -405,13 +496,15 @@ story.add('Compose: no contacts or groups', () => (
   />
 ));
 
-story.add('Compose: some contacts, no groups, no search term', () => (
+story.add('Compose: some contacts, no search term', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: defaultConversations,
         composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: '',
       },
@@ -419,13 +512,15 @@ story.add('Compose: some contacts, no groups, no search term', () => (
   />
 ));
 
-story.add('Compose: some contacts, no groups, with a search term', () => (
+story.add('Compose: some contacts, with a search term', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: defaultConversations,
         composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: 'ar',
       },
@@ -433,13 +528,15 @@ story.add('Compose: some contacts, no groups, with a search term', () => (
   />
 ));
 
-story.add('Compose: some groups, no contacts, no search term', () => (
+story.add('Compose: some groups, no search term', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: [],
         composeGroups: defaultGroups,
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: '',
       },
@@ -447,13 +544,15 @@ story.add('Compose: some groups, no contacts, no search term', () => (
   />
 ));
 
-story.add('Compose: some groups, no contacts, with search term', () => (
+story.add('Compose: some groups, with search term', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: [],
         composeGroups: defaultGroups,
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: 'ar',
       },
@@ -461,13 +560,118 @@ story.add('Compose: some groups, no contacts, with search term', () => (
   />
 ));
 
-story.add('Compose: some contacts, some groups, no search term', () => (
+story.add('Compose: search is valid username', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Compose,
+        composeContacts: [],
+        composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
+        regionCode: 'US',
+        searchTerm: 'someone',
+      },
+    })}
+  />
+));
+
+story.add('Compose: search is valid username, fetching username', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Compose,
+        composeContacts: [],
+        composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {
+          'username:someone': true,
+        },
+        regionCode: 'US',
+        searchTerm: 'someone',
+      },
+    })}
+  />
+));
+
+story.add('Compose: search is valid username, but flag is not enabled', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Compose,
+        composeContacts: [],
+        composeGroups: [],
+        isUsernamesEnabled: false,
+        uuidFetchState: {},
+        regionCode: 'US',
+        searchTerm: 'someone',
+      },
+    })}
+  />
+));
+
+story.add('Compose: search is partial phone number', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Compose,
+        composeContacts: [],
+        composeGroups: [],
+        isUsernamesEnabled: false,
+        uuidFetchState: {},
+        regionCode: 'US',
+        searchTerm: '+1(212)555',
+      },
+    })}
+  />
+));
+
+story.add('Compose: search is valid phone number', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.Compose,
+        composeContacts: [],
+        composeGroups: [],
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
+        regionCode: 'US',
+        searchTerm: '2125555454',
+      },
+    })}
+  />
+));
+
+story.add(
+  'Compose: search is valid phone number, fetching phone number',
+  () => (
+    <LeftPane
+      {...useProps({
+        modeSpecificProps: {
+          mode: LeftPaneMode.Compose,
+          composeContacts: [],
+          composeGroups: [],
+          isUsernamesEnabled: true,
+          uuidFetchState: {
+            'e164:+12125555454': true,
+          },
+          regionCode: 'US',
+          searchTerm: '(212)5555454',
+        },
+      })}
+    />
+  )
+);
+
+story.add('Compose: all kinds of results, no search term', () => (
+  <LeftPane
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: defaultConversations,
         composeGroups: defaultGroups,
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
         searchTerm: '',
       },
@@ -475,15 +679,17 @@ story.add('Compose: some contacts, some groups, no search term', () => (
   />
 ));
 
-story.add('Compose: some contacts, some groups, with a search term', () => (
+story.add('Compose: all kinds of results, with a search term', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.Compose,
         composeContacts: defaultConversations,
         composeGroups: defaultGroups,
+        isUsernamesEnabled: true,
+        uuidFetchState: {},
         regionCode: 'US',
-        searchTerm: 'ar',
+        searchTerm: 'someone',
       },
     })}
   />
@@ -493,12 +699,15 @@ story.add('Compose: some contacts, some groups, with a search term', () => (
 
 story.add('Captcha dialog: required', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations,
         conversations: defaultConversations,
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
+        searchTerm: '',
       },
       challengeStatus: 'required',
     })}
@@ -507,14 +716,72 @@ story.add('Captcha dialog: required', () => (
 
 story.add('Captcha dialog: pending', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
+        ...defaultSearchProps,
         mode: LeftPaneMode.Inbox,
         pinnedConversations,
         conversations: defaultConversations,
         archivedConversations: [],
+        isAboutToSearchInAConversation: false,
+        searchTerm: '',
       },
       challengeStatus: 'pending',
+    })}
+  />
+));
+
+// Crash report flow
+
+story.add('Crash report dialog', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        ...defaultSearchProps,
+        mode: LeftPaneMode.Inbox,
+        pinnedConversations,
+        conversations: defaultConversations,
+        archivedConversations: [],
+        isAboutToSearchInAConversation: false,
+        searchTerm: '',
+      },
+      crashReportCount: 42,
+    })}
+  />
+));
+
+// Choose Group Members
+
+story.add('Choose Group Members: Partial phone number', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.ChooseGroupMembers,
+        uuidFetchState: {},
+        candidateContacts: [],
+        isShowingRecommendedGroupSizeModal: false,
+        isShowingMaximumGroupSizeModal: false,
+        searchTerm: '+1(212) 555',
+        regionCode: 'US',
+        selectedContacts: [],
+      },
+    })}
+  />
+));
+
+story.add('Choose Group Members: Valid phone number', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        mode: LeftPaneMode.ChooseGroupMembers,
+        uuidFetchState: {},
+        candidateContacts: [],
+        isShowingRecommendedGroupSizeModal: false,
+        isShowingMaximumGroupSizeModal: false,
+        searchTerm: '+1(212) 555 5454',
+        regionCode: 'US',
+        selectedContacts: [],
+      },
     })}
   />
 ));
@@ -523,7 +790,7 @@ story.add('Captcha dialog: pending', () => (
 
 story.add('Group Metadata: No Timer', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.SetGroupMetadata,
         groupAvatar: undefined,
@@ -541,7 +808,7 @@ story.add('Group Metadata: No Timer', () => (
 
 story.add('Group Metadata: Regular Timer', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.SetGroupMetadata,
         groupAvatar: undefined,
@@ -559,7 +826,7 @@ story.add('Group Metadata: Regular Timer', () => (
 
 story.add('Group Metadata: Custom Timer', () => (
   <LeftPane
-    {...createProps({
+    {...useProps({
       modeSpecificProps: {
         mode: LeftPaneMode.SetGroupMetadata,
         groupAvatar: undefined,
@@ -570,6 +837,23 @@ story.add('Group Metadata: Custom Timer', () => (
         isEditingAvatar: false,
         selectedContacts: defaultConversations,
         userAvatarData: [],
+      },
+    })}
+  />
+));
+
+story.add('Searching Conversation', () => (
+  <LeftPane
+    {...useProps({
+      modeSpecificProps: {
+        ...defaultSearchProps,
+        mode: LeftPaneMode.Inbox,
+        pinnedConversations: [],
+        conversations: defaultConversations,
+        archivedConversations: [],
+        isAboutToSearchInAConversation: false,
+        searchConversation: getDefaultConversation(),
+        searchTerm: '',
       },
     })}
   />

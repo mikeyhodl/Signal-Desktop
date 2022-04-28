@@ -20,7 +20,7 @@ import { strictAssert } from './assert';
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function memoizeByRoot<F extends Function>(
   fn: F,
-  equalityCheck?: <T>(a: T, b: T, index: number) => boolean
+  equalityCheck?: <T>(a: T, b: T) => boolean
 ): F {
   // eslint-disable-next-line @typescript-eslint/ban-types
   const cache = new WeakMap<object, Function>();
@@ -43,5 +43,5 @@ export function memoizeByRoot<F extends Function>(
     return partial(...rest);
   };
 
-  return (wrap as unknown) as F;
+  return wrap as unknown as F;
 }

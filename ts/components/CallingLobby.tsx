@@ -1,9 +1,10 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
+import FocusTrap from 'focus-trap-react';
 import classNames from 'classnames';
-import {
+import type {
   SetLocalAudioType,
   SetLocalPreviewType,
   SetLocalVideoType,
@@ -12,14 +13,17 @@ import { CallingButton, CallingButtonType } from './CallingButton';
 import { TooltipPlacement } from './Tooltip';
 import { CallBackgroundBlur } from './CallBackgroundBlur';
 import { CallingHeader } from './CallingHeader';
+import { CallingToast, DEFAULT_LIFETIME } from './CallingToast';
 import { CallingPreCallInfo, RingMode } from './CallingPreCallInfo';
 import {
   CallingLobbyJoinButton,
   CallingLobbyJoinButtonVariant,
 } from './CallingLobbyJoinButton';
-import { AvatarColorType } from '../types/Colors';
-import { LocalizerType } from '../types/Util';
-import { ConversationType } from '../state/ducks/conversations';
+import type { LocalizerType } from '../types/Util';
+import { useIsOnline } from '../hooks/useIsOnline';
+import * as KeyboardLayout from '../services/keyboardLayout';
+import type { ConversationType } from '../state/ducks/conversations';
+import { isConversationTooBigToRing } from '../conversations/isConversationTooBigToRing';
 
 export type PropsType = {
   availableCameras: Array<MediaDeviceInfo>;
@@ -29,6 +33,7 @@ export type PropsType = {
     | 'avatarPath'
     | 'color'
     | 'isMe'
+    | 'memberships'
     | 'name'
     | 'phoneNumber'
     | 'profileName'
@@ -44,13 +49,7 @@ export type PropsType = {
   isGroupCall: boolean;
   isGroupCallOutboundRingEnabled: boolean;
   isCallFull?: boolean;
-  maxGroupCallRingSize: number;
-  me: {
-    avatarPath?: string;
-    id: string;
-    color?: AvatarColorType;
-    uuid: string;
-  };
+  me: Readonly<Pick<ConversationType, 'avatarPath' | 'color' | 'id' | 'uuid'>>;
   onCallCanceled: () => void;
   onJoinCall: () => void;
   outgoingRing: boolean;
@@ -74,7 +73,6 @@ export const CallingLobby = ({
   isGroupCall = false,
   isGroupCallOutboundRingEnabled,
   isCallFull = false,
-  maxGroupCallRingSize,
   me,
   onCallCanceled,
   onJoinCall,
@@ -88,6 +86,21 @@ export const CallingLobby = ({
   toggleSettings,
   outgoingRing,
 }: PropsType): JSX.Element => {
+  const [isMutedToastVisible, setIsMutedToastVisible] = React.useState(
+    !hasLocalAudio
+  );
+  React.useEffect(() => {
+    if (!isMutedToastVisible) {
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setIsMutedToastVisible(false);
+    }, DEFAULT_LIFETIME);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isMutedToastVisible]);
+
   const localVideoRef = React.useRef<null | HTMLVideoElement>(null);
 
   const shouldShowLocalVideo = hasLocalVideo && availableCameras.length > 0;
@@ -116,10 +129,11 @@ export const CallingLobby = ({
     function handleKeyDown(event: KeyboardEvent): void {
       let eventHandled = false;
 
-      if (event.shiftKey && (event.key === 'V' || event.key === 'v')) {
+      const key = KeyboardLayout.lookup(event);
+      if (event.shiftKey && (key === 'V' || key === 'v')) {
         toggleVideo();
         eventHandled = true;
-      } else if (event.shiftKey && (event.key === 'M' || event.key === 'm')) {
+      } else if (event.shiftKey && (key === 'M' || key === 'm')) {
         toggleAudio();
         eventHandled = true;
       }
@@ -137,6 +151,8 @@ export const CallingLobby = ({
     };
   }, [toggleVideo, toggleAudio]);
 
+  const isOnline = useIsOnline();
+
   const [isCallConnecting, setIsCallConnecting] = React.useState(false);
 
   // eslint-disable-next-line no-nested-ternary
@@ -150,21 +166,30 @@ export const CallingLobby = ({
     ? CallingButtonType.AUDIO_ON
     : CallingButtonType.AUDIO_OFF;
 
+  const isGroupTooLargeToRing = isConversationTooBigToRing(conversation);
+
   const isRingButtonVisible: boolean =
     isGroupCall &&
     isGroupCallOutboundRingEnabled &&
     peekedParticipants.length === 0 &&
     (groupMembers || []).length > 1;
 
-  const preCallInfoRingMode: RingMode =
-    isGroupCall && !outgoingRing ? RingMode.WillNotRing : RingMode.WillRing;
+  let preCallInfoRingMode: RingMode;
+  if (isGroupCall) {
+    preCallInfoRingMode =
+      outgoingRing && !isGroupTooLargeToRing
+        ? RingMode.WillRing
+        : RingMode.WillNotRing;
+  } else {
+    preCallInfoRingMode = RingMode.WillRing;
+  }
 
   let ringButtonType:
     | CallingButtonType.RING_DISABLED
     | CallingButtonType.RING_ON
     | CallingButtonType.RING_OFF;
   if (isRingButtonVisible) {
-    if ((groupMembers || []).length > maxGroupCallRingSize) {
+    if (isGroupTooLargeToRing) {
       ringButtonType = CallingButtonType.RING_DISABLED;
     } else if (outgoingRing) {
       ringButtonType = CallingButtonType.RING_ON;
@@ -175,7 +200,7 @@ export const CallingLobby = ({
     ringButtonType = CallingButtonType.RING_DISABLED;
   }
 
-  const canJoin = !isCallFull && !isCallConnecting;
+  const canJoin = !isCallFull && !isCallConnecting && isOnline;
 
   let callingLobbyJoinButtonVariant: CallingLobbyJoinButtonVariant;
   if (isCallFull) {
@@ -189,83 +214,94 @@ export const CallingLobby = ({
   }
 
   return (
-    <div className="module-calling__container">
-      {shouldShowLocalVideo ? (
-        <video
-          className="module-CallingLobby__local-preview module-CallingLobby__local-preview--camera-is-on"
-          ref={localVideoRef}
-          autoPlay
-        />
-      ) : (
-        <CallBackgroundBlur
-          className="module-CallingLobby__local-preview module-CallingLobby__local-preview--camera-is-off"
-          avatarPath={me.avatarPath}
-          color={me.color}
-        />
-      )}
-
-      <CallingHeader
-        i18n={i18n}
-        isGroupCall={isGroupCall}
-        participantCount={peekedParticipants.length}
-        showParticipantsList={showParticipantsList}
-        toggleParticipants={toggleParticipants}
-        toggleSettings={toggleSettings}
-        onCancel={onCallCanceled}
-      />
-
-      <CallingPreCallInfo
-        conversation={conversation}
-        groupMembers={groupMembers}
-        i18n={i18n}
-        isCallFull={isCallFull}
-        me={me}
-        peekedParticipants={peekedParticipants}
-        ringMode={preCallInfoRingMode}
-      />
-
-      <div
-        className={classNames(
-          'module-CallingLobby__camera-is-off',
-          `module-CallingLobby__camera-is-off--${
-            shouldShowLocalVideo ? 'invisible' : 'visible'
-          }`
+    <FocusTrap>
+      <div className="module-calling__container">
+        {shouldShowLocalVideo ? (
+          <video
+            className="module-CallingLobby__local-preview module-CallingLobby__local-preview--camera-is-on"
+            ref={localVideoRef}
+            autoPlay
+          />
+        ) : (
+          <CallBackgroundBlur
+            className="module-CallingLobby__local-preview module-CallingLobby__local-preview--camera-is-off"
+            avatarPath={me.avatarPath}
+            color={me.color}
+          />
         )}
-      >
-        {i18n('calling__your-video-is-off')}
-      </div>
 
-      <div className="module-calling__buttons module-calling__buttons--inline">
-        <CallingButton
-          buttonType={videoButtonType}
+        <CallingToast
+          isVisible={isMutedToastVisible}
+          onClick={() => setIsMutedToastVisible(false)}
+        >
+          {i18n(
+            'calling__lobby-automatically-muted-because-there-are-a-lot-of-people'
+          )}
+        </CallingToast>
+
+        <CallingHeader
           i18n={i18n}
-          onClick={toggleVideo}
-          tooltipDirection={TooltipPlacement.Top}
+          isGroupCall={isGroupCall}
+          participantCount={peekedParticipants.length}
+          showParticipantsList={showParticipantsList}
+          toggleParticipants={toggleParticipants}
+          toggleSettings={toggleSettings}
+          onCancel={onCallCanceled}
         />
-        <CallingButton
-          buttonType={audioButtonType}
+
+        <CallingPreCallInfo
+          conversation={conversation}
+          groupMembers={groupMembers}
           i18n={i18n}
-          onClick={toggleAudio}
-          tooltipDirection={TooltipPlacement.Top}
+          isCallFull={isCallFull}
+          me={me}
+          peekedParticipants={peekedParticipants}
+          ringMode={preCallInfoRingMode}
         />
-        <CallingButton
-          buttonType={ringButtonType}
+
+        <div
+          className={classNames(
+            'module-CallingLobby__camera-is-off',
+            `module-CallingLobby__camera-is-off--${
+              shouldShowLocalVideo ? 'invisible' : 'visible'
+            }`
+          )}
+        >
+          {i18n('calling__your-video-is-off')}
+        </div>
+
+        <div className="module-calling__buttons module-calling__buttons--inline">
+          <CallingButton
+            buttonType={videoButtonType}
+            i18n={i18n}
+            onClick={toggleVideo}
+            tooltipDirection={TooltipPlacement.Top}
+          />
+          <CallingButton
+            buttonType={audioButtonType}
+            i18n={i18n}
+            onClick={toggleAudio}
+            tooltipDirection={TooltipPlacement.Top}
+          />
+          <CallingButton
+            buttonType={ringButtonType}
+            i18n={i18n}
+            isVisible={isRingButtonVisible}
+            onClick={toggleOutgoingRing}
+            tooltipDirection={TooltipPlacement.Top}
+          />
+        </div>
+
+        <CallingLobbyJoinButton
+          disabled={!canJoin}
           i18n={i18n}
-          isVisible={isRingButtonVisible}
-          onClick={toggleOutgoingRing}
-          tooltipDirection={TooltipPlacement.Top}
+          onClick={() => {
+            setIsCallConnecting(true);
+            onJoinCall();
+          }}
+          variant={callingLobbyJoinButtonVariant}
         />
       </div>
-
-      <CallingLobbyJoinButton
-        disabled={!canJoin}
-        i18n={i18n}
-        onClick={() => {
-          setIsCallConnecting(true);
-          onJoinCall();
-        }}
-        variant={callingLobbyJoinButtonVariant}
-      />
-    </div>
+    </FocusTrap>
   );
 };

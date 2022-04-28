@@ -1,7 +1,8 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { FunctionComponent } from 'react';
+import type { FunctionComponent } from 'react';
+import React from 'react';
 import type { ConversationType } from '../state/ducks/conversations';
 import type { LocalizerType } from '../types/Util';
 import { Avatar, AvatarSize } from './Avatar';
@@ -163,6 +164,7 @@ export const CallingPreCallInfo: FunctionComponent<PropsType> = ({
     <div className="module-CallingPreCallInfo">
       <Avatar
         avatarPath={conversation.avatarPath}
+        badge={undefined}
         color={conversation.color}
         acceptedMessageRequest={conversation.acceptedMessageRequest}
         conversationType={conversation.type}

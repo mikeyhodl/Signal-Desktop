@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -8,10 +8,11 @@ import { boolean } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
 
 import { AvatarColors } from '../types/Colors';
-import { ConversationType } from '../state/ducks/conversations';
-import { CallingPip, PropsType } from './CallingPip';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PropsType } from './CallingPip';
+import { CallingPip } from './CallingPip';
+import type { ActiveCallType } from '../types/Calling';
 import {
-  ActiveCallType,
   CallMode,
   CallState,
   GroupCallConnectionState,
@@ -19,7 +20,7 @@ import {
 } from '../types/Calling';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
 import { fakeGetGroupCallVideoFrameSource } from '../test-both/helpers/fakeGetGroupCallVideoFrameSource';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
 
 const i18n = setupI18n('en', enMessages);
@@ -38,6 +39,7 @@ const getCommonActiveCallData = () => ({
   conversation,
   hasLocalAudio: boolean('hasLocalAudio', true),
   hasLocalVideo: boolean('hasLocalVideo', false),
+  amISpeaking: boolean('amISpeaking', false),
   isInSpeakerView: boolean('isInSpeakerView', false),
   joinedAt: Date.now(),
   outgoingRing: true,
@@ -59,13 +61,14 @@ const defaultCall: ActiveCallType = {
 const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   activeCall: overrideProps.activeCall || defaultCall,
   getGroupCallVideoFrameSource: fakeGetGroupCallVideoFrameSource,
-  hangUp: action('hang-up'),
+  hangUpActiveCall: action('hang-up-active-call'),
   hasLocalVideo: boolean('hasLocalVideo', overrideProps.hasLocalVideo || false),
   i18n,
   setGroupCallVideoRequest: action('set-group-call-video-request'),
   setLocalPreview: action('set-local-preview'),
   setRendererCanvas: action('set-renderer-canvas'),
   togglePip: action('toggle-pip'),
+  toggleSpeakerView: action('toggleSpeakerView'),
 });
 
 const story = storiesOf('Components/CallingPip', module);
@@ -117,6 +120,7 @@ story.add('Group Call', () => {
       deviceCount: 0,
       peekedParticipants: [],
       remoteParticipants: [],
+      speakingDemuxIds: new Set<number>(),
     },
   });
   return <CallingPip {...props} />;

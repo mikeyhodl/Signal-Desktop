@@ -1,10 +1,13 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { v4 as generateUuid } from 'uuid';
 import { sample } from 'lodash';
-import { ConversationType } from '../../state/ducks/conversations';
+import type { ConversationType } from '../../state/ducks/conversations';
+import { UUID } from '../../types/UUID';
+import type { UUIDStringType } from '../../types/UUID';
 import { getRandomColor } from './getRandomColor';
+import { ConversationColors } from '../../types/Colors';
 
 const FIRST_NAMES = [
   'James',
@@ -315,6 +318,13 @@ const LAST_NAMES = [
 export const getFirstName = (): string => sample(FIRST_NAMES) || 'Test';
 export const getLastName = (): string => sample(LAST_NAMES) || 'Test';
 
+export const getAvatarPath = (): string =>
+  sample([
+    '/fixtures/kitten-1-64-64.jpg',
+    '/fixtures/kitten-2-64-64.jpg',
+    '/fixtures/kitten-3-64-64.jpg',
+  ]) || '';
+
 export function getDefaultConversation(
   overrideProps: Partial<ConversationType> = {}
 ): ConversationType {
@@ -323,18 +333,30 @@ export function getDefaultConversation(
 
   return {
     acceptedMessageRequest: true,
+    avatarPath: getAvatarPath(),
+    badges: [],
     e164: '+1300555000',
+    conversationColor: ConversationColors[0],
     color: getRandomColor(),
     firstName,
     id: generateUuid(),
-    isGroupV2Capable: true,
     isMe: false,
     lastUpdated: Date.now(),
     markedUnread: Boolean(overrideProps.markedUnread),
     sharedGroupNames: [],
     title: `${firstName} ${lastName}`,
     type: 'direct' as const,
-    uuid: generateUuid(),
+    uuid: UUID.generate().toString(),
     ...overrideProps,
+  };
+}
+
+export function getDefaultConversationWithUuid(
+  overrideProps: Partial<ConversationType> = {},
+  uuid: UUIDStringType = UUID.generate().toString()
+): ConversationType & { uuid: UUIDStringType } {
+  return {
+    ...getDefaultConversation(overrideProps),
+    uuid,
   };
 }

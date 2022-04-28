@@ -1,11 +1,13 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactChild, ChangeEvent } from 'react';
+import type { ReactChild, ChangeEvent } from 'react';
+import React from 'react';
 
 import { LeftPaneHelper } from './LeftPaneHelper';
-import { Row, RowType } from '../ConversationList';
-import { ConversationType } from '../../state/ducks/conversations';
+import type { Row } from '../ConversationList';
+import { RowType } from '../ConversationList';
+import type { ConversationType } from '../../state/ducks/conversations';
 import { ContactCheckboxDisabledReason } from '../conversationList/ContactCheckbox';
 import { ContactPills } from '../ContactPills';
 import { ContactPill } from '../ContactPill';
@@ -15,29 +17,30 @@ import {
   AddGroupMemberErrorDialogMode,
 } from '../AddGroupMemberErrorDialog';
 import { Button } from '../Button';
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
+import type { ParsedE164Type } from '../../util/libphonenumberInstance';
+import { parseAndFormatPhoneNumber } from '../../util/libphonenumberInstance';
+import type { UUIDFetchStateType } from '../../util/uuidFetchState';
+import { isFetchingByE164 } from '../../util/uuidFetchState';
 import {
   getGroupSizeRecommendedLimit,
   getGroupSizeHardLimit,
 } from '../../groups/limits';
 
 export type LeftPaneChooseGroupMembersPropsType = {
+  uuidFetchState: UUIDFetchStateType;
   candidateContacts: ReadonlyArray<ConversationType>;
-  cantAddContactForModal: undefined | ConversationType;
   isShowingRecommendedGroupSizeModal: boolean;
   isShowingMaximumGroupSizeModal: boolean;
   searchTerm: string;
+  regionCode: string | undefined;
   selectedContacts: Array<ConversationType>;
 };
-
-/* eslint-disable class-methods-use-this */
 
 export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneChooseGroupMembersPropsType> {
   private readonly candidateContacts: ReadonlyArray<ConversationType>;
 
-  private readonly cantAddContactForModal:
-    | undefined
-    | Readonly<{ title: string }>;
+  private readonly isPhoneNumberChecked: boolean;
 
   private readonly isShowingMaximumGroupSizeModal: boolean;
 
@@ -45,25 +48,48 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
 
   private readonly searchTerm: string;
 
+  private readonly phoneNumber: ParsedE164Type | undefined;
+
   private readonly selectedContacts: Array<ConversationType>;
 
   private readonly selectedConversationIdsSet: Set<string>;
 
+  private readonly uuidFetchState: UUIDFetchStateType;
+
   constructor({
     candidateContacts,
-    cantAddContactForModal,
     isShowingMaximumGroupSizeModal,
     isShowingRecommendedGroupSizeModal,
     searchTerm,
+    regionCode,
     selectedContacts,
+    uuidFetchState,
   }: Readonly<LeftPaneChooseGroupMembersPropsType>) {
     super();
 
+    this.uuidFetchState = uuidFetchState;
+
     this.candidateContacts = candidateContacts;
-    this.cantAddContactForModal = cantAddContactForModal;
     this.isShowingMaximumGroupSizeModal = isShowingMaximumGroupSizeModal;
-    this.isShowingRecommendedGroupSizeModal = isShowingRecommendedGroupSizeModal;
+    this.isShowingRecommendedGroupSizeModal =
+      isShowingRecommendedGroupSizeModal;
     this.searchTerm = searchTerm;
+
+    const phoneNumber = parseAndFormatPhoneNumber(searchTerm, regionCode);
+    if (phoneNumber) {
+      this.isPhoneNumberChecked =
+        phoneNumber.isValid &&
+        selectedContacts.some(contact => contact.e164 === phoneNumber.e164);
+
+      const isVisible = this.candidateContacts.every(
+        contact => contact.e164 !== phoneNumber.e164
+      );
+      if (isVisible) {
+        this.phoneNumber = phoneNumber;
+      }
+    } else {
+      this.isPhoneNumberChecked = false;
+    }
     this.selectedContacts = selectedContacts;
 
     this.selectedConversationIdsSet = new Set(
@@ -71,7 +97,7 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
     );
   }
 
-  getHeaderContents({
+  override getHeaderContents({
     i18n,
     startComposing,
   }: Readonly<{
@@ -96,7 +122,7 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
     );
   }
 
-  getBackAction({
+  override getBackAction({
     startComposing,
   }: {
     startComposing: () => void;
@@ -104,21 +130,36 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
     return startComposing;
   }
 
-  getPreRowsNode({
-    closeCantAddContactToGroupModal,
-    closeMaximumGroupSizeModal,
-    closeRecommendedGroupSizeModal,
+  override getSearchInput({
     i18n,
     onChangeComposeSearchTerm,
-    removeSelectedContact,
   }: Readonly<{
-    closeCantAddContactToGroupModal: () => unknown;
-    closeMaximumGroupSizeModal: () => unknown;
-    closeRecommendedGroupSizeModal: () => unknown;
     i18n: LocalizerType;
     onChangeComposeSearchTerm: (
       event: ChangeEvent<HTMLInputElement>
     ) => unknown;
+  }>): ReactChild {
+    return (
+      <SearchInput
+        i18n={i18n}
+        moduleClassName="module-left-pane__compose-search-form"
+        onChange={onChangeComposeSearchTerm}
+        placeholder={i18n('contactSearchPlaceholder')}
+        ref={focusRef}
+        value={this.searchTerm}
+      />
+    );
+  }
+
+  override getPreRowsNode({
+    closeMaximumGroupSizeModal,
+    closeRecommendedGroupSizeModal,
+    i18n,
+    removeSelectedContact,
+  }: Readonly<{
+    closeMaximumGroupSizeModal: () => unknown;
+    closeRecommendedGroupSizeModal: () => unknown;
+    i18n: LocalizerType;
     removeSelectedContact: (conversationId: string) => unknown;
   }>): ReactChild {
     let modalNode: undefined | ReactChild;
@@ -140,27 +181,10 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
           onClose={closeRecommendedGroupSizeModal}
         />
       );
-    } else if (this.cantAddContactForModal) {
-      modalNode = (
-        <AddGroupMemberErrorDialog
-          i18n={i18n}
-          contact={this.cantAddContactForModal}
-          mode={AddGroupMemberErrorDialogMode.CantAddContact}
-          onClose={closeCantAddContactToGroupModal}
-        />
-      );
     }
 
     return (
       <>
-        <SearchInput
-          moduleClassName="module-left-pane__compose-search-form"
-          onChange={onChangeComposeSearchTerm}
-          placeholder={i18n('contactSearchPlaceholder')}
-          ref={focusRef}
-          value={this.searchTerm}
-        />
-
         {Boolean(this.selectedContacts.length) && (
           <ContactPills>
             {this.selectedContacts.map(contact => (
@@ -195,7 +219,7 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
     );
   }
 
-  getFooterContents({
+  override getFooterContents({
     i18n,
     startSettingGroupMetadata,
   }: Readonly<{
@@ -215,51 +239,90 @@ export class LeftPaneChooseGroupMembersHelper extends LeftPaneHelper<LeftPaneCho
   }
 
   getRowCount(): number {
-    if (!this.candidateContacts.length) {
-      return 0;
+    let rowCount = 0;
+
+    // Header + Phone Number
+    if (this.phoneNumber) {
+      rowCount += 2;
     }
-    return this.candidateContacts.length + 2;
+
+    // Header + Contacts
+    if (this.candidateContacts.length) {
+      rowCount += 1 + this.candidateContacts.length;
+    }
+
+    // Footer
+    if (rowCount > 0) {
+      rowCount += 1;
+    }
+
+    return rowCount;
   }
 
-  getRow(rowIndex: number): undefined | Row {
-    if (!this.candidateContacts.length) {
+  getRow(actualRowIndex: number): undefined | Row {
+    if (!this.candidateContacts.length && !this.phoneNumber) {
       return undefined;
     }
 
-    if (rowIndex === 0) {
-      return {
-        type: RowType.Header,
-        i18nKey: 'contactsHeader',
-      };
-    }
+    const rowCount = this.getRowCount();
 
     // This puts a blank row for the footer.
-    if (rowIndex === this.candidateContacts.length + 1) {
+    if (actualRowIndex === rowCount - 1) {
       return { type: RowType.Blank };
     }
 
-    const contact = this.candidateContacts[rowIndex - 1];
-    if (!contact) {
-      return undefined;
-    }
+    let virtualRowIndex = actualRowIndex;
 
-    const isChecked = this.selectedConversationIdsSet.has(contact.id);
-
-    let disabledReason: undefined | ContactCheckboxDisabledReason;
-    if (!isChecked) {
-      if (this.hasSelectedMaximumNumberOfContacts()) {
-        disabledReason = ContactCheckboxDisabledReason.MaximumContactsSelected;
-      } else if (!contact.isGroupV2Capable) {
-        disabledReason = ContactCheckboxDisabledReason.NotCapable;
+    if (this.candidateContacts.length) {
+      if (virtualRowIndex === 0) {
+        return {
+          type: RowType.Header,
+          i18nKey: 'contactsHeader',
+        };
       }
+
+      if (virtualRowIndex <= this.candidateContacts.length) {
+        const contact = this.candidateContacts[virtualRowIndex - 1];
+
+        const isChecked = this.selectedConversationIdsSet.has(contact.id);
+        const disabledReason =
+          !isChecked && this.hasSelectedMaximumNumberOfContacts()
+            ? ContactCheckboxDisabledReason.MaximumContactsSelected
+            : undefined;
+
+        return {
+          type: RowType.ContactCheckbox,
+          contact,
+          isChecked,
+          disabledReason,
+        };
+      }
+
+      virtualRowIndex -= 1 + this.candidateContacts.length;
     }
 
-    return {
-      type: RowType.ContactCheckbox,
-      contact,
-      isChecked,
-      disabledReason,
-    };
+    if (this.phoneNumber) {
+      if (virtualRowIndex === 0) {
+        return {
+          type: RowType.Header,
+          i18nKey: 'findByPhoneNumberHeader',
+        };
+      }
+      if (virtualRowIndex === 1) {
+        return {
+          type: RowType.PhoneNumberCheckbox,
+          isChecked: this.isPhoneNumberChecked,
+          isFetching: isFetchingByE164(
+            this.uuidFetchState,
+            this.phoneNumber.e164
+          ),
+          phoneNumber: this.phoneNumber,
+        };
+      }
+      virtualRowIndex -= 2;
+    }
+
+    return undefined;
   }
 
   // This is deliberately unimplemented because these keyboard shortcuts shouldn't work in

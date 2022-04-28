@@ -1,7 +1,8 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ConversationType } from '../state/ducks/conversations';
+import type { AudioDevice } from 'ringrtc';
+import type { ConversationType } from '../state/ducks/conversations';
 
 // These are strings (1) for the database (2) for Storybook.
 export enum CallMode {
@@ -27,6 +28,7 @@ type ActiveCallBaseType = {
   conversation: ConversationType;
   hasLocalAudio: boolean;
   hasLocalVideo: boolean;
+  amISpeaking: boolean;
   isInSpeakerView: boolean;
   isSharingScreen?: boolean;
   joinedAt?: number;
@@ -64,6 +66,7 @@ type ActiveGroupCallType = ActiveCallBaseType & {
   groupMembers: Array<Pick<ConversationType, 'id' | 'firstName' | 'title'>>;
   peekedParticipants: Array<ConversationType>;
   remoteParticipants: Array<GroupCallRemoteParticipantType>;
+  speakingDemuxIds: Set<number>;
 };
 
 export type ActiveCallType = ActiveDirectCallType | ActiveGroupCallType;
@@ -74,7 +77,7 @@ export type ActiveCallType = ActiveDirectCallType | ActiveGroupCallType;
 
 // Must be kept in sync with RingRTC.CallState
 export enum CallState {
-  Prering = 'init',
+  Prering = 'idle',
   Ringing = 'ringing',
   Accepted = 'connected',
   Reconnecting = 'connecting',
@@ -89,10 +92,12 @@ export enum CallEndedReason {
   Declined = 'Declined',
   Busy = 'Busy',
   Glare = 'Glare',
+  ReCall = 'ReCall',
   ReceivedOfferExpired = 'ReceivedOfferExpired',
   ReceivedOfferWhileActive = 'ReceivedOfferWhileActive',
   ReceivedOfferWithGlare = 'ReceivedOfferWithGlare',
   SignalingFailure = 'SignalingFailure',
+  GlareFailure = 'GlareFailure',
   ConnectionFailure = 'ConnectionFailure',
   InternalFailure = 'InternalFailure',
   Timeout = 'Timeout',
@@ -132,23 +137,6 @@ export type GroupCallVideoRequest = {
   demuxId: number;
   width: number;
   height: number;
-};
-
-// Should match RingRTC's VideoFrameSource
-export type VideoFrameSource = {
-  receiveVideoFrame(buffer: Buffer): [number, number] | undefined;
-};
-
-// Must be kept in sync with RingRTC.AudioDevice
-export type AudioDevice = {
-  // Device name.
-  name: string;
-  // Index of this device, starting from 0.
-  index: number;
-  // A unique and somewhat stable identifier of this device.
-  uniqueId: string;
-  // If present, the identifier of a localized string to substitute for the device name.
-  i18nKey?: string;
 };
 
 export enum CallingDeviceType {

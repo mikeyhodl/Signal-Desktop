@@ -1,9 +1,10 @@
 // Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { ReactNode } from 'react';
 import React from 'react';
 import classNames from 'classnames';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { Tooltip } from './Tooltip';
 import { Theme } from '../util/theme';
 
@@ -11,7 +12,7 @@ export type PropsType = {
   i18n: LocalizerType;
   isInSpeakerView?: boolean;
   isGroupCall?: boolean;
-  message?: string;
+  message?: ReactNode;
   onCancel?: () => void;
   participantCount: number;
   showParticipantsList: boolean;
@@ -44,7 +45,7 @@ export const CallingHeader = ({
       <div className="module-ongoing-call__header-message">{message}</div>
     ) : null}
     <div className="module-calling-tools">
-      {participantCount ? (
+      {isGroupCall && participantCount ? (
         <div className="module-calling-tools__button">
           <Tooltip
             content={i18n('calling__participants', [String(participantCount)])}
@@ -54,17 +55,14 @@ export const CallingHeader = ({
               aria-label={i18n('calling__participants', [
                 String(participantCount),
               ])}
-              className={classNames(
-                'module-calling-button__participants--container',
-                {
-                  'module-calling-button__participants--shown': showParticipantsList,
-                }
-              )}
+              className={classNames('CallingButton__participants--container', {
+                'CallingButton__participants--shown': showParticipantsList,
+              })}
               onClick={toggleParticipants}
               type="button"
             >
-              <i className="module-calling-button__participants" />
-              <span className="module-calling-button__participants--count">
+              <i className="CallingButton__participants" />
+              <span className="CallingButton__participants--count">
                 {participantCount}
               </span>
             </button>
@@ -78,7 +76,7 @@ export const CallingHeader = ({
         >
           <button
             aria-label={i18n('callingDeviceSelection__settings')}
-            className="module-calling-button__settings"
+            className="CallingButton__settings"
             onClick={toggleSettings}
             type="button"
           />
@@ -102,8 +100,8 @@ export const CallingHeader = ({
               )}
               className={
                 isInSpeakerView
-                  ? 'module-calling-button__grid-view'
-                  : 'module-calling-button__speaker-view'
+                  ? 'CallingButton__grid-view'
+                  : 'CallingButton__speaker-view'
               }
               onClick={toggleSpeakerView}
               type="button"
@@ -116,7 +114,7 @@ export const CallingHeader = ({
           <Tooltip content={i18n('calling__pip--on')} theme={Theme.Dark}>
             <button
               aria-label={i18n('calling__pip--on')}
-              className="module-calling-button__pip"
+              className="CallingButton__pip"
               onClick={togglePip}
               type="button"
             />
@@ -128,7 +126,7 @@ export const CallingHeader = ({
           <Tooltip content={i18n('cancel')} theme={Theme.Dark}>
             <button
               aria-label={i18n('cancel')}
-              className="module-calling-button__cancel"
+              className="CallingButton__cancel"
               onClick={onCancel}
               type="button"
             />

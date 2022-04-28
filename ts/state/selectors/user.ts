@@ -1,38 +1,41 @@
-// Copyright 2019-2020 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { createSelector } from 'reselect';
 
-import { LocalizerType, ThemeType } from '../../types/Util';
+import type { LocalizerType, ThemeType } from '../../types/Util';
+import type { UUIDStringType } from '../../types/UUID';
 
-import { StateType } from '../reducer';
-import { UserStateType } from '../ducks/user';
+import type { StateType } from '../reducer';
+import type { UserStateType } from '../ducks/user';
+
+import { isAlpha, isBeta } from '../../util/version';
 
 export const getUser = (state: StateType): UserStateType => state.user;
 
 export const getUserNumber = createSelector(
   getUser,
-  (state: UserStateType): string => state.ourNumber
+  (state: UserStateType): string | undefined => state.ourNumber
 );
 
 export const getUserDeviceId = createSelector(
   getUser,
-  (state: UserStateType): number => state.ourDeviceId
+  (state: UserStateType): number | undefined => state.ourDeviceId
 );
 
 export const getRegionCode = createSelector(
   getUser,
-  (state: UserStateType): string => state.regionCode
+  (state: UserStateType): string | undefined => state.regionCode
 );
 
 export const getUserConversationId = createSelector(
   getUser,
-  (state: UserStateType): string => state.ourConversationId
+  (state: UserStateType): string | undefined => state.ourConversationId
 );
 
 export const getUserUuid = createSelector(
   getUser,
-  (state: UserStateType): string => state.ourUuid
+  (state: UserStateType): UUIDStringType | undefined => state.ourUuid
 );
 
 export const getIntl = createSelector(
@@ -69,3 +72,12 @@ export const getTheme = createSelector(
   getUser,
   (state: UserStateType): ThemeType => state.theme
 );
+
+const getVersion = createSelector(
+  getUser,
+  (state: UserStateType) => state.version
+);
+
+export const getIsAlpha = createSelector(getVersion, isAlpha);
+
+export const getIsBeta = createSelector(getVersion, isBeta);

@@ -1,4 +1,4 @@
-// Copyright 2015-2021 Signal Messenger, LLC
+// Copyright 2015-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -9,20 +9,22 @@ import {
   Direction,
   SenderKeyRecord,
   SessionRecord,
-} from '@signalapp/signal-client';
+} from '@signalapp/libsignal-client';
 
 import { signal } from '../protobuf/compiled';
-import { sessionStructureToArrayBuffer } from '../util/sessionTranslation';
+import { sessionStructureToBytes } from '../util/sessionTranslation';
+import * as durations from '../util/durations';
 import { Zone } from '../util/Zone';
 
-import {
-  getRandomBytes,
-  constantTimeEqual,
-  typedArrayToArrayBuffer as toArrayBuffer,
-} from '../Crypto';
+import * as Bytes from '../Bytes';
+import { getRandomBytes, constantTimeEqual } from '../Crypto';
 import { clampPrivateKey, setPublicKeyTypeByte } from '../Curve';
-import { SignalProtocolStore, GLOBAL_ZONE } from '../SignalProtocolStore';
-import { IdentityKeyType, KeyPairType } from '../textsecure/Types.d';
+import type { SignalProtocolStore } from '../SignalProtocolStore';
+import { GLOBAL_ZONE } from '../SignalProtocolStore';
+import { Address } from '../types/Address';
+import { QualifiedAddress } from '../types/QualifiedAddress';
+import { UUID } from '../types/UUID';
+import type { IdentityKeyType, KeyPairType } from '../textsecure/Types.d';
 
 chai.use(chaiAsPromised);
 
@@ -34,7 +36,8 @@ const {
 } = signal.proto.storage;
 
 describe('SignalProtocolStore', () => {
-  const number = '+5558675309';
+  const ourUuid = UUID.generate();
+  const theirUuid = UUID.generate();
   let store: SignalProtocolStore;
   let identityKey: KeyPairType;
   let testKey: KeyPairType;
@@ -47,20 +50,20 @@ describe('SignalProtocolStore', () => {
     if (isOpen) {
       proto.currentSession = new SessionStructure();
 
-      proto.currentSession.aliceBaseKey = toUint8Array(getPublicKey());
-      proto.currentSession.localIdentityPublic = toUint8Array(getPublicKey());
+      proto.currentSession.aliceBaseKey = getPublicKey();
+      proto.currentSession.localIdentityPublic = getPublicKey();
       proto.currentSession.localRegistrationId = 435;
 
       proto.currentSession.previousCounter = 1;
-      proto.currentSession.remoteIdentityPublic = toUint8Array(getPublicKey());
+      proto.currentSession.remoteIdentityPublic = getPublicKey();
       proto.currentSession.remoteRegistrationId = 243;
 
-      proto.currentSession.rootKey = toUint8Array(getPrivateKey());
+      proto.currentSession.rootKey = getPrivateKey();
       proto.currentSession.sessionVersion = 3;
     }
 
     return SessionRecord.deserialize(
-      Buffer.from(sessionStructureToArrayBuffer(proto))
+      Buffer.from(sessionStructureToBytes(proto))
     );
   }
 
@@ -74,19 +77,19 @@ describe('SignalProtocolStore', () => {
     const senderChainKey = new SenderKeyStateStructure.SenderChainKey();
 
     senderChainKey.iteration = 10;
-    senderChainKey.seed = toUint8Array(getPublicKey());
+    senderChainKey.seed = getPublicKey();
     state.senderChainKey = senderChainKey;
 
     const senderSigningKey = new SenderKeyStateStructure.SenderSigningKey();
-    senderSigningKey.public = toUint8Array(getPublicKey());
-    senderSigningKey.private = toUint8Array(getPrivateKey());
+    senderSigningKey.public = getPublicKey();
+    senderSigningKey.private = getPrivateKey();
 
     state.senderSigningKey = senderSigningKey;
 
     state.senderMessageKeys = [];
     const messageKey = new SenderKeyStateStructure.SenderMessageKey();
     messageKey.iteration = 234;
-    messageKey.seed = toUint8Array(getPublicKey());
+    messageKey.seed = getPublicKey();
     state.senderMessageKeys.push(messageKey);
 
     proto.senderKeyStates = [];
@@ -97,10 +100,6 @@ describe('SignalProtocolStore', () => {
         signal.proto.storage.SenderKeyRecordStructure.encode(proto).finish()
       )
     );
-  }
-
-  function toUint8Array(buffer: ArrayBuffer): Uint8Array {
-    return new Uint8Array(buffer);
   }
 
   function getPrivateKey() {
@@ -132,26 +131,34 @@ describe('SignalProtocolStore', () => {
     clampPrivateKey(identityKey.privKey);
     clampPrivateKey(testKey.privKey);
 
-    window.storage.put('registrationId', 1337);
-    window.storage.put('identityKey', identityKey);
+    window.storage.put('registrationIdMap', { [ourUuid.toString()]: 1337 });
+    window.storage.put('identityKeyMap', {
+      [ourUuid.toString()]: {
+        privKey: Bytes.toBase64(identityKey.privKey),
+        pubKey: Bytes.toBase64(identityKey.pubKey),
+      },
+    });
     await window.storage.fetch();
 
     window.ConversationController.reset();
     await window.ConversationController.load();
-    await window.ConversationController.getOrCreateAndWait(number, 'private');
+    await window.ConversationController.getOrCreateAndWait(
+      theirUuid.toString(),
+      'private'
+    );
   });
 
   describe('getLocalRegistrationId', () => {
     it('retrieves my registration id', async () => {
       await store.hydrateCaches();
-      const id = await store.getLocalRegistrationId();
+      const id = await store.getLocalRegistrationId(ourUuid);
       assert.strictEqual(id, 1337);
     });
   });
   describe('getIdentityKeyPair', () => {
     it('retrieves my identity key', async () => {
       await store.hydrateCaches();
-      const key = await store.getIdentityKeyPair();
+      const key = await store.getIdentityKeyPair(ourUuid);
       if (!key) {
         throw new Error('Missing key!');
       }
@@ -163,66 +170,66 @@ describe('SignalProtocolStore', () => {
 
   describe('senderKeys', () => {
     it('roundtrips in memory', async () => {
-      const distributionId = window.getGuid();
+      const distributionId = UUID.generate().toString();
       const expected = getSenderKeyRecord();
 
       const deviceId = 1;
-      const encodedAddress = `${number}.${deviceId}`;
+      const qualifiedAddress = new QualifiedAddress(
+        ourUuid,
+        new Address(theirUuid, deviceId)
+      );
 
-      await store.saveSenderKey(encodedAddress, distributionId, expected);
+      await store.saveSenderKey(qualifiedAddress, distributionId, expected);
 
-      const actual = await store.getSenderKey(encodedAddress, distributionId);
+      const actual = await store.getSenderKey(qualifiedAddress, distributionId);
       if (!actual) {
         throw new Error('getSenderKey returned nothing!');
       }
 
       assert.isTrue(
-        constantTimeEqual(
-          toArrayBuffer(expected.serialize()),
-          toArrayBuffer(actual.serialize())
-        )
+        constantTimeEqual(expected.serialize(), actual.serialize())
       );
 
-      await store.removeSenderKey(encodedAddress, distributionId);
+      await store.removeSenderKey(qualifiedAddress, distributionId);
 
       const postDeleteGet = await store.getSenderKey(
-        encodedAddress,
+        qualifiedAddress,
         distributionId
       );
       assert.isUndefined(postDeleteGet);
     });
 
     it('roundtrips through database', async () => {
-      const distributionId = window.getGuid();
+      const distributionId = UUID.generate().toString();
       const expected = getSenderKeyRecord();
 
       const deviceId = 1;
-      const encodedAddress = `${number}.${deviceId}`;
+      const qualifiedAddress = new QualifiedAddress(
+        ourUuid,
+        new Address(theirUuid, deviceId)
+      );
 
-      await store.saveSenderKey(encodedAddress, distributionId, expected);
+      await store.saveSenderKey(qualifiedAddress, distributionId, expected);
 
       // Re-fetch from the database to ensure we get the latest database value
       await store.hydrateCaches();
 
-      const actual = await store.getSenderKey(encodedAddress, distributionId);
+      const actual = await store.getSenderKey(qualifiedAddress, distributionId);
       if (!actual) {
         throw new Error('getSenderKey returned nothing!');
       }
 
       assert.isTrue(
-        constantTimeEqual(
-          toArrayBuffer(expected.serialize()),
-          toArrayBuffer(actual.serialize())
-        )
+        constantTimeEqual(expected.serialize(), actual.serialize())
       );
 
-      await store.removeSenderKey(encodedAddress, distributionId);
+      await store.removeSenderKey(qualifiedAddress, distributionId);
 
       // Re-fetch from the database to ensure we get the latest database value
       await store.hydrateCaches();
 
       const postDeleteGet = await store.getSenderKey(
-        encodedAddress,
+        qualifiedAddress,
         distributionId
       );
       assert.isUndefined(postDeleteGet);
@@ -230,11 +237,11 @@ describe('SignalProtocolStore', () => {
   });
 
   describe('saveIdentity', () => {
-    const identifier = `${number}.1`;
+    const identifier = new Address(theirUuid, 1);
 
     it('stores identity keys', async () => {
       await store.saveIdentity(identifier, testKey.pubKey);
-      const key = await store.loadIdentityKey(number);
+      const key = await store.loadIdentityKey(theirUuid);
       if (!key) {
         throw new Error('Missing key!');
       }
@@ -249,25 +256,31 @@ describe('SignalProtocolStore', () => {
 
     describe('When there is no existing key (first use)', () => {
       before(async () => {
-        await store.removeIdentityKey(number);
+        await store.removeIdentityKey(theirUuid);
         await store.saveIdentity(identifier, testKey.pubKey);
       });
       it('marks the key firstUse', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert(identity.firstUse);
       });
       it('sets the timestamp', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert(identity.timestamp);
       });
       it('sets the verified status to DEFAULT', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -280,7 +293,7 @@ describe('SignalProtocolStore', () => {
 
       before(async () => {
         await window.Signal.Data.createOrUpdateIdentityKey({
-          id: identifier,
+          id: theirUuid.toString(),
           publicKey: testKey.pubKey,
           firstUse: true,
           timestamp: oldTimestamp,
@@ -292,14 +305,18 @@ describe('SignalProtocolStore', () => {
         await store.saveIdentity(identifier, newIdentity);
       });
       it('marks the key not firstUse', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert(!identity.firstUse);
       });
       it('updates the timestamp', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -309,7 +326,7 @@ describe('SignalProtocolStore', () => {
       describe('The previous verified status was DEFAULT', () => {
         before(async () => {
           await window.Signal.Data.createOrUpdateIdentityKey({
-            id: number,
+            id: theirUuid.toString(),
             publicKey: testKey.pubKey,
             firstUse: true,
             timestamp: oldTimestamp,
@@ -321,7 +338,9 @@ describe('SignalProtocolStore', () => {
           await store.saveIdentity(identifier, newIdentity);
         });
         it('sets the new key to default', async () => {
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -331,7 +350,7 @@ describe('SignalProtocolStore', () => {
       describe('The previous verified status was VERIFIED', () => {
         before(async () => {
           await window.Signal.Data.createOrUpdateIdentityKey({
-            id: number,
+            id: theirUuid.toString(),
             publicKey: testKey.pubKey,
             firstUse: true,
             timestamp: oldTimestamp,
@@ -343,7 +362,9 @@ describe('SignalProtocolStore', () => {
           await store.saveIdentity(identifier, newIdentity);
         });
         it('sets the new key to unverified', async () => {
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -356,7 +377,7 @@ describe('SignalProtocolStore', () => {
       describe('The previous verified status was UNVERIFIED', () => {
         before(async () => {
           await window.Signal.Data.createOrUpdateIdentityKey({
-            id: number,
+            id: theirUuid.toString(),
             publicKey: testKey.pubKey,
             firstUse: true,
             timestamp: oldTimestamp,
@@ -368,7 +389,9 @@ describe('SignalProtocolStore', () => {
           await store.saveIdentity(identifier, newIdentity);
         });
         it('sets the new key to unverified', async () => {
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -383,7 +406,7 @@ describe('SignalProtocolStore', () => {
       const oldTimestamp = Date.now();
       before(async () => {
         await window.Signal.Data.createOrUpdateIdentityKey({
-          id: number,
+          id: theirUuid.toString(),
           publicKey: testKey.pubKey,
           timestamp: oldTimestamp,
           nonblockingApproval: false,
@@ -394,7 +417,9 @@ describe('SignalProtocolStore', () => {
       });
       describe('If it is marked firstUse', () => {
         before(async () => {
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -405,7 +430,9 @@ describe('SignalProtocolStore', () => {
         it('nothing changes', async () => {
           await store.saveIdentity(identifier, testKey.pubKey, true);
 
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -415,7 +442,9 @@ describe('SignalProtocolStore', () => {
       });
       describe('If it is not marked firstUse', () => {
         before(async () => {
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -428,7 +457,7 @@ describe('SignalProtocolStore', () => {
           before(async () => {
             now = Date.now();
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -441,7 +470,7 @@ describe('SignalProtocolStore', () => {
             await store.saveIdentity(identifier, testKey.pubKey, true);
 
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -462,7 +491,7 @@ describe('SignalProtocolStore', () => {
     before(async () => {
       now = Date.now();
       validAttributes = {
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         firstUse: true,
         timestamp: now,
@@ -470,43 +499,53 @@ describe('SignalProtocolStore', () => {
         nonblockingApproval: false,
       };
 
-      await store.removeIdentityKey(number);
+      await store.removeIdentityKey(theirUuid);
     });
     describe('with valid attributes', () => {
       before(async () => {
-        await store.saveIdentityWithAttributes(number, validAttributes);
+        await store.saveIdentityWithAttributes(theirUuid, validAttributes);
       });
 
       it('publicKey is saved', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert.isTrue(constantTimeEqual(identity.publicKey, testKey.pubKey));
       });
       it('firstUse is saved', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert.strictEqual(identity.firstUse, true);
       });
       it('timestamp is saved', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert.strictEqual(identity.timestamp, now);
       });
       it('verified is saved', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
         assert.strictEqual(identity.verified, store.VerifiedStatus.VERIFIED);
       });
       it('nonblockingApproval is saved', async () => {
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -521,7 +560,7 @@ describe('SignalProtocolStore', () => {
 
       async function testInvalidAttributes() {
         try {
-          await store.saveIdentityWithAttributes(number, attributes);
+          await store.saveIdentityWithAttributes(theirUuid, attributes);
           throw new Error('saveIdentityWithAttributes should have failed');
         } catch (error) {
           // good. we expect to fail with invalid attributes.
@@ -552,8 +591,10 @@ describe('SignalProtocolStore', () => {
   });
   describe('setApproval', () => {
     it('sets nonblockingApproval', async () => {
-      await store.setApproval(number, true);
-      const identity = await window.Signal.Data.getIdentityKeyById(number);
+      await store.setApproval(theirUuid, true);
+      const identity = await window.Signal.Data.getIdentityKeyById(
+        theirUuid.toString()
+      );
       if (!identity) {
         throw new Error('Missing identity!');
       }
@@ -564,7 +605,7 @@ describe('SignalProtocolStore', () => {
   describe('setVerified', () => {
     async function saveRecordDefault() {
       await window.Signal.Data.createOrUpdateIdentityKey({
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         firstUse: true,
         timestamp: Date.now(),
@@ -576,9 +617,11 @@ describe('SignalProtocolStore', () => {
     describe('with no public key argument', () => {
       before(saveRecordDefault);
       it('updates the verified status', async () => {
-        await store.setVerified(number, store.VerifiedStatus.VERIFIED);
+        await store.setVerified(theirUuid, store.VerifiedStatus.VERIFIED);
 
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -591,12 +634,14 @@ describe('SignalProtocolStore', () => {
       before(saveRecordDefault);
       it('updates the verified status', async () => {
         await store.setVerified(
-          number,
+          theirUuid,
           store.VerifiedStatus.VERIFIED,
           testKey.pubKey
         );
 
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -610,12 +655,14 @@ describe('SignalProtocolStore', () => {
       before(saveRecordDefault);
       it('does not change the record.', async () => {
         await store.setVerified(
-          number,
+          theirUuid,
           store.VerifiedStatus.VERIFIED,
           newIdentity
         );
 
-        const identity = await window.Signal.Data.getIdentityKeyById(number);
+        const identity = await window.Signal.Data.getIdentityKeyById(
+          theirUuid.toString()
+        );
         if (!identity) {
           throw new Error('Missing identity!');
         }
@@ -625,7 +672,7 @@ describe('SignalProtocolStore', () => {
       });
     });
   });
-  describe('processContactSyncVerificationState', () => {
+  describe('processVerifiedMessage', () => {
     const newIdentity = getPublicKey();
     let keychangeTriggered: number;
 
@@ -642,27 +689,24 @@ describe('SignalProtocolStore', () => {
     describe('when the new verified status is DEFAULT', () => {
       describe('when there is no existing record', () => {
         before(async () => {
-          await window.Signal.Data.removeIdentityKeyById(number);
+          await window.Signal.Data.removeIdentityKeyById(theirUuid.toString());
           await store.hydrateCaches();
         });
 
-        it('does nothing', async () => {
-          await store.processContactSyncVerificationState(
-            number,
+        it('sets the identity key', async () => {
+          await store.processVerifiedMessage(
+            theirUuid,
             store.VerifiedStatus.DEFAULT,
             newIdentity
           );
 
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
-
-          if (identity) {
-            // fetchRecord resolved so there is a record.
-            // Bad.
-            throw new Error(
-              'processContactSyncVerificationState should not save new records'
-            );
-          }
-
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
+          assert.isTrue(
+            identity?.publicKey &&
+              constantTimeEqual(identity.publicKey, newIdentity)
+          );
           assert.strictEqual(keychangeTriggered, 0);
         });
       });
@@ -670,7 +714,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is different', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -680,34 +724,29 @@ describe('SignalProtocolStore', () => {
             await store.hydrateCaches();
           });
 
-          it('does not save the new identity (because this is a less secure state)', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+          it('updates the identity', async () => {
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.DEFAULT,
               newIdentity
             );
 
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
             }
 
-            assert.strictEqual(
-              identity.verified,
-              store.VerifiedStatus.VERIFIED
-            );
-            assert.isTrue(
-              constantTimeEqual(identity.publicKey, testKey.pubKey)
-            );
-            assert.strictEqual(keychangeTriggered, 0);
+            assert.strictEqual(identity.verified, store.VerifiedStatus.DEFAULT);
+            assert.isTrue(constantTimeEqual(identity.publicKey, newIdentity));
+            assert.strictEqual(keychangeTriggered, 1);
           });
         });
         describe('when the existing key is the same but VERIFIED', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -718,14 +757,14 @@ describe('SignalProtocolStore', () => {
           });
 
           it('updates the verified status', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.DEFAULT,
               testKey.pubKey
             );
 
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -741,7 +780,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is the same and already DEFAULT', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -752,8 +791,8 @@ describe('SignalProtocolStore', () => {
           });
 
           it('does not hang', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.DEFAULT,
               testKey.pubKey
             );
@@ -766,18 +805,20 @@ describe('SignalProtocolStore', () => {
     describe('when the new verified status is UNVERIFIED', () => {
       describe('when there is no existing record', () => {
         before(async () => {
-          await window.Signal.Data.removeIdentityKeyById(number);
+          await window.Signal.Data.removeIdentityKeyById(theirUuid.toString());
           await store.hydrateCaches();
         });
 
-        it('saves the new identity and marks it verified', async () => {
-          await store.processContactSyncVerificationState(
-            number,
+        it('saves the new identity and marks it UNVERIFIED', async () => {
+          await store.processVerifiedMessage(
+            theirUuid,
             store.VerifiedStatus.UNVERIFIED,
             newIdentity
           );
 
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -794,7 +835,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is different', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -805,14 +846,14 @@ describe('SignalProtocolStore', () => {
           });
 
           it('saves the new identity and marks it UNVERIFIED', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.UNVERIFIED,
               newIdentity
             );
 
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -829,7 +870,7 @@ describe('SignalProtocolStore', () => {
         describe('when the key exists and is DEFAULT', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -840,13 +881,13 @@ describe('SignalProtocolStore', () => {
           });
 
           it('updates the verified status', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.UNVERIFIED,
               testKey.pubKey
             );
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -865,7 +906,7 @@ describe('SignalProtocolStore', () => {
         describe('when the key exists and is already UNVERIFIED', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -876,8 +917,8 @@ describe('SignalProtocolStore', () => {
           });
 
           it('does not hang', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.UNVERIFIED,
               testKey.pubKey
             );
@@ -890,17 +931,19 @@ describe('SignalProtocolStore', () => {
     describe('when the new verified status is VERIFIED', () => {
       describe('when there is no existing record', () => {
         before(async () => {
-          await window.Signal.Data.removeIdentityKeyById(number);
+          await window.Signal.Data.removeIdentityKeyById(theirUuid.toString());
           await store.hydrateCaches();
         });
 
         it('saves the new identity and marks it verified', async () => {
-          await store.processContactSyncVerificationState(
-            number,
+          await store.processVerifiedMessage(
+            theirUuid,
             store.VerifiedStatus.VERIFIED,
             newIdentity
           );
-          const identity = await window.Signal.Data.getIdentityKeyById(number);
+          const identity = await window.Signal.Data.getIdentityKeyById(
+            theirUuid.toString()
+          );
           if (!identity) {
             throw new Error('Missing identity!');
           }
@@ -914,7 +957,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is different', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -925,14 +968,14 @@ describe('SignalProtocolStore', () => {
           });
 
           it('saves the new identity and marks it VERIFIED', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.VERIFIED,
               newIdentity
             );
 
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -949,7 +992,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is the same but UNVERIFIED', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -960,13 +1003,13 @@ describe('SignalProtocolStore', () => {
           });
 
           it('saves the identity and marks it verified', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.VERIFIED,
               testKey.pubKey
             );
             const identity = await window.Signal.Data.getIdentityKeyById(
-              number
+              theirUuid.toString()
             );
             if (!identity) {
               throw new Error('Missing identity!');
@@ -985,7 +1028,7 @@ describe('SignalProtocolStore', () => {
         describe('when the existing key is the same and already VERIFIED', () => {
           before(async () => {
             await window.Signal.Data.createOrUpdateIdentityKey({
-              id: number,
+              id: theirUuid.toString(),
               publicKey: testKey.pubKey,
               firstUse: true,
               timestamp: Date.now(),
@@ -996,8 +1039,8 @@ describe('SignalProtocolStore', () => {
           });
 
           it('does not hang', async () => {
-            await store.processContactSyncVerificationState(
-              number,
+            await store.processVerifiedMessage(
+              theirUuid,
               store.VerifiedStatus.VERIFIED,
               testKey.pubKey
             );
@@ -1012,7 +1055,7 @@ describe('SignalProtocolStore', () => {
   describe('isUntrusted', () => {
     it('returns false if identity key old enough', async () => {
       await window.Signal.Data.createOrUpdateIdentityKey({
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         timestamp: Date.now() - 10 * 1000 * 60,
         verified: store.VerifiedStatus.DEFAULT,
@@ -1021,13 +1064,13 @@ describe('SignalProtocolStore', () => {
       });
 
       await store.hydrateCaches();
-      const untrusted = await store.isUntrusted(number);
+      const untrusted = await store.isUntrusted(theirUuid);
       assert.strictEqual(untrusted, false);
     });
 
     it('returns false if new but nonblockingApproval is true', async () => {
       await window.Signal.Data.createOrUpdateIdentityKey({
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         timestamp: Date.now(),
         verified: store.VerifiedStatus.DEFAULT,
@@ -1036,13 +1079,13 @@ describe('SignalProtocolStore', () => {
       });
       await store.hydrateCaches();
 
-      const untrusted = await store.isUntrusted(number);
+      const untrusted = await store.isUntrusted(theirUuid);
       assert.strictEqual(untrusted, false);
     });
 
     it('returns false if new but firstUse is true', async () => {
       await window.Signal.Data.createOrUpdateIdentityKey({
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         timestamp: Date.now(),
         verified: store.VerifiedStatus.DEFAULT,
@@ -1051,13 +1094,13 @@ describe('SignalProtocolStore', () => {
       });
       await store.hydrateCaches();
 
-      const untrusted = await store.isUntrusted(number);
+      const untrusted = await store.isUntrusted(theirUuid);
       assert.strictEqual(untrusted, false);
     });
 
     it('returns true if new, and no flags are set', async () => {
       await window.Signal.Data.createOrUpdateIdentityKey({
-        id: number,
+        id: theirUuid.toString(),
         publicKey: testKey.pubKey,
         timestamp: Date.now(),
         verified: store.VerifiedStatus.DEFAULT,
@@ -1066,31 +1109,28 @@ describe('SignalProtocolStore', () => {
       });
       await store.hydrateCaches();
 
-      const untrusted = await store.isUntrusted(number);
+      const untrusted = await store.isUntrusted(theirUuid);
       assert.strictEqual(untrusted, true);
     });
   });
 
   describe('getVerified', () => {
     before(async () => {
-      await store.setVerified(number, store.VerifiedStatus.VERIFIED);
+      await store.setVerified(theirUuid, store.VerifiedStatus.VERIFIED);
     });
     it('resolves to the verified status', async () => {
-      const result = await store.getVerified(number);
+      const result = await store.getVerified(theirUuid);
       assert.strictEqual(result, store.VerifiedStatus.VERIFIED);
     });
   });
   describe('isTrustedIdentity', () => {
-    const identifier = `${number}.1`;
+    const identifier = new Address(theirUuid, 1);
 
     describe('When invalid direction is given', () => {
       it('should fail', async () => {
-        try {
-          await store.isTrustedIdentity(number, testKey.pubKey, 'dir' as any);
-          throw new Error('isTrustedIdentity should have failed');
-        } catch (error) {
-          // good
-        }
+        await assert.isRejected(
+          store.isTrustedIdentity(identifier, testKey.pubKey, 'dir' as any)
+        );
       });
     });
     describe('When direction is RECEIVING', () => {
@@ -1112,7 +1152,7 @@ describe('SignalProtocolStore', () => {
     describe('When direction is SENDING', () => {
       describe('When there is no existing key (first use)', () => {
         before(async () => {
-          await store.removeIdentityKey(number);
+          await store.removeIdentityKey(theirUuid);
         });
         it('returns true', async () => {
           const newIdentity = getPublicKey();
@@ -1177,19 +1217,15 @@ describe('SignalProtocolStore', () => {
   });
   describe('storePreKey', () => {
     it('stores prekeys', async () => {
-      await store.storePreKey(1, testKey);
-      const key = await store.loadPreKey(1);
+      await store.storePreKey(ourUuid, 1, testKey);
+      const key = await store.loadPreKey(ourUuid, 1);
       if (!key) {
         throw new Error('Missing key!');
       }
 
       const keyPair = {
-        pubKey: window.Signal.Crypto.typedArrayToArrayBuffer(
-          key.publicKey().serialize()
-        ),
-        privKey: window.Signal.Crypto.typedArrayToArrayBuffer(
-          key.privateKey().serialize()
-        ),
+        pubKey: key.publicKey().serialize(),
+        privKey: key.privateKey().serialize(),
       };
 
       assert.isTrue(constantTimeEqual(keyPair.pubKey, testKey.pubKey));
@@ -1198,30 +1234,26 @@ describe('SignalProtocolStore', () => {
   });
   describe('removePreKey', () => {
     before(async () => {
-      await store.storePreKey(2, testKey);
+      await store.storePreKey(ourUuid, 2, testKey);
     });
     it('deletes prekeys', async () => {
-      await store.removePreKey(2);
+      await store.removePreKey(ourUuid, 2);
 
-      const key = await store.loadPreKey(2);
+      const key = await store.loadPreKey(ourUuid, 2);
       assert.isUndefined(key);
     });
   });
   describe('storeSignedPreKey', () => {
     it('stores signed prekeys', async () => {
-      await store.storeSignedPreKey(3, testKey);
-      const key = await store.loadSignedPreKey(3);
+      await store.storeSignedPreKey(ourUuid, 3, testKey);
+      const key = await store.loadSignedPreKey(ourUuid, 3);
       if (!key) {
         throw new Error('Missing key!');
       }
 
       const keyPair = {
-        pubKey: window.Signal.Crypto.typedArrayToArrayBuffer(
-          key.publicKey().serialize()
-        ),
-        privKey: window.Signal.Crypto.typedArrayToArrayBuffer(
-          key.privateKey().serialize()
-        ),
+        pubKey: key.publicKey().serialize(),
+        privKey: key.privateKey().serialize(),
       };
 
       assert.isTrue(constantTimeEqual(keyPair.pubKey, testKey.pubKey));
@@ -1230,20 +1262,21 @@ describe('SignalProtocolStore', () => {
   });
   describe('removeSignedPreKey', () => {
     before(async () => {
-      await store.storeSignedPreKey(4, testKey);
+      await store.storeSignedPreKey(ourUuid, 4, testKey);
     });
     it('deletes signed prekeys', async () => {
-      await store.removeSignedPreKey(4);
+      await store.removeSignedPreKey(ourUuid, 4);
 
-      const key = await store.loadSignedPreKey(4);
+      const key = await store.loadSignedPreKey(ourUuid, 4);
       assert.isUndefined(key);
     });
   });
   describe('storeSession', () => {
     it('stores sessions', async () => {
       const testRecord = getSessionRecord();
-      await store.storeSession(`${number}.1`, testRecord);
-      const record = await store.loadSession(`${number}.1`);
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      await store.storeSession(id, testRecord);
+      const record = await store.loadSession(id);
       if (!record) {
         throw new Error('Missing record!');
       }
@@ -1252,18 +1285,19 @@ describe('SignalProtocolStore', () => {
     });
   });
   describe('removeAllSessions', () => {
-    it('removes all sessions for a number', async () => {
-      const devices = [1, 2, 3].map(deviceId => {
-        return [number, deviceId].join('.');
-      });
+    it('removes all sessions for a uuid', async () => {
+      const devices = [1, 2, 3].map(
+        deviceId =>
+          new QualifiedAddress(ourUuid, new Address(theirUuid, deviceId))
+      );
 
       await Promise.all(
-        devices.map(async encodedNumber => {
-          await store.storeSession(encodedNumber, getSessionRecord());
+        devices.map(async encodedAddress => {
+          await store.storeSession(encodedAddress, getSessionRecord());
         })
       );
 
-      await store.removeAllSessions(number);
+      await store.removeAllSessions(theirUuid.toString());
 
       const records = await Promise.all(
         devices.map(device => store.loadSession(device))
@@ -1277,83 +1311,112 @@ describe('SignalProtocolStore', () => {
   describe('clearSessionStore', () => {
     it('clears the session store', async () => {
       const testRecord = getSessionRecord();
-      await store.storeSession(`${number}.1`, testRecord);
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      await store.storeSession(id, testRecord);
       await store.clearSessionStore();
 
-      const record = await store.loadSession(`${number}.1`);
+      const record = await store.loadSession(id);
       assert.isUndefined(record);
     });
   });
   describe('getDeviceIds', () => {
-    it('returns deviceIds for a number', async () => {
+    it('returns deviceIds for a uuid', async () => {
       const openRecord = getSessionRecord(true);
-      const openDevices = [1, 2, 3, 10].map(deviceId => {
-        return [number, deviceId].join('.');
-      });
+      const openDevices = [1, 2, 3, 10].map(
+        deviceId =>
+          new QualifiedAddress(ourUuid, new Address(theirUuid, deviceId))
+      );
       await Promise.all(
-        openDevices.map(async encodedNumber => {
-          await store.storeSession(encodedNumber, openRecord);
+        openDevices.map(async address => {
+          await store.storeSession(address, openRecord);
         })
       );
 
       const closedRecord = getSessionRecord(false);
-      await store.storeSession([number, 11].join('.'), closedRecord);
+      await store.storeSession(
+        new QualifiedAddress(ourUuid, new Address(theirUuid, 11)),
+        closedRecord
+      );
 
-      const deviceIds = await store.getDeviceIds(number);
+      const deviceIds = await store.getDeviceIds({
+        ourUuid,
+        identifier: theirUuid.toString(),
+      });
       assert.sameMembers(deviceIds, [1, 2, 3, 10]);
     });
 
-    it('returns empty array for a number with no device ids', async () => {
-      const deviceIds = await store.getDeviceIds('foo');
+    it('returns empty array for a uuid with no device ids', async () => {
+      const deviceIds = await store.getDeviceIds({
+        ourUuid,
+        identifier: 'foo',
+      });
       assert.sameMembers(deviceIds, []);
     });
   });
 
   describe('getOpenDevices', () => {
-    it('returns all open devices for a number', async () => {
+    it('returns all open devices for a uuid', async () => {
       const openRecord = getSessionRecord(true);
-      const openDevices = [1, 2, 3, 10].map(deviceId => {
-        return [number, deviceId].join('.');
-      });
+      const openDevices = [1, 2, 3, 10].map(
+        deviceId =>
+          new QualifiedAddress(ourUuid, new Address(theirUuid, deviceId))
+      );
       await Promise.all(
-        openDevices.map(async encodedNumber => {
-          await store.storeSession(encodedNumber, openRecord);
+        openDevices.map(async address => {
+          await store.storeSession(address, openRecord);
         })
       );
 
       const closedRecord = getSessionRecord(false);
-      await store.storeSession([number, 11].join('.'), closedRecord);
+      await store.storeSession(
+        new QualifiedAddress(ourUuid, new Address(theirUuid, 11)),
+        closedRecord
+      );
 
-      const result = await store.getOpenDevices([number, 'blah', 'blah2']);
-      assert.deepEqual(result, {
-        devices: [
-          {
-            id: 1,
-            identifier: number,
-            registrationId: 243,
-          },
-          {
-            id: 2,
-            identifier: number,
-            registrationId: 243,
-          },
-          {
-            id: 3,
-            identifier: number,
-            registrationId: 243,
-          },
-          {
-            id: 10,
-            identifier: number,
-            registrationId: 243,
-          },
-        ],
-        emptyIdentifiers: ['blah', 'blah2'],
-      });
+      const result = await store.getOpenDevices(ourUuid, [
+        theirUuid.toString(),
+        'blah',
+        'blah2',
+      ]);
+      assert.deepStrictEqual(
+        {
+          ...result,
+          devices: result.devices.map(({ id, identifier, registrationId }) => ({
+            id,
+            identifier: identifier.toString(),
+            registrationId,
+          })),
+        },
+        {
+          devices: [
+            {
+              id: 1,
+              identifier: theirUuid.toString(),
+              registrationId: 243,
+            },
+            {
+              id: 2,
+              identifier: theirUuid.toString(),
+              registrationId: 243,
+            },
+            {
+              id: 3,
+              identifier: theirUuid.toString(),
+              registrationId: 243,
+            },
+            {
+              id: 10,
+              identifier: theirUuid.toString(),
+              registrationId: 243,
+            },
+          ],
+          emptyIdentifiers: ['blah', 'blah2'],
+        }
+      );
     });
 
-    it('returns empty array for a number with no device ids', async () => {
-      const result = await store.getOpenDevices(['foo']);
+    it('returns empty array for a uuid with no device ids', async () => {
+      const result = await store.getOpenDevices(ourUuid, ['foo']);
       assert.deepEqual(result, {
         devices: [],
         emptyIdentifiers: ['foo'],
@@ -1362,18 +1425,21 @@ describe('SignalProtocolStore', () => {
   });
 
   describe('zones', () => {
+    const distributionId = UUID.generate().toString();
     const zone = new Zone('zone', {
+      pendingSenderKeys: true,
       pendingSessions: true,
       pendingUnprocessed: true,
     });
 
     beforeEach(async () => {
       await store.removeAllUnprocessed();
-      await store.removeAllSessions(number);
+      await store.removeAllSessions(theirUuid.toString());
+      await store.removeAllSenderKeys();
     });
 
     it('should not store pending sessions in global zone', async () => {
-      const id = `${number}.1`;
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
       const testRecord = getSessionRecord();
 
       await assert.isRejected(
@@ -1387,27 +1453,51 @@ describe('SignalProtocolStore', () => {
       assert.equal(await store.loadSession(id), testRecord);
     });
 
-    it('commits session stores and unprocessed on success', async () => {
-      const id = `${number}.1`;
-      const testRecord = getSessionRecord();
+    it('should not store pending sender keys in global zone', async () => {
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      const testRecord = getSenderKeyRecord();
+
+      await assert.isRejected(
+        store.withZone(GLOBAL_ZONE, 'test', async () => {
+          await store.saveSenderKey(id, distributionId, testRecord);
+          throw new Error('Failure');
+        }),
+        'Failure'
+      );
+
+      assert.equal(await store.getSenderKey(id, distributionId), testRecord);
+    });
+
+    it('commits sender keys, sessions and unprocessed on success', async () => {
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      const testSession = getSessionRecord();
+      const testSenderKey = getSenderKeyRecord();
 
       await store.withZone(zone, 'test', async () => {
-        await store.storeSession(id, testRecord, { zone });
+        await store.storeSession(id, testSession, { zone });
+        await store.saveSenderKey(id, distributionId, testSenderKey, { zone });
 
         await store.addUnprocessed(
           {
             id: '2-two',
             envelope: 'second',
-            timestamp: 2,
+            timestamp: Date.now() + 2,
+            receivedAtCounter: 0,
             version: 2,
             attempts: 0,
           },
           { zone }
         );
-        assert.equal(await store.loadSession(id, { zone }), testRecord);
+
+        assert.equal(await store.loadSession(id, { zone }), testSession);
+        assert.equal(
+          await store.getSenderKey(id, distributionId, { zone }),
+          testSenderKey
+        );
       });
 
-      assert.equal(await store.loadSession(id), testRecord);
+      assert.equal(await store.loadSession(id), testSession);
+      assert.equal(await store.getSenderKey(id, distributionId), testSenderKey);
 
       const allUnprocessed = await store.getAllUnprocessed();
       assert.deepEqual(
@@ -1416,24 +1506,38 @@ describe('SignalProtocolStore', () => {
       );
     });
 
-    it('reverts session stores and unprocessed on error', async () => {
-      const id = `${number}.1`;
-      const testRecord = getSessionRecord();
-      const failedRecord = getSessionRecord();
+    it('reverts sender keys, sessions and unprocessed on error', async () => {
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      const testSession = getSessionRecord();
+      const failedSession = getSessionRecord();
+      const testSenderKey = getSenderKeyRecord();
+      const failedSenderKey = getSenderKeyRecord();
 
-      await store.storeSession(id, testRecord);
-      assert.equal(await store.loadSession(id), testRecord);
+      await store.storeSession(id, testSession);
+      assert.equal(await store.loadSession(id), testSession);
+
+      await store.saveSenderKey(id, distributionId, testSenderKey);
+      assert.equal(await store.getSenderKey(id, distributionId), testSenderKey);
 
       await assert.isRejected(
         store.withZone(zone, 'test', async () => {
-          await store.storeSession(id, failedRecord, { zone });
-          assert.equal(await store.loadSession(id, { zone }), failedRecord);
+          await store.storeSession(id, failedSession, { zone });
+          assert.equal(await store.loadSession(id, { zone }), failedSession);
+
+          await store.saveSenderKey(id, distributionId, failedSenderKey, {
+            zone,
+          });
+          assert.equal(
+            await store.getSenderKey(id, distributionId, { zone }),
+            failedSenderKey
+          );
 
           await store.addUnprocessed(
             {
               id: '2-two',
               envelope: 'second',
               timestamp: 2,
+              receivedAtCounter: 0,
               version: 2,
               attempts: 0,
             },
@@ -1445,12 +1549,13 @@ describe('SignalProtocolStore', () => {
         'Failure'
       );
 
-      assert.equal(await store.loadSession(id), testRecord);
+      assert.equal(await store.loadSession(id), testSession);
+      assert.equal(await store.getSenderKey(id, distributionId), testSenderKey);
       assert.deepEqual(await store.getAllUnprocessed(), []);
     });
 
     it('can be re-entered', async () => {
-      const id = `${number}.1`;
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
       const testRecord = getSessionRecord();
 
       await store.withZone(zone, 'test', async () => {
@@ -1493,13 +1598,13 @@ describe('SignalProtocolStore', () => {
     });
 
     it('should not deadlock in archiveSiblingSessions', async () => {
-      const id = `${number}.1`;
-      const sibling = `${number}.2`;
+      const id = new QualifiedAddress(ourUuid, new Address(theirUuid, 1));
+      const sibling = new QualifiedAddress(ourUuid, new Address(theirUuid, 2));
 
       await store.storeSession(id, getSessionRecord(true));
       await store.storeSession(sibling, getSessionRecord(true));
 
-      await store.archiveSiblingSessions(id, { zone });
+      await store.archiveSiblingSessions(id.address, { zone });
     });
 
     it('can be concurrently re-entered after waiting', async () => {
@@ -1538,6 +1643,8 @@ describe('SignalProtocolStore', () => {
   });
 
   describe('Not yet processed messages', () => {
+    const NOW = Date.now();
+
     beforeEach(async () => {
       await store.removeAllUnprocessed();
       const items = await store.getAllUnprocessed();
@@ -1547,23 +1654,34 @@ describe('SignalProtocolStore', () => {
     it('adds three and gets them back', async () => {
       await Promise.all([
         store.addUnprocessed({
+          id: '0-dropped',
+          envelope: 'old envelope',
+          timestamp: NOW - 2 * durations.MONTH,
+          receivedAtCounter: 0,
+          version: 2,
+          attempts: 0,
+        }),
+        store.addUnprocessed({
           id: '2-two',
           envelope: 'second',
-          timestamp: 2,
+          timestamp: NOW + 2,
+          receivedAtCounter: 0,
           version: 2,
           attempts: 0,
         }),
         store.addUnprocessed({
           id: '3-three',
           envelope: 'third',
-          timestamp: 3,
+          timestamp: NOW + 3,
+          receivedAtCounter: 0,
           version: 2,
           attempts: 0,
         }),
         store.addUnprocessed({
           id: '1-one',
           envelope: 'first',
-          timestamp: 1,
+          timestamp: NOW + 1,
+          receivedAtCounter: 0,
           version: 2,
           attempts: 0,
         }),
@@ -1583,7 +1701,8 @@ describe('SignalProtocolStore', () => {
       await store.addUnprocessed({
         id,
         envelope: 'first',
-        timestamp: 1,
+        timestamp: NOW + 1,
+        receivedAtCounter: 0,
         version: 2,
         attempts: 0,
       });
@@ -1592,7 +1711,7 @@ describe('SignalProtocolStore', () => {
       const items = await store.getAllUnprocessed();
       assert.strictEqual(items.length, 1);
       assert.strictEqual(items[0].decrypted, 'updated');
-      assert.strictEqual(items[0].timestamp, 1);
+      assert.strictEqual(items[0].timestamp, NOW + 1);
     });
 
     it('removeUnprocessed successfully deletes item', async () => {
@@ -1600,7 +1719,8 @@ describe('SignalProtocolStore', () => {
       await store.addUnprocessed({
         id,
         envelope: 'first',
-        timestamp: 1,
+        timestamp: NOW + 1,
+        receivedAtCounter: 0,
         version: 2,
         attempts: 0,
       });

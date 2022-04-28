@@ -1,23 +1,30 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
 import * as sinon from 'sinon';
 import { v4 as uuid } from 'uuid';
 import { times } from 'lodash';
-import { set } from 'lodash/fp';
 import { reducer as rootReducer } from '../../../state/reducer';
 import { noopAction } from '../../../state/ducks/noop';
 import {
-  actions,
-  OneTimeModalState,
   ComposerStep,
+  ConversationVerificationState,
+  OneTimeModalState,
+} from '../../../state/ducks/conversationsEnums';
+import type {
+  CancelVerificationDataByConversationActionType,
   ConversationMessageType,
-  ConversationType,
   ConversationsStateType,
+  ConversationType,
   MessageType,
   SwitchToAssociatedViewActionType,
   ToggleConversationInChooseMembersActionType,
+} from '../../../state/ducks/conversations';
+import {
+  actions,
+  cancelConversationVerification,
+  clearCancelledConversationVerification,
   getConversationCallMode,
   getEmptyState,
   reducer,
@@ -26,25 +33,27 @@ import {
 import { ReadStatus } from '../../../messages/MessageReadStatus';
 import { ContactSpoofingType } from '../../../util/contactSpoofing';
 import { CallMode } from '../../../types/Calling';
-import * as groups from '../../../groups';
-import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
+import { UUID } from '../../../types/UUID';
+import {
+  getDefaultConversation,
+  getDefaultConversationWithUuid,
+} from '../../../test-both/helpers/getDefaultConversation';
 import { getDefaultAvatars } from '../../../types/Avatar';
 import {
   defaultStartDirectConversationComposerState,
   defaultChooseGroupMembersComposerState,
   defaultSetGroupMetadataComposerState,
 } from '../../../test-both/helpers/defaultComposerStates';
+import { updateRemoteConfig } from '../../../test-both/helpers/RemoteConfigStub';
 
 const {
-  cantAddContactToGroup,
   clearGroupCreationError,
-  clearInvitedConversationsForNewlyCreatedGroup,
-  closeCantAddContactToGroupModal,
+  clearInvitedUuidsForNewlyCreatedGroup,
   closeContactSpoofingReview,
   closeMaximumGroupSizeModal,
   closeRecommendedGroupSizeModal,
+  conversationStoppedByMissingVerification,
   createGroup,
-  messageSizeChanged,
   openConversationInternal,
   repairNewestMessage,
   repairOldestMessage,
@@ -74,7 +83,7 @@ describe('both/state/ducks/conversations', () => {
 
     sinonSandbox.stub(window.Whisper.events, 'trigger');
 
-    createGroupStub = sinonSandbox.stub(groups, 'createGroupV2');
+    createGroupStub = sinon.stub();
   });
 
   afterEach(() => {
@@ -222,26 +231,24 @@ describe('both/state/ducks/conversations', () => {
       });
 
       it('adds and removes uuid-only contact', () => {
-        const removed = getDefaultConversation({
+        const removed = getDefaultConversationWithUuid({
           id: 'id-removed',
-          uuid: 'uuid-removed',
           e164: undefined,
         });
 
         const state = {
           ...getEmptyState(),
           conversationsByuuid: {
-            'uuid-removed': removed,
+            [removed.uuid]: removed,
           },
         };
-        const added = getDefaultConversation({
+        const added = getDefaultConversationWithUuid({
           id: 'id-added',
-          uuid: 'uuid-added',
           e164: undefined,
         });
 
         const expected = {
-          'uuid-added': added,
+          [added.uuid]: added,
         };
 
         const actual = updateConversationLookups(added, removed, state);
@@ -304,6 +311,7 @@ describe('both/state/ducks/conversations', () => {
     const messageId = 'message-guid-1';
     const messageIdTwo = 'message-guid-2';
     const messageIdThree = 'message-guid-3';
+    const sourceUuid = UUID.generate().toString();
 
     function getDefaultMessage(id: string): MessageType {
       return {
@@ -313,7 +321,7 @@ describe('both/state/ducks/conversations', () => {
         received_at: previousTime,
         sent_at: previousTime,
         source: 'source',
-        sourceUuid: 'sourceUuid',
+        sourceUuid,
         timestamp: previousTime,
         type: 'incoming' as const,
         readStatus: ReadStatus.Read,
@@ -322,13 +330,10 @@ describe('both/state/ducks/conversations', () => {
 
     function getDefaultConversationMessage(): ConversationMessageType {
       return {
-        heightChangeMessageIds: [],
-        isLoadingMessages: false,
         messageIds: [],
         metrics: {
-          totalUnread: 0,
+          totalUnseen: 0,
         },
-        resetCounter: 0,
         scrollToMessageCounter: 0,
       };
     }
@@ -453,22 +458,6 @@ describe('both/state/ducks/conversations', () => {
       });
     });
 
-    describe('CANT_ADD_CONTACT_TO_GROUP', () => {
-      it('marks the conversation ID as "cannot add"', () => {
-        const state = {
-          ...getEmptyState(),
-          composer: defaultChooseGroupMembersComposerState,
-        };
-        const action = cantAddContactToGroup('abc123');
-        const result = reducer(state, action);
-
-        assert(
-          result.composer?.step === ComposerStep.ChooseGroupMembers &&
-            result.composer.cantAddContactIdForModal === 'abc123'
-        );
-      });
-    });
-
     describe('CLEAR_GROUP_CREATION_ERROR', () => {
       it('clears the group creation error', () => {
         const state = {
@@ -488,36 +477,19 @@ describe('both/state/ducks/conversations', () => {
       });
     });
 
-    describe('CLEAR_INVITED_CONVERSATIONS_FOR_NEWLY_CREATED_GROUP', () => {
-      it('clears the list of invited conversation IDs', () => {
+    describe('CLEAR_INVITED_UUIDS_FOR_NEWLY_CREATED_GROUP', () => {
+      it('clears the list of invited conversation UUIDs', () => {
         const state = {
           ...getEmptyState(),
-          invitedConversationIdsForNewlyCreatedGroup: ['abc123', 'def456'],
+          invitedUuidsForNewlyCreatedGroup: [
+            UUID.generate().toString(),
+            UUID.generate().toString(),
+          ],
         };
-        const action = clearInvitedConversationsForNewlyCreatedGroup();
+        const action = clearInvitedUuidsForNewlyCreatedGroup();
         const result = reducer(state, action);
 
-        assert.isUndefined(result.invitedConversationIdsForNewlyCreatedGroup);
-      });
-    });
-
-    describe('CLOSE_CANT_ADD_CONTACT_TO_GROUP_MODAL', () => {
-      it('closes the "cannot add contact" modal"', () => {
-        const state = {
-          ...getEmptyState(),
-          composer: {
-            ...defaultChooseGroupMembersComposerState,
-            cantAddContactIdForModal: 'abc123',
-          },
-        };
-        const action = closeCantAddContactToGroupModal();
-        const result = reducer(state, action);
-
-        assert(
-          result.composer?.step === ComposerStep.ChooseGroupMembers &&
-            result.composer.cantAddContactIdForModal === undefined,
-          'Expected the contact ID to be cleared'
-        );
+        assert.isUndefined(result.invitedUuidsForNewlyCreatedGroup);
       });
     });
 
@@ -644,7 +616,7 @@ describe('both/state/ducks/conversations', () => {
           ...defaultSetGroupMetadataComposerState,
           selectedConversationIds: ['abc123'],
           groupName: 'Foo Bar Group',
-          groupAvatar: new Uint8Array([1, 2, 3]).buffer,
+          groupAvatar: new Uint8Array([1, 2, 3]),
         },
       };
 
@@ -675,7 +647,7 @@ describe('both/state/ducks/conversations', () => {
       });
 
       it('calls groups.createGroupV2', async () => {
-        await createGroup()(
+        await createGroup(createGroupStub)(
           sinon.spy(),
           () => ({
             ...getEmptyRootState(),
@@ -687,7 +659,7 @@ describe('both/state/ducks/conversations', () => {
         sinon.assert.calledOnce(createGroupStub);
         sinon.assert.calledWith(createGroupStub, {
           name: 'Foo Bar Group',
-          avatar: new Uint8Array([1, 2, 3]).buffer,
+          avatar: new Uint8Array([1, 2, 3]),
           avatars: [],
           expireTimer: 0,
           conversationIds: ['abc123'],
@@ -695,7 +667,7 @@ describe('both/state/ducks/conversations', () => {
       });
 
       it("trims the group's title before calling groups.createGroupV2", async () => {
-        await createGroup()(
+        await createGroup(createGroupStub)(
           sinon.spy(),
           () => ({
             ...getEmptyRootState(),
@@ -721,7 +693,7 @@ describe('both/state/ducks/conversations', () => {
 
         const dispatch = sinon.spy();
 
-        const createGroupPromise = createGroup()(
+        const createGroupPromise = createGroup(createGroupStub)(
           dispatch,
           () => ({
             ...getEmptyRootState(),
@@ -753,7 +725,7 @@ describe('both/state/ducks/conversations', () => {
 
         const dispatch = sinon.spy();
 
-        const createGroupPromise = createGroup()(
+        const createGroupPromise = createGroup(createGroupStub)(
           dispatch,
           () => ({
             ...getEmptyRootState(),
@@ -772,19 +744,20 @@ describe('both/state/ducks/conversations', () => {
       });
 
       it('dispatches a CREATE_GROUP_FULFILLED event (which updates the newly-created conversation IDs), triggers a showConversation event and switches to the associated conversation on success', async () => {
+        const abc = UUID.fromPrefix('abc').toString();
         createGroupStub.resolves({
           id: '9876',
           get: (key: string) => {
             if (key !== 'pendingMembersV2') {
               throw new Error('This getter is not set up for this test');
             }
-            return [{ conversationId: 'xyz999' }];
+            return [{ uuid: abc }];
           },
         });
 
         const dispatch = sinon.spy();
 
-        await createGroup()(
+        await createGroup(createGroupStub)(
           dispatch,
           () => ({
             ...getEmptyRootState(),
@@ -802,14 +775,12 @@ describe('both/state/ducks/conversations', () => {
 
         sinon.assert.calledWith(dispatch, {
           type: 'CREATE_GROUP_FULFILLED',
-          payload: { invitedConversationIds: ['xyz999'] },
+          payload: { invitedUuids: [abc] },
         });
 
         const fulfilledAction = dispatch.getCall(1).args[0];
         const result = reducer(conversationsState, fulfilledAction);
-        assert.deepEqual(result.invitedConversationIdsForNewlyCreatedGroup, [
-          'xyz999',
-        ]);
+        assert.deepEqual(result.invitedUuidsForNewlyCreatedGroup, [abc]);
 
         sinon.assert.calledWith(dispatch, {
           type: 'SWITCH_TO_ASSOCIATED_VIEW',
@@ -818,73 +789,205 @@ describe('both/state/ducks/conversations', () => {
       });
     });
 
-    describe('MESSAGE_SIZE_CHANGED', () => {
-      const stateWithActiveConversation = {
-        ...getEmptyState(),
-        messagesByConversation: {
-          [conversationId]: {
-            heightChangeMessageIds: [],
-            isLoadingMessages: false,
-            isNearBottom: true,
-            messageIds: [messageId],
-            metrics: { totalUnread: 0 },
-            resetCounter: 0,
-            scrollToMessageCounter: 0,
+    describe('CONVERSATION_STOPPED_BY_MISSING_VERIFICATION', () => {
+      it('adds to state, removing duplicates', () => {
+        const first = reducer(
+          getEmptyState(),
+          conversationStoppedByMissingVerification({
+            conversationId: 'convo A',
+            untrustedConversationIds: ['convo 1'],
+          })
+        );
+        const second = reducer(
+          first,
+          conversationStoppedByMissingVerification({
+            conversationId: 'convo A',
+            untrustedConversationIds: ['convo 2'],
+          })
+        );
+        const third = reducer(
+          second,
+          conversationStoppedByMissingVerification({
+            conversationId: 'convo A',
+            untrustedConversationIds: ['convo 1', 'convo 3'],
+          })
+        );
+
+        assert.deepStrictEqual(third.verificationDataByConversation, {
+          'convo A': {
+            type: ConversationVerificationState.PendingVerification,
+            conversationsNeedingVerification: ['convo 1', 'convo 2', 'convo 3'],
           },
-        },
-        messagesLookup: {
-          [messageId]: getDefaultMessage(messageId),
-        },
-      };
-
-      it('does nothing if no conversation is active', () => {
-        const state = getEmptyState();
-
-        assert.strictEqual(
-          reducer(state, messageSizeChanged('messageId', 'convoId')),
-          state
-        );
+        });
       });
 
-      it('does nothing if a different conversation is active', () => {
-        assert.deepEqual(
-          reducer(
-            stateWithActiveConversation,
-            messageSizeChanged(messageId, 'another-conversation-guid')
-          ),
-          stateWithActiveConversation
-        );
-      });
-
-      it('adds the message ID to the list of messages with changed heights', () => {
-        const result = reducer(
-          stateWithActiveConversation,
-          messageSizeChanged(messageId, conversationId)
-        );
-
-        assert.sameMembers(
-          result.messagesByConversation[conversationId]
-            ?.heightChangeMessageIds || [],
-          [messageId]
-        );
-      });
-
-      it("doesn't add duplicates to the list of changed-heights messages", () => {
-        const state = set(
-          ['messagesByConversation', conversationId, 'heightChangeMessageIds'],
-          [messageId],
-          stateWithActiveConversation
-        );
-        const result = reducer(
+      it('stomps on VerificationCancelled state', () => {
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.VerificationCancelled,
+              canceledAt: Date.now(),
+            },
+          },
+        };
+        const actual = reducer(
           state,
-          messageSizeChanged(messageId, conversationId)
+          conversationStoppedByMissingVerification({
+            conversationId: 'convo A',
+            untrustedConversationIds: ['convo 1', 'convo 2'],
+          })
         );
 
-        assert.sameMembers(
-          result.messagesByConversation[conversationId]
-            ?.heightChangeMessageIds || [],
-          [messageId]
+        assert.deepStrictEqual(actual.verificationDataByConversation, {
+          'convo A': {
+            type: ConversationVerificationState.PendingVerification,
+            conversationsNeedingVerification: ['convo 1', 'convo 2'],
+          },
+        });
+      });
+    });
+
+    describe('CANCEL_CONVERSATION_PENDING_VERIFICATION', () => {
+      function getAction(
+        timestamp: number,
+        conversationsState: ConversationsStateType
+      ): CancelVerificationDataByConversationActionType {
+        const dispatch = sinon.spy();
+
+        cancelConversationVerification(timestamp)(
+          dispatch,
+          () => ({
+            ...getEmptyRootState(),
+            conversations: conversationsState,
+          }),
+          null
         );
+
+        return dispatch.getCall(0).args[0];
+      }
+
+      it('replaces existing PendingVerification state', () => {
+        const now = Date.now();
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.PendingVerification,
+              conversationsNeedingVerification: ['convo 1', 'convo 2'],
+            },
+          },
+        };
+        const action = getAction(now, state);
+        const actual = reducer(state, action);
+
+        assert.deepStrictEqual(actual.verificationDataByConversation, {
+          'convo A': {
+            type: ConversationVerificationState.VerificationCancelled,
+            canceledAt: now,
+          },
+        });
+      });
+
+      it('updates timestamp for existing VerificationCancelled state', () => {
+        const now = Date.now();
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.VerificationCancelled,
+              canceledAt: now - 1,
+            },
+          },
+        };
+        const action = getAction(now, state);
+        const actual = reducer(state, action);
+
+        assert.deepStrictEqual(actual.verificationDataByConversation, {
+          'convo A': {
+            type: ConversationVerificationState.VerificationCancelled,
+            canceledAt: now,
+          },
+        });
+      });
+
+      it('uses newest timestamp when updating existing VerificationCancelled state', () => {
+        const now = Date.now();
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.VerificationCancelled,
+              canceledAt: now,
+            },
+          },
+        };
+        const action = getAction(now, state);
+        const actual = reducer(state, action);
+
+        assert.deepStrictEqual(actual.verificationDataByConversation, {
+          'convo A': {
+            type: ConversationVerificationState.VerificationCancelled,
+            canceledAt: now,
+          },
+        });
+      });
+
+      it('does nothing if no existing state', () => {
+        const state: ConversationsStateType = getEmptyState();
+        const action = getAction(Date.now(), state);
+        const actual = reducer(state, action);
+
+        assert.strictEqual(actual, state);
+      });
+    });
+
+    describe('CANCEL_CONVERSATION_PENDING_VERIFICATION', () => {
+      it('removes existing VerificationCancelled state', () => {
+        const now = Date.now();
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.VerificationCancelled,
+              canceledAt: now,
+            },
+          },
+        };
+        const actual = reducer(
+          state,
+          clearCancelledConversationVerification('convo A')
+        );
+
+        assert.deepStrictEqual(actual.verificationDataByConversation, {});
+      });
+
+      it('leaves existing PendingVerification state', () => {
+        const state: ConversationsStateType = {
+          ...getEmptyState(),
+          verificationDataByConversation: {
+            'convo A': {
+              type: ConversationVerificationState.PendingVerification,
+              conversationsNeedingVerification: ['convo 1', 'convo 2'],
+            },
+          },
+        };
+        const actual = reducer(
+          state,
+          clearCancelledConversationVerification('convo A')
+        );
+
+        assert.deepStrictEqual(actual, state);
+      });
+
+      it('does nothing with empty state', () => {
+        const state: ConversationsStateType = getEmptyState();
+        const actual = reducer(
+          state,
+          clearCancelledConversationVerification('convo A')
+        );
+
+        assert.deepStrictEqual(actual, state);
       });
     });
 
@@ -905,7 +1008,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [messageIdThree, messageIdTwo, messageId],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
               },
             },
           },
@@ -925,7 +1028,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [messageIdThree, messageIdTwo, messageId],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
                 newest: {
                   id: messageId,
                   received_at: time,
@@ -955,7 +1058,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
                 newest: {
                   id: messageId,
                   received_at: time,
@@ -979,7 +1082,7 @@ describe('both/state/ducks/conversations', () => {
               messageIds: [],
               metrics: {
                 newest: undefined,
-                totalUnread: 0,
+                totalUnseen: 0,
               },
             },
           },
@@ -1015,7 +1118,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [messageId, messageIdTwo, messageIdThree],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
               },
             },
           },
@@ -1035,7 +1138,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [messageId, messageIdTwo, messageIdThree],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
                 oldest: {
                   id: messageId,
                   received_at: time,
@@ -1065,7 +1168,7 @@ describe('both/state/ducks/conversations', () => {
               ...getDefaultConversationMessage(),
               messageIds: [],
               metrics: {
-                totalUnread: 0,
+                totalUnseen: 0,
                 oldest: {
                   id: messageId,
                   received_at: time,
@@ -1089,7 +1192,7 @@ describe('both/state/ducks/conversations', () => {
               messageIds: [],
               metrics: {
                 oldest: undefined,
-                totalUnread: 0,
+                totalUnseen: 0,
               },
             },
           },
@@ -1142,7 +1245,7 @@ describe('both/state/ducks/conversations', () => {
           ...getEmptyState(),
           composer: {
             ...defaultSetGroupMetadataComposerState,
-            groupAvatar: new ArrayBuffer(2),
+            groupAvatar: new Uint8Array(2),
           },
         };
         const action = setComposeGroupAvatar(undefined);
@@ -1155,7 +1258,7 @@ describe('both/state/ducks/conversations', () => {
       });
 
       it("can set the composer's group avatar", () => {
-        const avatar = new Uint8Array([1, 2, 3]).buffer;
+        const avatar = new Uint8Array([1, 2, 3]);
 
         const state = {
           ...getEmptyState(),
@@ -1193,8 +1296,8 @@ describe('both/state/ducks/conversations', () => {
           ...getEmptyState(),
           composer: defaultStartDirectConversationComposerState,
         };
-        const action = setComposeSearchTerm('foo bar');
-        const result = reducer(state, action);
+
+        const result = reducer(state, setComposeSearchTerm('foo bar'));
 
         assert.deepEqual(result.composer, {
           ...defaultStartDirectConversationComposerState,
@@ -1420,7 +1523,7 @@ describe('both/state/ducks/conversations', () => {
           composer: {
             ...defaultSetGroupMetadataComposerState,
             groupName: 'Foo Bar Group',
-            groupAvatar: new Uint8Array([4, 2]).buffer,
+            groupAvatar: new Uint8Array([4, 2]),
           },
         };
         const action = showChooseGroupMembers();
@@ -1430,7 +1533,7 @@ describe('both/state/ducks/conversations', () => {
         assert.deepEqual(result.composer, {
           ...defaultChooseGroupMembersComposerState,
           groupName: 'Foo Bar Group',
-          groupAvatar: new Uint8Array([4, 2]).buffer,
+          groupAvatar: new Uint8Array([4, 2]),
         });
       });
 
@@ -1488,7 +1591,7 @@ describe('both/state/ducks/conversations', () => {
             searchTerm: 'foo bar',
             selectedConversationIds: ['abc', 'def'],
             groupName: 'Foo Bar Group',
-            groupAvatar: new Uint8Array([6, 9]).buffer,
+            groupAvatar: new Uint8Array([6, 9]),
           },
         };
         const action = startSettingGroupMetadata();
@@ -1498,7 +1601,7 @@ describe('both/state/ducks/conversations', () => {
           ...defaultSetGroupMetadataComposerState,
           selectedConversationIds: ['abc', 'def'],
           groupName: 'Foo Bar Group',
-          groupAvatar: new Uint8Array([6, 9]).buffer,
+          groupAvatar: new Uint8Array([6, 9]),
         });
       });
 
@@ -1533,15 +1636,15 @@ describe('both/state/ducks/conversations', () => {
         return dispatch.getCall(0).args[0];
       }
 
-      let remoteConfigGetValueStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        remoteConfigGetValueStub = sinonSandbox
-          .stub(window.Signal.RemoteConfig, 'getValue')
-          .withArgs('global.groupsv2.maxGroupSize')
-          .returns('22')
-          .withArgs('global.groupsv2.groupSizeHardLimit')
-          .returns('33');
+      beforeEach(async () => {
+        await updateRemoteConfig([
+          { name: 'global.groupsv2.maxGroupSize', value: '22', enabled: true },
+          {
+            name: 'global.groupsv2.groupSizeHardLimit',
+            value: '33',
+            enabled: true,
+          },
+        ]);
       });
 
       it('adds conversation IDs to the list', () => {
@@ -1618,11 +1721,21 @@ describe('both/state/ducks/conversations', () => {
         });
       });
 
-      it('defaults the maximum recommended size to 151', () => {
-        [undefined, 'xyz'].forEach(value => {
-          remoteConfigGetValueStub
-            .withArgs('global.groupsv2.maxGroupSize')
-            .returns(value);
+      it('defaults the maximum recommended size to 151', async () => {
+        for (const value of [null, 'xyz']) {
+          // eslint-disable-next-line no-await-in-loop
+          await updateRemoteConfig([
+            {
+              name: 'global.groupsv2.maxGroupSize',
+              value,
+              enabled: true,
+            },
+            {
+              name: 'global.groupsv2.groupSizeHardLimit',
+              value: '33',
+              enabled: true,
+            },
+          ]);
 
           const state = {
             ...getEmptyState(),
@@ -1631,7 +1744,7 @@ describe('both/state/ducks/conversations', () => {
           const action = getAction(uuid(), state);
 
           assert.strictEqual(action.payload.maxRecommendedGroupSize, 151);
-        });
+        }
       });
 
       it('shows the maximum group size modal when first reaching the maximum group size', () => {
@@ -1696,13 +1809,17 @@ describe('both/state/ducks/conversations', () => {
         assert.deepEqual(result, state);
       });
 
-      it('defaults the maximum group size to 1001 if the recommended maximum is smaller', () => {
-        [undefined, 'xyz'].forEach(value => {
-          remoteConfigGetValueStub
-            .withArgs('global.groupsv2.maxGroupSize')
-            .returns('2')
-            .withArgs('global.groupsv2.groupSizeHardLimit')
-            .returns(value);
+      it('defaults the maximum group size to 1001 if the recommended maximum is smaller', async () => {
+        for (const value of [null, 'xyz']) {
+          // eslint-disable-next-line no-await-in-loop
+          await updateRemoteConfig([
+            { name: 'global.groupsv2.maxGroupSize', value: '2', enabled: true },
+            {
+              name: 'global.groupsv2.groupSizeHardLimit',
+              value,
+              enabled: true,
+            },
+          ]);
 
           const state = {
             ...getEmptyState(),
@@ -1711,15 +1828,22 @@ describe('both/state/ducks/conversations', () => {
           const action = getAction(uuid(), state);
 
           assert.strictEqual(action.payload.maxGroupSize, 1001);
-        });
+        }
       });
 
-      it('defaults the maximum group size to (recommended maximum + 1) if the recommended maximum is more than 1001', () => {
-        remoteConfigGetValueStub
-          .withArgs('global.groupsv2.maxGroupSize')
-          .returns('1234')
-          .withArgs('global.groupsv2.groupSizeHardLimit')
-          .returns('2');
+      it('defaults the maximum group size to (recommended maximum + 1) if the recommended maximum is more than 1001', async () => {
+        await updateRemoteConfig([
+          {
+            name: 'global.groupsv2.maxGroupSize',
+            value: '1234',
+            enabled: true,
+          },
+          {
+            name: 'global.groupsv2.groupSizeHardLimit',
+            value: '2',
+            enabled: true,
+          },
+        ]);
 
         const state = {
           ...getEmptyState(),
@@ -1733,14 +1857,12 @@ describe('both/state/ducks/conversations', () => {
   });
 
   describe('COLORS_CHANGED', () => {
-    const abc = getDefaultConversation({
+    const abc = getDefaultConversationWithUuid({
       id: 'abc',
-      uuid: 'abc',
       conversationColor: 'wintergreen',
     });
-    const def = getDefaultConversation({
+    const def = getDefaultConversationWithUuid({
       id: 'def',
-      uuid: 'def',
       conversationColor: 'infrared',
     });
     const ghi = getDefaultConversation({
@@ -1788,8 +1910,12 @@ describe('both/state/ducks/conversations', () => {
       assert.isUndefined(nextState.conversationLookup.def.conversationColor);
       assert.isUndefined(nextState.conversationLookup.ghi.conversationColor);
       assert.isUndefined(nextState.conversationLookup.jkl.conversationColor);
-      assert.isUndefined(nextState.conversationsByUuid.abc.conversationColor);
-      assert.isUndefined(nextState.conversationsByUuid.def.conversationColor);
+      assert.isUndefined(
+        nextState.conversationsByUuid[abc.uuid].conversationColor
+      );
+      assert.isUndefined(
+        nextState.conversationsByUuid[def.uuid].conversationColor
+      );
       assert.isUndefined(nextState.conversationsByE164.ghi.conversationColor);
       assert.isUndefined(
         nextState.conversationsByGroupId.jkl.conversationColor

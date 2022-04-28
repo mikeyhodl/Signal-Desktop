@@ -5,29 +5,27 @@
 /* eslint-disable more/no-then */
 /* eslint-disable no-console */
 
-import * as path from 'path';
-import * as fs from 'fs';
-import { BrowserWindow, app, ipcMain as ipc } from 'electron';
+import { join } from 'path';
+import split2 from 'split2';
+import { readdirSync, createReadStream, unlinkSync, writeFileSync } from 'fs';
+import type { BrowserWindow } from 'electron';
+import { app, ipcMain as ipc } from 'electron';
 import pinoms from 'pino-multi-stream';
 import pino from 'pino';
 import * as mkdirp from 'mkdirp';
-import * as _ from 'lodash';
+import { filter, flatten, map, pick, sortBy } from 'lodash';
 import readFirstLine from 'firstline';
 import { read as readLastLines } from 'read-last-lines';
 import rimraf from 'rimraf';
 import { createStream } from 'rotating-file-stream';
 
-import { setLogAtLevel } from './log';
+import type { LoggerType } from '../types/Logging';
+
+import * as log from './log';
 import { Environment, getEnvironment } from '../environment';
 
-import {
-  FetchLogIpcData,
-  LogEntryType,
-  LogLevel,
-  cleanArgs,
-  getLogLevelString,
-  isLogEntry,
-} from './shared';
+import type { FetchLogIpcData, LogEntryType } from './shared';
+import { LogLevel, cleanArgs, getLogLevelString, isLogEntry } from './shared';
 
 declare global {
   // We want to extend `Console`, so we need an interface.
@@ -39,23 +37,23 @@ declare global {
   }
 }
 
-let globalLogger: undefined | pinoms.Logger;
+const MAX_LOG_LINES = 1000000;
+
+let globalLogger: undefined | pino.Logger;
 let shouldRestart = false;
 
 const isRunningFromConsole =
-  Boolean(process.stdout.isTTY) ||
-  getEnvironment() === Environment.Test ||
-  getEnvironment() === Environment.TestLib;
+  Boolean(process.stdout.isTTY) || getEnvironment() === Environment.Test;
 
 export async function initialize(
   getMainWindow: () => undefined | BrowserWindow
-): Promise<pinoms.Logger> {
+): Promise<LoggerType> {
   if (globalLogger) {
     throw new Error('Already called initialize!');
   }
 
   const basePath = app.getPath('userData');
-  const logPath = path.join(basePath, 'logs');
+  const logPath = join(basePath, 'logs');
   mkdirp.sync(logPath);
 
   try {
@@ -73,7 +71,7 @@ export async function initialize(
     }, 500);
   }
 
-  const logFile = path.join(logPath, 'main.log');
+  const logFile = join(logPath, 'main.log');
   const stream = createStream(logFile, {
     interval: '1d',
     rotate: 3,
@@ -160,7 +158,7 @@ export async function initialize(
 
   globalLogger = logger;
 
-  return logger;
+  return log;
 }
 
 async function deleteAllLogs(logPath: string): Promise<void> {
@@ -189,7 +187,7 @@ async function cleanupLogs(logPath: string) {
 
   try {
     const remaining = await eliminateOutOfDateFiles(logPath, earliestDate);
-    const files = _.filter(remaining, file => !file.start && file.end);
+    const files = filter(remaining, file => !file.start && file.end);
 
     if (!files.length) {
       return;
@@ -234,11 +232,11 @@ export function eliminateOutOfDateFiles(
     end: boolean;
   }>
 > {
-  const files = fs.readdirSync(logPath);
-  const paths = files.map(file => path.join(logPath, file));
+  const files = readdirSync(logPath);
+  const paths = files.map(file => join(logPath, file));
 
   return Promise.all(
-    _.map(paths, target =>
+    map(paths, target =>
       Promise.all([readFirstLine(target), readLastLines(target, 2)]).then(
         results => {
           const start = results[0];
@@ -253,7 +251,7 @@ export function eliminateOutOfDateFiles(
           };
 
           if (!file.start && !file.end) {
-            fs.unlinkSync(file.path);
+            unlinkSync(file.path);
           }
 
           return file;
@@ -269,46 +267,55 @@ export async function eliminateOldEntries(
   date: Readonly<Date>
 ): Promise<void> {
   await Promise.all(
-    _.map(files, file =>
+    map(files, file =>
       fetchLog(file.path).then(lines => {
-        const recent = _.filter(lines, line => new Date(line.time) >= date);
-        const text = _.map(recent, line => JSON.stringify(line)).join('\n');
+        const recent = filter(lines, line => new Date(line.time) >= date);
+        const text = map(recent, line => JSON.stringify(line)).join('\n');
 
-        return fs.writeFileSync(file.path, `${text}\n`);
+        return writeFileSync(file.path, `${text}\n`);
       })
     )
   );
 }
 
 // Exported for testing only.
-export function fetchLog(logFile: string): Promise<Array<LogEntryType>> {
-  return new Promise((resolve, reject) => {
-    fs.readFile(logFile, { encoding: 'utf8' }, (err, text) => {
-      if (err) {
-        return reject(err);
+export async function fetchLog(logFile: string): Promise<Array<LogEntryType>> {
+  const results = new Array<LogEntryType>();
+
+  const rawStream = createReadStream(logFile);
+  const jsonStream = rawStream.pipe(
+    split2(line => {
+      try {
+        return JSON.parse(line);
+      } catch (e) {
+        return undefined;
       }
+    })
+  );
 
-      const lines = _.compact(text.split('\n'));
-      const data = _.compact(
-        lines.map(line => {
-          try {
-            const result = _.pick(JSON.parse(line), ['level', 'time', 'msg']);
-            return isLogEntry(result) ? result : null;
-          } catch (e) {
-            return null;
-          }
-        })
-      );
+  // Propagate fs errors down to the json stream so that for loop below handles
+  // them.
+  rawStream.on('error', error => jsonStream.emit('error', error));
 
-      return resolve(data);
-    });
-  });
+  for await (const line of jsonStream) {
+    const result = line && pick(line, ['level', 'time', 'msg']);
+    if (!isLogEntry(result)) {
+      continue;
+    }
+
+    results.push(result);
+    if (results.length > MAX_LOG_LINES) {
+      results.shift();
+    }
+  }
+
+  return results;
 }
 
 // Exported for testing only.
 export function fetchLogs(logPath: string): Promise<Array<LogEntryType>> {
-  const files = fs.readdirSync(logPath);
-  const paths = files.map(file => path.join(logPath, file));
+  const files = readdirSync(logPath);
+  const paths = files.map(file => join(logPath, file));
 
   // creating a manual log entry for the final log result
   const fileListEntry: LogEntryType = {
@@ -318,11 +325,11 @@ export function fetchLogs(logPath: string): Promise<Array<LogEntryType>> {
   };
 
   return Promise.all(paths.map(fetchLog)).then(results => {
-    const data = _.flatten(results);
+    const data = flatten(results);
 
     data.push(fileListEntry);
 
-    return _.sortBy(data, logEntry => logEntry.time);
+    return sortBy(data, logEntry => logEntry.time);
   });
 }
 
@@ -340,7 +347,7 @@ function logAtLevel(level: LogLevel, ...args: ReadonlyArray<unknown>) {
   if (globalLogger) {
     const levelString = getLogLevelString(level);
     globalLogger[levelString](cleanArgs(args));
-  } else if (isRunningFromConsole) {
+  } else if (isRunningFromConsole && !process.stdout.destroyed) {
     console._log(...args);
   }
 }
@@ -351,12 +358,12 @@ function isProbablyObjectHasBeenDestroyedError(err: unknown): boolean {
 
 // This blows up using mocha --watch, so we ensure it is run just once
 if (!console._log) {
-  setLogAtLevel(logAtLevel);
+  log.setLogAtLevel(logAtLevel);
 
   console._log = console.log;
-  console.log = _.partial(logAtLevel, LogLevel.Info);
+  console.log = log.info;
   console._error = console.error;
-  console.error = _.partial(logAtLevel, LogLevel.Error);
+  console.error = log.error;
   console._warn = console.warn;
-  console.warn = _.partial(logAtLevel, LogLevel.Warn);
+  console.warn = log.warn;
 }

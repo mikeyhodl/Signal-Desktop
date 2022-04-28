@@ -1,19 +1,25 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { FunctionComponent } from 'react';
+import type { FunctionComponent } from 'react';
+import React from 'react';
 
-import { BaseConversationListItem } from './BaseConversationListItem';
-import { ConversationType } from '../../state/ducks/conversations';
-import { LocalizerType } from '../../types/Util';
+import {
+  BaseConversationListItem,
+  HEADER_CONTACT_NAME_CLASS_NAME,
+} from './BaseConversationListItem';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { BadgeType } from '../../badges/types';
+import type { LocalizerType, ThemeType } from '../../types/Util';
 import { ContactName } from '../conversation/ContactName';
 import { About } from '../conversation/About';
 
-export type PropsDataType = Pick<
+export type ContactListItemConversationType = Pick<
   ConversationType,
   | 'about'
   | 'acceptedMessageRequest'
   | 'avatarPath'
+  | 'badges'
   | 'color'
   | 'id'
   | 'isMe'
@@ -24,11 +30,17 @@ export type PropsDataType = Pick<
   | 'title'
   | 'type'
   | 'unblurredAvatarPath'
+  | 'e164'
 >;
+
+type PropsDataType = ContactListItemConversationType & {
+  badge: undefined | BadgeType;
+};
 
 type PropsHousekeepingType = {
   i18n: LocalizerType;
   onClick?: (id: string) => void;
+  theme: ThemeType;
 };
 
 type PropsType = PropsDataType & PropsHousekeepingType;
@@ -38,6 +50,7 @@ export const ContactListItem: FunctionComponent<PropsType> = React.memo(
     about,
     acceptedMessageRequest,
     avatarPath,
+    badge,
     color,
     i18n,
     id,
@@ -47,20 +60,17 @@ export const ContactListItem: FunctionComponent<PropsType> = React.memo(
     phoneNumber,
     profileName,
     sharedGroupNames,
+    theme,
     title,
     type,
     unblurredAvatarPath,
   }) {
     const headerName = isMe ? (
-      i18n('noteToSelf')
+      <span className={HEADER_CONTACT_NAME_CLASS_NAME}>
+        {i18n('noteToSelf')}
+      </span>
     ) : (
-      <ContactName
-        phoneNumber={phoneNumber}
-        name={name}
-        profileName={profileName}
-        title={title}
-        i18n={i18n}
-      />
+      <ContactName module={HEADER_CONTACT_NAME_CLASS_NAME} title={title} />
     );
 
     const messageText =
@@ -70,6 +80,7 @@ export const ContactListItem: FunctionComponent<PropsType> = React.memo(
       <BaseConversationListItem
         acceptedMessageRequest={acceptedMessageRequest}
         avatarPath={avatarPath}
+        badge={badge}
         color={color}
         conversationType={type}
         headerName={headerName}
@@ -83,6 +94,7 @@ export const ContactListItem: FunctionComponent<PropsType> = React.memo(
         phoneNumber={phoneNumber}
         profileName={profileName}
         sharedGroupNames={sharedGroupNames}
+        theme={theme}
         title={title}
         unblurredAvatarPath={unblurredAvatarPath}
       />

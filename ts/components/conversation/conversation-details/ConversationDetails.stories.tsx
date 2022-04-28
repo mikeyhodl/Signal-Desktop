@@ -1,4 +1,4 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -7,11 +7,17 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { times } from 'lodash';
 
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import { setupI18n } from '../../../util/setupI18n';
+import { CapabilityError } from '../../../types/errors';
 import enMessages from '../../../../_locales/en/messages.json';
-import { ConversationDetails, Props } from './ConversationDetails';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { Props } from './ConversationDetails';
+import { ConversationDetails } from './ConversationDetails';
+import { ChooseGroupMembersModal } from './AddGroupMembersModal/ChooseGroupMembersModal';
+import { ConfirmAdditionsModal } from './AddGroupMembersModal/ConfirmAdditionsModal';
+import type { ConversationType } from '../../../state/ducks/conversations';
 import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
+import { makeFakeLookupConversationWithoutUuid } from '../../../test-both/helpers/fakeLookupConversationWithoutUuid';
+import { ThemeType } from '../../../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -30,21 +36,26 @@ const conversation: ConversationType = getDefaultConversation({
   conversationColor: 'ultramarine' as const,
 });
 
+const allCandidateContacts = times(10, () => getDefaultConversation());
+
 const createProps = (hasGroupLink = false, expireTimer?: number): Props => ({
   addMembers: async () => {
     action('addMembers');
   },
+  areWeASubscriber: false,
   canEditGroupInfo: false,
-  candidateContactsToAdd: times(10, () => getDefaultConversation()),
   conversation: expireTimer
     ? {
         ...conversation,
         expireTimer,
       }
     : conversation,
+  hasActiveCall: false,
   hasGroupLink,
+  getPreferredBadge: () => undefined,
   i18n,
   isAdmin: false,
+  isGroup: true,
   loadRecentMediaItems: action('loadRecentMediaItems'),
   memberships: times(32, i => ({
     isAdmin: i === 1,
@@ -62,7 +73,7 @@ const createProps = (hasGroupLink = false, expireTimer?: number): Props => ({
   setDisappearingMessages: action('setDisappearingMessages'),
   showAllMedia: action('showAllMedia'),
   showContactModal: action('showContactModal'),
-  showGroupChatColorEditor: action('showGroupChatColorEditor'),
+  showChatColorEditor: action('showChatColorEditor'),
   showGroupLinkManagement: action('showGroupLinkManagement'),
   showGroupV2Permissions: action('showGroupV2Permissions'),
   showConversationNotificationsSettings: action(
@@ -75,10 +86,41 @@ const createProps = (hasGroupLink = false, expireTimer?: number): Props => ({
   },
   onBlock: action('onBlock'),
   onLeave: action('onLeave'),
+  onUnblock: action('onUnblock'),
   deleteAvatarFromDisk: action('deleteAvatarFromDisk'),
   replaceAvatar: action('replaceAvatar'),
   saveAvatarToDisk: action('saveAvatarToDisk'),
+  setMuteExpiration: action('setMuteExpiration'),
   userAvatarData: [],
+  toggleSafetyNumberModal: action('toggleSafetyNumberModal'),
+  onOutgoingAudioCallInConversation: action(
+    'onOutgoingAudioCallInConversation'
+  ),
+  onOutgoingVideoCallInConversation: action(
+    'onOutgoingVideoCallInConversation'
+  ),
+  searchInConversation: action('searchInConversation'),
+  theme: ThemeType.light,
+  renderChooseGroupMembersModal: props => {
+    return (
+      <ChooseGroupMembersModal
+        {...props}
+        candidateContacts={allCandidateContacts}
+        selectedContacts={[]}
+        regionCode="US"
+        getPreferredBadge={() => undefined}
+        theme={ThemeType.light}
+        i18n={i18n}
+        lookupConversationWithoutUuid={makeFakeLookupConversationWithoutUuid()}
+        showUserNotFoundModal={action('showUserNotFoundModal')}
+      />
+    );
+  },
+  renderConfirmAdditionsModal: props => {
+    return (
+      <ConfirmAdditionsModal {...props} selectedContacts={[]} i18n={i18n} />
+    );
+  },
 });
 
 story.add('Basic', () => {
@@ -152,9 +194,11 @@ story.add('Group add with missing capabilities', () => (
     {...createProps()}
     canEditGroupInfo
     addMembers={async () => {
-      const error = new Error();
-      error.code = 'E_NO_CAPABILITY';
-      throw error;
+      throw new CapabilityError('stories');
     }}
   />
+));
+
+story.add('1:1', () => (
+  <ConversationDetails {...createProps()} isGroup={false} />
 ));

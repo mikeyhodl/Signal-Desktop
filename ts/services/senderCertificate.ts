@@ -1,19 +1,17 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { SerializedCertificateType } from '../textsecure/OutgoingMessage';
 import {
   SenderCertificateMode,
   serializedCertificateSchema,
-  SerializedCertificateType,
 } from '../textsecure/OutgoingMessage';
 import * as Bytes from '../Bytes';
-import { typedArrayToArrayBuffer } from '../Crypto';
 import { assert } from '../util/assert';
 import { missingCaseError } from '../util/missingCaseError';
-import { normalizeNumber } from '../util/normalizeNumber';
 import { waitForOnline } from '../util/waitForOnline';
 import * as log from '../logging/log';
-import { StorageInterface } from '../types/Storage.d';
+import type { StorageInterface } from '../types/Storage.d';
 import type { WebAPIType } from '../textsecure/WebAPI';
 import { SignalService as Proto } from '../protobuf';
 
@@ -74,6 +72,24 @@ export class SenderCertificateService {
     }
 
     return this.fetchCertificate(mode);
+  }
+
+  // This is intended to be called when our credentials have been deleted, so any fetches
+  //   made until this function is complete would fail anyway.
+  async clear(): Promise<void> {
+    log.info(
+      'Sender certificate service: Clearing in-progress fetches and ' +
+        'deleting cached certificates'
+    );
+    await Promise.all(this.fetchPromises.values());
+
+    const { storage } = this;
+    assert(
+      storage,
+      'Sender certificate service method was called before it was initialized'
+    );
+    await storage.remove('senderCertificate');
+    await storage.remove('senderCertificateNoE164');
   }
 
   private getStoredCertificate(
@@ -164,7 +180,7 @@ export class SenderCertificateService {
     const decodedCert = decodedContainer.certificate
       ? SenderCertificate.Certificate.decode(decodedContainer.certificate)
       : undefined;
-    const expires = normalizeNumber(decodedCert?.expires);
+    const expires = decodedCert?.expires?.toNumber();
 
     if (!isExpirationValid(expires)) {
       log.warn(
@@ -177,7 +193,7 @@ export class SenderCertificateService {
 
     const serializedCertificate = {
       expires: expires - CLOCK_SKEW_THRESHOLD,
-      serialized: typedArrayToArrayBuffer(certificate),
+      serialized: certificate,
     };
 
     await storage.put(modeToStorageKey(mode), serializedCertificate);

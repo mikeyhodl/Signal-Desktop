@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -6,14 +6,18 @@ import { times } from 'lodash';
 import { storiesOf } from '@storybook/react';
 import { boolean } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
-import { v4 as generateUuid } from 'uuid';
 
 import { AvatarColors } from '../types/Colors';
-import { ConversationType } from '../state/ducks/conversations';
-import { CallingLobby, PropsType } from './CallingLobby';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PropsType } from './CallingLobby';
+import { CallingLobby } from './CallingLobby';
+import { setupI18n } from '../util/setupI18n';
+import { UUID } from '../types/UUID';
 import enMessages from '../../_locales/en/messages.json';
-import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
+import {
+  getDefaultConversation,
+  getDefaultConversationWithUuid,
+} from '../test-both/helpers/getDefaultConversation';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -47,22 +51,23 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => {
       (isGroupCall ? times(3, () => getDefaultConversation()) : undefined),
     hasLocalAudio: boolean(
       'hasLocalAudio',
-      overrideProps.hasLocalAudio || false
+      overrideProps.hasLocalAudio ?? true
     ),
     hasLocalVideo: boolean(
       'hasLocalVideo',
-      overrideProps.hasLocalVideo || false
+      overrideProps.hasLocalVideo ?? false
     ),
     i18n,
     isGroupCall,
     isGroupCallOutboundRingEnabled: true,
     isCallFull: boolean('isCallFull', overrideProps.isCallFull || false),
-    maxGroupCallRingSize: overrideProps.maxGroupCallRingSize || 16,
-    me: overrideProps.me || {
-      color: AvatarColors[0],
-      id: generateUuid(),
-      uuid: generateUuid(),
-    },
+    me:
+      overrideProps.me ||
+      getDefaultConversation({
+        color: AvatarColors[0],
+        id: UUID.generate().toString(),
+        uuid: UUID.generate().toString(),
+      }),
     onCallCanceled: action('on-call-canceled'),
     onJoinCall: action('on-join-call'),
     outgoingRing: boolean('outgoingRing', Boolean(overrideProps.outgoingRing)),
@@ -81,8 +86,7 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => {
 };
 
 const fakePeekedParticipant = (conversationProps: Partial<ConversationType>) =>
-  getDefaultConversation({
-    uuid: generateUuid(),
+  getDefaultConversationWithUuid({
     ...conversationProps,
   });
 
@@ -103,12 +107,12 @@ story.add('No Camera, no avatar', () => {
 story.add('No Camera, local avatar', () => {
   const props = createProps({
     availableCameras: [],
-    me: {
+    me: getDefaultConversation({
       avatarPath: '/fixtures/kitten-4-112-112.jpg',
       color: AvatarColors[0],
-      id: generateUuid(),
-      uuid: generateUuid(),
-    },
+      id: UUID.generate().toString(),
+      uuid: UUID.generate().toString(),
+    }),
   });
   return <CallingLobby {...props} />;
 });
@@ -120,9 +124,9 @@ story.add('Local Video', () => {
   return <CallingLobby {...props} />;
 });
 
-story.add('Local Video', () => {
+story.add('Initially muted', () => {
   const props = createProps({
-    hasLocalVideo: true,
+    hasLocalAudio: false,
   });
   return <CallingLobby {...props} />;
 });
@@ -141,13 +145,13 @@ story.add('Group Call - 1 peeked participant', () => {
 });
 
 story.add('Group Call - 1 peeked participant (self)', () => {
-  const uuid = generateUuid();
+  const uuid = UUID.generate().toString();
   const props = createProps({
     isGroupCall: true,
-    me: {
-      id: generateUuid(),
+    me: getDefaultConversation({
+      id: UUID.generate().toString(),
       uuid,
-    },
+    }),
     peekedParticipants: [fakePeekedParticipant({ title: 'Ash', uuid })],
   });
   return <CallingLobby {...props} />;

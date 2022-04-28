@@ -3,21 +3,20 @@
 
 import { assert } from 'chai';
 import Delta from 'quill-delta';
-import sinon, { SinonStub } from 'sinon';
-import Quill, { KeyboardStatic } from 'quill';
+import type { SinonStub } from 'sinon';
+import sinon from 'sinon';
+import type { Quill, KeyboardStatic } from 'quill';
 
-import { MutableRefObject } from 'react';
-import {
-  MentionCompletion,
-  MentionCompletionOptions,
-} from '../../../quill/mentions/completion';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { MutableRefObject } from 'react';
+import type { MentionCompletionOptions } from '../../../quill/mentions/completion';
+import { MentionCompletion } from '../../../quill/mentions/completion';
+import type { ConversationType } from '../../../state/ducks/conversations';
 import { MemberRepository } from '../../../quill/memberRepository';
-import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
+import { ThemeType } from '../../../types/Util';
+import { getDefaultConversationWithUuid } from '../../../test-both/helpers/getDefaultConversation';
 
-const me: ConversationType = getDefaultConversation({
+const me: ConversationType = getDefaultConversationWithUuid({
   id: '666777',
-  uuid: 'pqrstuv',
   title: 'Fred Savage',
   firstName: 'Fred',
   profileName: 'Fred S.',
@@ -29,9 +28,8 @@ const me: ConversationType = getDefaultConversation({
 });
 
 const members: Array<ConversationType> = [
-  getDefaultConversation({
+  getDefaultConversationWithUuid({
     id: '555444',
-    uuid: 'abcdefg',
     title: 'Mahershala Ali',
     firstName: 'Mahershala',
     profileName: 'Mahershala A.',
@@ -40,9 +38,8 @@ const members: Array<ConversationType> = [
     markedUnread: false,
     areWeAdmin: false,
   }),
-  getDefaultConversation({
+  getDefaultConversationWithUuid({
     id: '333222',
-    uuid: 'hijklmno',
     title: 'Shia LaBeouf',
     firstName: 'Shia',
     profileName: 'Shia L.',
@@ -69,10 +66,12 @@ describe('MentionCompletion', () => {
     };
 
     const options: MentionCompletionOptions = {
+      getPreferredBadge: () => undefined,
       i18n: Object.assign(sinon.stub(), { getLocale: sinon.stub() }),
       me,
       memberRepositoryRef,
       setMentionPickerElement: sinon.stub(),
+      theme: ThemeType.dark,
     };
 
     mockQuill = {
@@ -86,7 +85,7 @@ describe('MentionCompletion', () => {
     };
 
     mentionCompletion = new MentionCompletion(
-      (mockQuill as unknown) as Quill,
+      mockQuill as unknown as Quill,
       options
     );
 

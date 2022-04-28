@@ -1,9 +1,12 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import PQueue from 'p-queue';
 
 import { sleep } from './sleep';
+import * as log from '../logging/log';
+import * as Errors from '../types/errors';
+import { clearTimeoutIfNecessary } from './clearTimeoutIfNecessary';
 
 declare global {
   // We want to extend `window`'s properties, so we need an interface.
@@ -18,7 +21,15 @@ declare global {
 window.batchers = [];
 
 window.waitForAllBatchers = async () => {
-  await Promise.all(window.batchers.map(item => item.flushAndWait()));
+  log.info('batcher#waitForAllBatchers');
+  try {
+    await Promise.all(window.batchers.map(item => item.flushAndWait()));
+  } catch (error) {
+    log.error(
+      'waitForAllBatchers: error flushing all',
+      Errors.toLogFormat(error)
+    );
+  }
 };
 
 export type BatcherOptionsType<ItemType> = {
@@ -30,6 +41,7 @@ export type BatcherOptionsType<ItemType> = {
 
 export type BatcherType<ItemType> = {
   add: (item: ItemType) => void;
+  removeAll: (needle: ItemType) => void;
   anyPending: () => boolean;
   onIdle: () => Promise<void>;
   flushAndWait: () => Promise<void>;
@@ -42,13 +54,15 @@ export function createBatcher<ItemType>(
   let batcher: BatcherType<ItemType>;
   let timeout: NodeJS.Timeout | null;
   let items: Array<ItemType> = [];
-  const queue = new PQueue({ concurrency: 1, timeout: 1000 * 60 * 2 });
+  const queue = new PQueue({
+    concurrency: 1,
+    timeout: 1000 * 60 * 2,
+    throwOnTimeout: true,
+  });
 
   function _kickBatchOff() {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
+    clearTimeoutIfNecessary(timeout);
+    timeout = null;
 
     const itemsRef = items;
     items = [];
@@ -67,6 +81,10 @@ export function createBatcher<ItemType>(
     } else if (items.length >= options.maxSize) {
       _kickBatchOff();
     }
+  }
+
+  function removeAll(needle: ItemType) {
+    items = items.filter(item => item !== needle);
   }
 
   function anyPending(): boolean {
@@ -92,9 +110,7 @@ export function createBatcher<ItemType>(
   }
 
   async function flushAndWait() {
-    window.log.info(
-      `Flushing ${options.name} batcher items.length=${items.length}`
-    );
+    log.info(`Flushing ${options.name} batcher items.length=${items.length}`);
 
     while (anyPending()) {
       _kickBatchOff();
@@ -104,11 +120,12 @@ export function createBatcher<ItemType>(
         await queue.onIdle();
       }
     }
-    window.log.info(`Flushing complete ${options.name} for batcher`);
+    log.info(`Flushing complete ${options.name} for batcher`);
   }
 
   batcher = {
     add,
+    removeAll,
     anyPending,
     onIdle,
     flushAndWait,

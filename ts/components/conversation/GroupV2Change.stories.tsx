@@ -3,39 +3,65 @@
 
 /* eslint-disable-next-line max-classes-per-file */
 import * as React from 'react';
+import { action } from '@storybook/addon-actions';
 import { storiesOf } from '@storybook/react';
 
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
+import { UUID } from '../../types/UUID';
+import type { UUIDStringType } from '../../types/UUID';
 import enMessages from '../../../_locales/en/messages.json';
-import { GroupV2ChangeType } from '../../groups';
+import type { GroupV2ChangeType } from '../../groups';
 import { SignalService as Proto } from '../../protobuf';
-import { SmartContactRendererType } from '../../groupChange';
+import type { SmartContactRendererType } from '../../groupChange';
 import { GroupV2Change } from './GroupV2Change';
+import type { FullJSXType } from '../Intl';
 
 const i18n = setupI18n('en', enMessages);
 
-const OUR_ID = 'OUR_ID';
-const CONTACT_A = 'CONTACT_A';
-const CONTACT_B = 'CONTACT_B';
-const CONTACT_C = 'CONTACT_C';
-const ADMIN_A = 'ADMIN_A';
-const INVITEE_A = 'INVITEE_A';
+const OUR_ID = UUID.generate().toString();
+const CONTACT_A = UUID.generate().toString();
+const CONTACT_B = UUID.generate().toString();
+const CONTACT_C = UUID.generate().toString();
+const ADMIN_A = UUID.generate().toString();
+const INVITEE_A = UUID.generate().toString();
 
 const AccessControlEnum = Proto.AccessControl.AccessRequired;
 const RoleEnum = Proto.Member.Role;
 
-const renderContact: SmartContactRendererType = (conversationId: string) => (
+const renderContact: SmartContactRendererType<FullJSXType> = (
+  conversationId: string
+) => (
   <React.Fragment key={conversationId}>
     {`Conversation(${conversationId})`}
   </React.Fragment>
 );
 
-const renderChange = (change: GroupV2ChangeType, groupName?: string) => (
+const renderChange = (
+  change: GroupV2ChangeType,
+  {
+    groupBannedMemberships,
+    groupMemberships,
+    groupName,
+    areWeAdmin = true,
+  }: {
+    groupMemberships?: Array<{
+      uuid: UUIDStringType;
+      isAdmin: boolean;
+    }>;
+    groupBannedMemberships?: Array<UUIDStringType>;
+    groupName?: string;
+    areWeAdmin?: boolean;
+  } = {}
+) => (
   <GroupV2Change
+    areWeAdmin={areWeAdmin ?? true}
+    blockGroupLinkRequests={action('blockGroupLinkRequests')}
     change={change}
+    groupBannedMemberships={groupBannedMemberships}
+    groupMemberships={groupMemberships}
     groupName={groupName}
     i18n={i18n}
-    ourConversationId={OUR_ID}
+    ourUuid={OUR_ID}
     renderContact={renderContact}
   />
 );
@@ -62,7 +88,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
             },
             {
               type: 'member-add',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
             {
               type: 'description',
@@ -70,7 +96,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
             },
             {
               type: 'member-privilege',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -402,7 +428,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -411,7 +437,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -419,7 +445,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -428,7 +454,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -437,7 +463,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -445,7 +471,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -461,7 +487,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               inviter: CONTACT_B,
             },
           ],
@@ -470,7 +496,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               inviter: CONTACT_A,
             },
           ],
@@ -481,7 +507,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               inviter: CONTACT_B,
             },
           ],
@@ -491,7 +517,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_B,
+              uuid: CONTACT_B,
               inviter: CONTACT_C,
             },
           ],
@@ -500,7 +526,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               inviter: CONTACT_B,
             },
           ],
@@ -511,7 +537,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               inviter: CONTACT_A,
             },
           ],
@@ -521,7 +547,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -530,7 +556,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               inviter: OUR_ID,
             },
           ],
@@ -540,7 +566,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               inviter: CONTACT_B,
             },
           ],
@@ -550,7 +576,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-invite',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -565,7 +591,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-link',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -574,7 +600,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-link',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -582,7 +608,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-link',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -597,7 +623,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-admin-approval',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -605,7 +631,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-admin-approval',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -614,7 +640,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-admin-approval',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -623,7 +649,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-admin-approval',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -631,7 +657,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-add-from-admin-approval',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -646,7 +672,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -655,7 +681,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -663,7 +689,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -672,7 +698,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -681,7 +707,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -690,7 +716,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -698,7 +724,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-remove',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -713,7 +739,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -722,7 +748,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -732,7 +758,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -742,7 +768,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -751,7 +777,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.ADMINISTRATOR,
             },
           ],
@@ -761,7 +787,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               newPrivilege: RoleEnum.DEFAULT,
             },
           ],
@@ -770,7 +796,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               newPrivilege: RoleEnum.DEFAULT,
             },
           ],
@@ -780,7 +806,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.DEFAULT,
             },
           ],
@@ -790,7 +816,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.DEFAULT,
             },
           ],
@@ -799,7 +825,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'member-privilege',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
               newPrivilege: RoleEnum.DEFAULT,
             },
           ],
@@ -815,7 +841,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-add-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -823,7 +849,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-add-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -832,7 +858,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-add-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -841,7 +867,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-add-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -849,7 +875,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-add-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -896,7 +922,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: OUR_ID,
             },
           ],
@@ -906,7 +932,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: OUR_ID,
             },
           ],
@@ -916,7 +942,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: OUR_ID,
             },
           ],
@@ -925,7 +951,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: OUR_ID,
             },
           ],
@@ -935,7 +961,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -944,7 +970,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: CONTACT_B,
             },
           ],
@@ -955,7 +981,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
               inviter: CONTACT_B,
             },
           ],
@@ -965,7 +991,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: CONTACT_B,
+              uuid: CONTACT_B,
               inviter: CONTACT_A,
             },
           ],
@@ -976,7 +1002,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: CONTACT_B,
             },
           ],
@@ -986,7 +1012,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: CONTACT_B,
             },
           ],
@@ -995,7 +1021,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
               inviter: CONTACT_B,
             },
           ],
@@ -1006,7 +1032,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -1015,7 +1041,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -1023,7 +1049,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'pending-remove-one',
-              conversationId: INVITEE_A,
+              uuid: INVITEE_A,
             },
           ],
         })}
@@ -1128,7 +1154,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'admin-approval-add-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -1136,7 +1162,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'admin-approval-add-one',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
@@ -1151,7 +1177,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'admin-approval-remove-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -1159,7 +1185,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'admin-approval-remove-one',
-              conversationId: OUR_ID,
+              uuid: OUR_ID,
             },
           ],
         })}
@@ -1168,36 +1194,91 @@ storiesOf('Components/Conversation/GroupV2Change', module)
           details: [
             {
               type: 'admin-approval-remove-one',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
-        {renderChange({
-          from: CONTACT_A,
-          details: [
-            {
-              type: 'admin-approval-remove-one',
-              conversationId: CONTACT_A,
-            },
-          ],
-        })}
+        Should show button:
+        {renderChange(
+          {
+            from: CONTACT_A,
+            details: [
+              {
+                type: 'admin-approval-remove-one',
+                uuid: CONTACT_A,
+              },
+            ],
+          },
+          {
+            groupMemberships: [{ uuid: CONTACT_C, isAdmin: false }],
+            groupBannedMemberships: [CONTACT_B],
+          }
+        )}
         {renderChange({
           from: ADMIN_A,
           details: [
             {
               type: 'admin-approval-remove-one',
-              conversationId: CONTACT_A,
+              uuid: CONTACT_A,
             },
           ],
         })}
-        {renderChange({
-          details: [
-            {
-              type: 'admin-approval-remove-one',
-              conversationId: CONTACT_A,
-            },
-          ],
-        })}
+        Should show button:
+        {renderChange(
+          {
+            details: [
+              {
+                type: 'admin-approval-remove-one',
+                uuid: CONTACT_A,
+              },
+            ],
+          },
+          {
+            groupMemberships: [{ uuid: CONTACT_C, isAdmin: false }],
+            groupBannedMemberships: [CONTACT_B],
+          }
+        )}
+        Would show button, but we&apos;re not admin:
+        {renderChange(
+          {
+            from: CONTACT_A,
+            details: [
+              {
+                type: 'admin-approval-remove-one',
+                uuid: CONTACT_A,
+              },
+            ],
+          },
+
+          { areWeAdmin: false, groupName: 'Group 1' }
+        )}
+        Would show button, but user is a group member:
+        {renderChange(
+          {
+            from: CONTACT_A,
+            details: [
+              {
+                type: 'admin-approval-remove-one',
+                uuid: CONTACT_A,
+              },
+            ],
+          },
+          { groupMemberships: [{ uuid: CONTACT_A, isAdmin: false }] }
+        )}
+        Would show button, but user is already banned:
+        {renderChange(
+          {
+            from: CONTACT_A,
+            details: [
+              {
+                type: 'admin-approval-remove-one',
+                uuid: CONTACT_A,
+              },
+            ],
+          },
+
+          { groupBannedMemberships: [CONTACT_A] }
+        )}
       </>
     );
   })
@@ -1363,7 +1444,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
               },
             ],
           },
-          'We do hikes 🌲'
+          { groupName: 'We do hikes 🌲' }
         )}
         {renderChange(
           {
@@ -1376,7 +1457,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
               },
             ],
           },
-          'We do hikes 🌲'
+          { groupName: 'We do hikes 🌲' }
         )}
         {renderChange(
           {
@@ -1388,7 +1469,7 @@ storiesOf('Components/Conversation/GroupV2Change', module)
               },
             ],
           },
-          'We do hikes 🌲'
+          { groupName: 'We do hikes 🌲' }
         )}
       </>
     );

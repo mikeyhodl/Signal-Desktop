@@ -1,28 +1,26 @@
 // Copyright 2019-2020 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { Dictionary, omit, reject } from 'lodash';
+import type { Dictionary } from 'lodash';
+import { omit, reject } from 'lodash';
 import type {
   StickerPackStatusType,
   StickerType as StickerDBType,
   StickerPackType as StickerPackDBType,
 } from '../../sql/Interface';
 import dataInterface from '../../sql/Client';
+import type { RecentStickerType } from '../../types/Stickers';
 import {
   downloadStickerPack as externalDownloadStickerPack,
   maybeDeletePack,
-  RecentStickerType,
 } from '../../types/Stickers';
 import { sendStickerPackSync } from '../../shims/textsecure';
 import { trigger } from '../../shims/events';
 
-import { NoopActionType } from './noop';
+import type { NoopActionType } from './noop';
 
-const {
-  getRecentStickers,
-  updateStickerLastUsed,
-  updateStickerPackStatus,
-} = dataInterface;
+const { getRecentStickers, updateStickerLastUsed, updateStickerPackStatus } =
+  dataInterface;
 
 // State
 
@@ -166,11 +164,18 @@ function stickerAdded(payload: StickerDBType): StickerAddedAction {
   };
 }
 
-function stickerPackAdded(payload: StickerPackDBType): StickerPackAddedAction {
+function stickerPackAdded(
+  payload: StickerPackDBType,
+  options?: { suppressError?: boolean }
+): StickerPackAddedAction {
   const { status, attemptedStatus } = payload;
 
   // We do this to trigger a toast, which is still done via Backbone
-  if (status === 'error' && attemptedStatus === 'installed') {
+  if (
+    status === 'error' &&
+    attemptedStatus === 'installed' &&
+    !options?.suppressError
+  ) {
     trigger('pack-install-failed');
   }
 
@@ -282,12 +287,17 @@ function clearInstalledStickerPack(): ClearInstalledStickerPackAction {
 
 function stickerPackUpdated(
   packId: string,
-  patch: Partial<StickerPackDBType>
+  patch: Partial<StickerPackDBType>,
+  options?: { suppressError?: boolean }
 ): StickerPackUpdatedAction {
   const { status, attemptedStatus } = patch;
 
   // We do this to trigger a toast, which is still done via Backbone
-  if (status === 'error' && attemptedStatus === 'installed') {
+  if (
+    status === 'error' &&
+    attemptedStatus === 'installed' &&
+    !options?.suppressError
+  ) {
     trigger('pack-install-failed');
   }
 
@@ -326,7 +336,7 @@ async function doUseSticker(
 
 // Reducer
 
-function getEmptyState(): StickersStateType {
+export function getEmptyState(): StickersStateType {
   return {
     installedPack: null,
     packs: {},

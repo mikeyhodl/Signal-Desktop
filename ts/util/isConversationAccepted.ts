@@ -1,7 +1,7 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ConversationAttributesType } from '../model-types.d';
+import type { ConversationAttributesType } from '../model-types.d';
 import { SignalService as Proto } from '../protobuf';
 import { isDirectConversation, isMe } from './whatTypeOfConversation';
 import { isInSystemContacts } from './isInSystemContacts';
@@ -11,7 +11,8 @@ import { isInSystemContacts } from './isInSystemContacts';
  * of message requests
  */
 export function isConversationAccepted(
-  conversationAttrs: ConversationAttributesType
+  conversationAttrs: ConversationAttributesType,
+  { ignoreEmptyConvo = false } = {}
 ): boolean {
   const messageRequestsEnabled = window.Signal.RemoteConfig.isEnabled(
     'desktop.messageRequests'
@@ -40,7 +41,9 @@ export function isConversationAccepted(
   const hasNoMessages = (conversationAttrs.messageCount || 0) === 0;
 
   const isEmptyPrivateConvo =
-    hasNoMessages && isDirectConversation(conversationAttrs);
+    hasNoMessages &&
+    isDirectConversation(conversationAttrs) &&
+    !ignoreEmptyConvo;
   const isEmptyWhitelistedGroup =
     hasNoMessages &&
     !isDirectConversation(conversationAttrs) &&

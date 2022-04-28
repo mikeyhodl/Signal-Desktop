@@ -1,7 +1,7 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { AvatarColorType } from './Colors';
+import type { AvatarColorType } from './Colors';
 import { strictAssert } from '../util/assert';
 
 export const PersonalAvatarIcons = [
@@ -42,7 +42,7 @@ export type AvatarIconType = GroupAvatarIconType | PersonalAvatarIconType;
 
 export type AvatarDataType = {
   id: number | string;
-  buffer?: ArrayBuffer;
+  buffer?: Uint8Array;
   color?: AvatarColorType;
   icon?: AvatarIconType;
   imagePath?: string;
@@ -64,6 +64,11 @@ export type SaveAvatarToDiskActionType = (
   avatarData: AvatarDataType,
   conversationId?: string
 ) => unknown;
+
+export type AvatarUpdateType = Readonly<{
+  oldAvatar: Uint8Array | undefined;
+  newAvatar: Uint8Array | undefined;
+}>;
 
 const groupIconColors = [
   'A180',

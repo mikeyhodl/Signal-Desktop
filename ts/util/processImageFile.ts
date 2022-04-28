@@ -1,10 +1,11 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import loadImage, { LoadImageOptions } from 'blueimp-load-image';
-import { canvasToArrayBuffer } from './canvasToArrayBuffer';
+import type { LoadImageOptions } from 'blueimp-load-image';
+import loadImage from 'blueimp-load-image';
+import { canvasToBytes } from './canvasToBytes';
 
-export async function processImageFile(file: File): Promise<ArrayBuffer> {
+export async function processImageFile(file: File): Promise<Uint8Array> {
   const { image } = await loadImage(file, {
     canvas: true,
     cover: true,
@@ -26,5 +27,5 @@ export async function processImageFile(file: File): Promise<ArrayBuffer> {
     throw new Error('Loaded image was not a canvas');
   }
 
-  return canvasToArrayBuffer(image);
+  return canvasToBytes(image);
 }

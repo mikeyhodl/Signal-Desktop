@@ -7,7 +7,9 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
-import { ipcRenderer } from 'electron';
+import { ipcRenderer as ipc } from 'electron';
+import fs from 'fs-extra';
+import pify from 'pify';
 
 import {
   cloneDeep,
@@ -24,36 +26,42 @@ import {
   uniq,
 } from 'lodash';
 
-import { arrayBufferToBase64, base64ToArrayBuffer } from '../Crypto';
+import { deleteExternalFiles } from '../types/Conversation';
+import * as Bytes from '../Bytes';
 import { CURRENT_SCHEMA_VERSION } from '../../js/modules/types/message';
 import { createBatcher } from '../util/batcher';
-import { assert } from '../util/assert';
-import * as durations from '../util/durations';
+import { assert, strictAssert } from '../util/assert';
 import { cleanDataForIpc } from './cleanDataForIpc';
-import { ReactionType } from '../types/Reactions';
-import { ConversationColorType, CustomColorType } from '../types/Colors';
+import type { ReactionType } from '../types/Reactions';
+import type { ConversationColorType, CustomColorType } from '../types/Colors';
+import type { UUIDStringType } from '../types/UUID';
+import type { BadgeType } from '../badges/types';
 import type { ProcessGroupCallRingRequestResult } from '../types/Calling';
+import type { RemoveAllConfiguration } from '../types/RemoveAllConfiguration';
+import createTaskWithTimeout from '../textsecure/TaskWithTimeout';
+import * as log from '../logging/log';
 
-import {
-  ConversationModelCollectionType,
-  MessageModelCollectionType,
-} from '../model-types.d';
-import { StoredJob } from '../jobs/types';
+import type { StoredJob } from '../jobs/types';
+import { formatJobForInsert } from '../jobs/formatJobForInsert';
+import { cleanupMessage } from '../util/cleanup';
 
-import {
+import type {
   AttachmentDownloadJobType,
   ClientInterface,
   ClientJobType,
   ClientSearchResultMessageType,
   ConversationType,
+  DeleteSentProtoRecipientOptionsType,
+  IdentityKeyIdType,
   IdentityKeyType,
   ItemKeyType,
   ItemType,
-  LastConversationMessagesType,
+  ConversationMessageStatsType,
   MessageType,
   MessageTypeUnhydrated,
+  PreKeyIdType,
   PreKeyType,
-  SearchResultMessageType,
+  SenderKeyIdType,
   SenderKeyType,
   SentMessageDBType,
   SentMessagesType,
@@ -62,27 +70,33 @@ import {
   SentRecipientsDBType,
   SentRecipientsType,
   ServerInterface,
+  ServerSearchResultMessageType,
+  SessionIdType,
   SessionType,
+  SignedPreKeyIdType,
   SignedPreKeyType,
   StickerPackStatusType,
   StickerPackType,
   StickerType,
+  StoryDistributionMemberType,
+  StoryDistributionType,
+  StoryDistributionWithMembersType,
+  StoryReadType,
   UnprocessedType,
   UnprocessedUpdateType,
 } from './Interface';
 import Server from './Server';
-import { MessageModel } from '../models/messages';
-import { ConversationModel } from '../models/conversations';
+import { isCorruptionError } from './errors';
 
-// We listen to a lot of events on ipcRenderer, often on the same channel. This prevents
+// We listen to a lot of events on ipc, often on the same channel. This prevents
 //   any warnings that might be sent to the console in that case.
-if (ipcRenderer && ipcRenderer.setMaxListeners) {
-  ipcRenderer.setMaxListeners(0);
+if (ipc && ipc.setMaxListeners) {
+  ipc.setMaxListeners(0);
 } else {
-  window.log.warn('sql/Client: ipcRenderer is not available!');
+  log.warn('sql/Client: ipc is not available!');
 }
 
-const DATABASE_UPDATE_TIMEOUT = 2 * durations.MINUTE;
+const getRealPath = pify(fs.realpath);
 
 const MIN_TRACE_DURATION = 10;
 
@@ -101,13 +115,20 @@ type ClientJobUpdateType = {
   args?: Array<any>;
 };
 
+enum RendererState {
+  InMain = 'InMain',
+  Opening = 'Opening',
+  InRenderer = 'InRenderer',
+  Closing = 'Closing',
+}
+
 const _jobs: { [id: string]: ClientJobType } = Object.create(null);
 const _DEBUG = false;
 let _jobCounter = 0;
 let _shuttingDown = false;
 let _shutdownCallback: Function | null = null;
 let _shutdownPromise: Promise<any> | null = null;
-let shouldUseRendererProcess = true;
+let state = RendererState.InMain;
 const startupQueries = new Map<string, number>();
 
 // Because we can't force this module to conform to an interface, we narrow our exports
@@ -135,16 +156,16 @@ const dataInterface: ClientInterface = {
 
   createOrUpdateSignedPreKey,
   getSignedPreKeyById,
-  getAllSignedPreKeys,
   bulkAddSignedPreKeys,
   removeSignedPreKeyById,
   removeAllSignedPreKeys,
+  getAllSignedPreKeys,
 
   createOrUpdateItem,
   getItemById,
-  getAllItems,
   removeItemById,
   removeAllItems,
+  getAllItems,
 
   createOrUpdateSenderKey,
   getSenderKeyById,
@@ -165,13 +186,14 @@ const dataInterface: ClientInterface = {
 
   createOrUpdateSession,
   createOrUpdateSessions,
-  commitSessionsAndUnprocessed,
+  commitDecryptResult,
   bulkAddSessions,
   removeSessionById,
   removeSessionsByConversation,
   removeAllSessions,
   getAllSessions,
 
+  eraseStorageServiceStateFromConversations,
   getConversationCount,
   saveConversation,
   saveConversations,
@@ -181,30 +203,32 @@ const dataInterface: ClientInterface = {
   removeConversation,
   updateAllConversationColors,
 
-  eraseStorageServiceStateFromConversations,
   getAllConversations,
   getAllConversationIds,
-  getAllPrivateConversations,
-  getAllGroupsInvolvingId,
+  getAllGroupsInvolvingUuid,
 
-  searchConversations,
   searchMessages,
   searchMessagesInConversation,
 
   getMessageCount,
+  getStoryCount,
   saveMessage,
   saveMessages,
   removeMessage,
   removeMessages,
-  getUnreadCountForConversation,
+  getTotalUnreadForConversation,
   getUnreadByConversationAndMarkRead,
   getUnreadReactionsAndMarkRead,
   markReactionAsRead,
   removeReactionFromConversation,
   addReaction,
-
+  _getAllReactions,
+  _removeAllReactions,
   getMessageBySender,
   getMessageById,
+  getMessagesById,
+  _getAllMessages,
+  _removeAllMessages,
   getAllMessageIds,
   getMessagesBySentAt,
   getExpiredMessages,
@@ -213,16 +237,18 @@ const dataInterface: ClientInterface = {
   getNextTapToViewMessageTimestampToAgeOut,
   getTapToViewMessagesNeedingErase,
   getOlderMessagesByConversation,
+  getOlderStories,
   getNewerMessagesByConversation,
-  getLastConversationMessages,
   getMessageMetricsForConversation,
+  getConversationRangeCenteredOnMessage,
+  getConversationMessageStats,
+  getLastConversationMessage,
   hasGroupCallHistoryMessage,
   migrateConversationMessages,
 
   getUnprocessedCount,
   getAllUnprocessed,
   getUnprocessedById,
-  updateUnprocessedAttempts,
   updateUnprocessedWithData,
   updateUnprocessedsWithData,
   removeUnprocessed,
@@ -235,13 +261,13 @@ const dataInterface: ClientInterface = {
   removeAttachmentDownloadJob,
   removeAllAttachmentDownloadJobs,
 
-  getStickerCount,
   createOrUpdateStickerPack,
   updateStickerPackStatus,
   createOrUpdateSticker,
   updateStickerLastUsed,
   addStickerPackReference,
   deleteStickerPackReference,
+  getStickerCount,
   deleteStickerPack,
   getAllStickerPacks,
   getAllStickers,
@@ -250,6 +276,26 @@ const dataInterface: ClientInterface = {
 
   updateEmojiUsage,
   getRecentEmojis,
+
+  getAllBadges,
+  updateOrCreateBadges,
+  badgeImageFileDownloaded,
+
+  _getAllStoryDistributions,
+  _getAllStoryDistributionMembers,
+  _deleteAllStoryDistributions,
+  createNewStoryDistribution,
+  getAllStoryDistributionsWithMembers,
+  getStoryDistributionWithMembers,
+  modifyStoryDistribution,
+  modifyStoryDistributionMembers,
+  deleteStoryDistribution,
+
+  _getAllStoryReads,
+  _deleteAllStoryReads,
+  addNewStoryRead,
+  getLastStoryReadsForAuthor,
+  countStoryReadsByConversation,
 
   removeAll,
   removeAllConfiguration,
@@ -267,11 +313,9 @@ const dataInterface: ClientInterface = {
   processGroupCallRingCancelation,
   cleanExpiredGroupCallRings,
 
+  getMaxMessageCounter,
+
   getStatisticsForLogging,
-
-  // Test-only
-
-  _getAllMessages,
 
   // Client-side only
 
@@ -284,28 +328,61 @@ const dataInterface: ClientInterface = {
 
   // Client-side only, and test-only
 
+  startInRendererProcess,
   goBackToMainProcess,
-  _removeConversations,
   _jobs,
 };
 
 export default dataInterface;
 
+async function startInRendererProcess(isTesting = false): Promise<void> {
+  strictAssert(
+    state === RendererState.InMain,
+    `startInRendererProcess: expected ${state} to be ${RendererState.InMain}`
+  );
+
+  log.info('data.startInRendererProcess: switching to renderer process');
+  state = RendererState.Opening;
+
+  if (!isTesting) {
+    ipc.send('database-ready');
+
+    await new Promise<void>(resolve => {
+      ipc.once('database-ready', () => {
+        resolve();
+      });
+    });
+  }
+
+  const configDir = await getRealPath(ipc.sendSync('get-user-data-path'));
+  const key = ipc.sendSync('user-config-key');
+
+  await Server.initializeRenderer({ configDir, key });
+
+  log.info('data.startInRendererProcess: switched to renderer process');
+
+  state = RendererState.InRenderer;
+}
+
 async function goBackToMainProcess(): Promise<void> {
-  if (!shouldUseRendererProcess) {
-    window.log.info(
-      'data.goBackToMainProcess: already switched to main process'
-    );
+  if (state === RendererState.InMain) {
+    log.info('goBackToMainProcess: Already in the main process');
     return;
   }
 
+  strictAssert(
+    state === RendererState.InRenderer,
+    `goBackToMainProcess: expected ${state} to be ${RendererState.InRenderer}`
+  );
+
   // We don't need to wait for pending queries since they are synchronous.
-  window.log.info('data.goBackToMainProcess: switching to main process');
+  log.info('data.goBackToMainProcess: switching to main process');
+  const closePromise = close();
 
-  // Close the database in the renderer process.
-  await close();
-
-  shouldUseRendererProcess = false;
+  // It should be the last query we run in renderer process
+  state = RendererState.Closing;
+  await closePromise;
+  state = RendererState.InMain;
 
   // Print query statistics for whole startup
   const entries = Array.from(startupQueries.entries());
@@ -316,8 +393,10 @@ async function goBackToMainProcess(): Promise<void> {
     .sort((a, b) => b[1] - a[1])
     .filter(([_, duration]) => duration > MIN_TRACE_DURATION)
     .forEach(([query, duration]) => {
-      window.log.info(`startup query: ${query} ${duration}ms`);
+      log.info(`startup query: ${query} ${duration}ms`);
     });
+
+  log.info('data.goBackToMainProcess: switched to main process');
 }
 
 const channelsAsUnknown = fromPairs(
@@ -340,7 +419,7 @@ function _cleanData(
   const { cleaned, pathsChanged } = cleanDataForIpc(data);
 
   if (pathsChanged.length) {
-    window.log.info(
+    log.info(
       `_cleanData cleaned the following paths: ${pathsChanged.join(', ')}`
     );
   }
@@ -359,7 +438,7 @@ function _cleanMessageData(data: MessageType): MessageType {
 
 async function _shutdown() {
   const jobKeys = Object.keys(_jobs);
-  window.log.info(
+  log.info(
     `data.shutdown: shutdown requested. ${jobKeys.length} jobs outstanding`
   );
 
@@ -379,7 +458,7 @@ async function _shutdown() {
   // Outstanding jobs; we need to wait until the last one is done
   _shutdownPromise = new Promise<void>((resolve, reject) => {
     _shutdownCallback = (error: Error) => {
-      window.log.info('data.shutdown: process complete');
+      log.info('data.shutdown: process complete');
       if (error) {
         reject(error);
 
@@ -404,7 +483,7 @@ function _makeJob(fnName: string) {
   const id = _jobCounter;
 
   if (_DEBUG) {
-    window.log.info(`SQL channel job ${id} (${fnName}) started`);
+    log.info(`SQL channel job ${id} (${fnName}) started`);
   }
   _jobs[id] = {
     fnName,
@@ -425,7 +504,7 @@ function _updateJob(id: number, data: ClientJobUpdateType) {
       _removeJob(id);
       const end = Date.now();
       if (_DEBUG) {
-        window.log.info(
+        log.info(
           `SQL channel job ${id} (${fnName}) succeeded in ${end - start}ms`
         );
       }
@@ -435,21 +514,7 @@ function _updateJob(id: number, data: ClientJobUpdateType) {
     reject: (error: Error) => {
       _removeJob(id);
       const end = Date.now();
-      window.log.info(
-        `SQL channel job ${id} (${fnName}) failed in ${end - start}ms`
-      );
-
-      if (
-        error &&
-        error.message &&
-        (error.message.includes('SQLITE_CORRUPT') ||
-          error.message.includes('database disk image is malformed'))
-      ) {
-        window.log.error(
-          `Detected corruption. Restarting the application immediately. Error: ${error.message}`
-        );
-        ipcRenderer?.send('database-error', error.message);
-      }
+      log.info(`SQL channel job ${id} (${fnName}) failed in ${end - start}ms`);
 
       return reject(error);
     },
@@ -477,38 +542,35 @@ function _getJob(id: number) {
   return _jobs[id];
 }
 
-if (ipcRenderer && ipcRenderer.on) {
-  ipcRenderer.on(
-    `${SQL_CHANNEL_KEY}-done`,
-    (_, jobId, errorForDisplay, result) => {
-      const job = _getJob(jobId);
-      if (!job) {
-        throw new Error(
-          `Received SQL channel reply to job ${jobId}, but did not have it in our registry!`
-        );
-      }
-
-      const { resolve, reject, fnName } = job;
-
-      if (!resolve || !reject) {
-        throw new Error(
-          `SQL channel job ${jobId} (${fnName}): didn't have a resolve or reject`
-        );
-      }
-
-      if (errorForDisplay) {
-        return reject(
-          new Error(
-            `Error received from SQL channel job ${jobId} (${fnName}): ${errorForDisplay}`
-          )
-        );
-      }
-
-      return resolve(result);
+if (ipc && ipc.on) {
+  ipc.on(`${SQL_CHANNEL_KEY}-done`, (_, jobId, errorForDisplay, result) => {
+    const job = _getJob(jobId);
+    if (!job) {
+      throw new Error(
+        `Received SQL channel reply to job ${jobId}, but did not have it in our registry!`
+      );
     }
-  );
+
+    const { resolve, reject, fnName } = job;
+
+    if (!resolve || !reject) {
+      throw new Error(
+        `SQL channel job ${jobId} (${fnName}): didn't have a resolve or reject`
+      );
+    }
+
+    if (errorForDisplay) {
+      return reject(
+        new Error(
+          `Error received from SQL channel job ${jobId} (${fnName}): ${errorForDisplay}`
+        )
+      );
+    }
+
+    return resolve(result);
+  });
 } else {
-  window.log.warn('sql/Client: ipcRenderer.on is not available!');
+  log.warn('sql/Client: ipc.on is not available!');
 }
 
 function makeChannel(fnName: string) {
@@ -517,56 +579,66 @@ function makeChannel(fnName: string) {
     // the db that exists in the renderer process to be able to boot up quickly
     // once the app is running we switch back to the main process to avoid the
     // UI from locking up whenever we do costly db operations.
-    if (shouldUseRendererProcess) {
+    if (state === RendererState.InRenderer) {
       const serverFnName = fnName as keyof ServerInterface;
       const start = Date.now();
 
-      // Ignoring this error TS2556: Expected 3 arguments, but got 0 or more.
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const result = Server[serverFnName](...args);
-
-      const duration = Date.now() - start;
-
-      startupQueries.set(
-        serverFnName,
-        (startupQueries.get(serverFnName) || 0) + duration
-      );
-
-      if (duration > MIN_TRACE_DURATION || _DEBUG) {
-        window.log.info(
-          `Renderer SQL channel job (${fnName}) succeeded in ${duration}ms`
+      try {
+        // Ignoring this error TS2556: Expected 3 arguments, but got 0 or more.
+        return await (Server[serverFnName] as Function)(...args);
+      } catch (error) {
+        if (isCorruptionError(error)) {
+          log.error(
+            'Detected sql corruption in renderer process. ' +
+              `Restarting the application immediately. Error: ${error.message}`
+          );
+          ipc?.send('database-error', error.stack);
+        }
+        log.error(
+          `Renderer SQL channel job (${fnName}) error ${error.message}`
         );
-      }
+        throw error;
+      } finally {
+        const duration = Date.now() - start;
 
-      return result;
+        startupQueries.set(
+          serverFnName,
+          (startupQueries.get(serverFnName) || 0) + duration
+        );
+
+        if (duration > MIN_TRACE_DURATION || _DEBUG) {
+          log.info(
+            `Renderer SQL channel job (${fnName}) completed in ${duration}ms`
+          );
+        }
+      }
     }
 
     const jobId = _makeJob(fnName);
 
-    return new Promise((resolve, reject) => {
-      try {
-        ipcRenderer.send(SQL_CHANNEL_KEY, jobId, fnName, ...args);
+    return createTaskWithTimeout(
+      () =>
+        new Promise((resolve, reject) => {
+          try {
+            ipc.send(SQL_CHANNEL_KEY, jobId, fnName, ...args);
 
-        _updateJob(jobId, {
-          resolve,
-          reject,
-          args: _DEBUG ? args : undefined,
-        });
+            _updateJob(jobId, {
+              resolve,
+              reject,
+              args: _DEBUG ? args : undefined,
+            });
+          } catch (error) {
+            _removeJob(jobId);
 
-        setTimeout(() => {
-          reject(new Error(`SQL channel job ${jobId} (${fnName}) timed out`));
-        }, DATABASE_UPDATE_TIMEOUT);
-      } catch (error) {
-        _removeJob(jobId);
-
-        reject(error);
-      }
-    });
+            reject(error);
+          }
+        }),
+      `SQL channel job ${jobId} (${fnName})`
+    )();
   };
 }
 
-function keysToArrayBuffer(keys: Array<string>, data: any) {
+function keysToBytes(keys: Array<string>, data: any) {
   const updated = cloneDeep(data);
 
   const max = keys.length;
@@ -575,14 +647,14 @@ function keysToArrayBuffer(keys: Array<string>, data: any) {
     const value = get(data, key);
 
     if (value) {
-      set(updated, key, base64ToArrayBuffer(value));
+      set(updated, key, Bytes.fromBase64(value));
     }
   }
 
   return updated;
 }
 
-function keysFromArrayBuffer(keys: Array<string>, data: any) {
+function keysFromBytes(keys: Array<string>, data: any) {
   const updated = cloneDeep(data);
 
   const max = keys.length;
@@ -591,7 +663,7 @@ function keysFromArrayBuffer(keys: Array<string>, data: any) {
     const value = get(data, key);
 
     if (value) {
-      set(updated, key, arrayBufferToBase64(value));
+      set(updated, key, Bytes.toBase64(value));
     }
   }
 
@@ -601,6 +673,8 @@ function keysFromArrayBuffer(keys: Array<string>, data: any) {
 // Top-level calls
 
 async function shutdown() {
+  log.info('Client.shutdown');
+
   // Stop accepting new SQL jobs, flush outstanding queue
   await _shutdown();
 
@@ -626,32 +700,19 @@ async function removeIndexedDBFiles() {
 
 const IDENTITY_KEY_KEYS = ['publicKey'];
 async function createOrUpdateIdentityKey(data: IdentityKeyType) {
-  const updated = keysFromArrayBuffer(IDENTITY_KEY_KEYS, {
-    ...data,
-    id: window.ConversationController.getConversationId(data.id),
-  });
+  const updated = keysFromBytes(IDENTITY_KEY_KEYS, data);
   await channels.createOrUpdateIdentityKey(updated);
 }
-async function getIdentityKeyById(identifier: string) {
-  const id = window.ConversationController.getConversationId(identifier);
-  if (!id) {
-    throw new Error('getIdentityKeyById: unable to find conversationId');
-  }
+async function getIdentityKeyById(id: IdentityKeyIdType) {
   const data = await channels.getIdentityKeyById(id);
 
-  return keysToArrayBuffer(IDENTITY_KEY_KEYS, data);
+  return keysToBytes(IDENTITY_KEY_KEYS, data);
 }
 async function bulkAddIdentityKeys(array: Array<IdentityKeyType>) {
-  const updated = map(array, data =>
-    keysFromArrayBuffer(IDENTITY_KEY_KEYS, data)
-  );
+  const updated = map(array, data => keysFromBytes(IDENTITY_KEY_KEYS, data));
   await channels.bulkAddIdentityKeys(updated);
 }
-async function removeIdentityKeyById(identifier: string) {
-  const id = window.ConversationController.getConversationId(identifier);
-  if (!id) {
-    throw new Error('removeIdentityKeyById: unable to find conversationId');
-  }
+async function removeIdentityKeyById(id: IdentityKeyIdType) {
   await channels.removeIdentityKeyById(id);
 }
 async function removeAllIdentityKeys() {
@@ -660,25 +721,25 @@ async function removeAllIdentityKeys() {
 async function getAllIdentityKeys() {
   const keys = await channels.getAllIdentityKeys();
 
-  return keys.map(key => keysToArrayBuffer(IDENTITY_KEY_KEYS, key));
+  return keys.map(key => keysToBytes(IDENTITY_KEY_KEYS, key));
 }
 
 // Pre Keys
 
 async function createOrUpdatePreKey(data: PreKeyType) {
-  const updated = keysFromArrayBuffer(PRE_KEY_KEYS, data);
+  const updated = keysFromBytes(PRE_KEY_KEYS, data);
   await channels.createOrUpdatePreKey(updated);
 }
-async function getPreKeyById(id: number) {
+async function getPreKeyById(id: PreKeyIdType) {
   const data = await channels.getPreKeyById(id);
 
-  return keysToArrayBuffer(PRE_KEY_KEYS, data);
+  return keysToBytes(PRE_KEY_KEYS, data);
 }
 async function bulkAddPreKeys(array: Array<PreKeyType>) {
-  const updated = map(array, data => keysFromArrayBuffer(PRE_KEY_KEYS, data));
+  const updated = map(array, data => keysFromBytes(PRE_KEY_KEYS, data));
   await channels.bulkAddPreKeys(updated);
 }
-async function removePreKeyById(id: number) {
+async function removePreKeyById(id: PreKeyIdType) {
   await channels.removePreKeyById(id);
 }
 async function removeAllPreKeys() {
@@ -687,33 +748,31 @@ async function removeAllPreKeys() {
 async function getAllPreKeys() {
   const keys = await channels.getAllPreKeys();
 
-  return keys.map(key => keysToArrayBuffer(PRE_KEY_KEYS, key));
+  return keys.map(key => keysToBytes(PRE_KEY_KEYS, key));
 }
 
 // Signed Pre Keys
 
 const PRE_KEY_KEYS = ['privateKey', 'publicKey'];
 async function createOrUpdateSignedPreKey(data: SignedPreKeyType) {
-  const updated = keysFromArrayBuffer(PRE_KEY_KEYS, data);
+  const updated = keysFromBytes(PRE_KEY_KEYS, data);
   await channels.createOrUpdateSignedPreKey(updated);
 }
-async function getSignedPreKeyById(id: number) {
+async function getSignedPreKeyById(id: SignedPreKeyIdType) {
   const data = await channels.getSignedPreKeyById(id);
 
-  return keysToArrayBuffer(PRE_KEY_KEYS, data);
+  return keysToBytes(PRE_KEY_KEYS, data);
 }
 async function getAllSignedPreKeys() {
   const keys = await channels.getAllSignedPreKeys();
 
-  return keys.map((key: SignedPreKeyType) =>
-    keysToArrayBuffer(PRE_KEY_KEYS, key)
-  );
+  return keys.map((key: SignedPreKeyType) => keysToBytes(PRE_KEY_KEYS, key));
 }
 async function bulkAddSignedPreKeys(array: Array<SignedPreKeyType>) {
-  const updated = map(array, data => keysFromArrayBuffer(PRE_KEY_KEYS, data));
+  const updated = map(array, data => keysFromBytes(PRE_KEY_KEYS, data));
   await channels.bulkAddSignedPreKeys(updated);
 }
-async function removeSignedPreKeyById(id: number) {
+async function removeSignedPreKeyById(id: SignedPreKeyIdType) {
   await channels.removeSignedPreKeyById(id);
 }
 async function removeAllSignedPreKeys() {
@@ -723,9 +782,9 @@ async function removeAllSignedPreKeys() {
 // Items
 
 const ITEM_KEYS: Partial<Record<ItemKeyType, Array<string>>> = {
-  identityKey: ['value.pubKey', 'value.privKey'],
   senderCertificate: ['value.serialized'],
   senderCertificateNoE164: ['value.serialized'],
+  subscriberId: ['value'],
   profileKey: ['value'],
 };
 async function createOrUpdateItem<K extends ItemKeyType>(data: ItemType<K>) {
@@ -737,15 +796,17 @@ async function createOrUpdateItem<K extends ItemKeyType>(data: ItemType<K>) {
   }
 
   const keys = ITEM_KEYS[id];
-  const updated = Array.isArray(keys) ? keysFromArrayBuffer(keys, data) : data;
+  const updated = Array.isArray(keys) ? keysFromBytes(keys, data) : data;
 
   await channels.createOrUpdateItem(updated);
 }
-async function getItemById<K extends ItemKeyType>(id: K): Promise<ItemType<K>> {
+async function getItemById<K extends ItemKeyType>(
+  id: K
+): Promise<ItemType<K> | undefined> {
   const keys = ITEM_KEYS[id];
   const data = await channels.getItemById(id);
 
-  return Array.isArray(keys) ? keysToArrayBuffer(keys, data) : data;
+  return Array.isArray(keys) ? keysToBytes(keys, data) : data;
 }
 async function getAllItems() {
   const items = await channels.getAllItems();
@@ -759,7 +820,7 @@ async function getAllItems() {
     const keys = ITEM_KEYS[key];
 
     const deserializedValue = Array.isArray(keys)
-      ? keysToArrayBuffer(keys, { value }).value
+      ? keysToBytes(keys, { value }).value
       : value;
 
     result[key] = deserializedValue;
@@ -780,7 +841,7 @@ async function createOrUpdateSenderKey(key: SenderKeyType): Promise<void> {
   await channels.createOrUpdateSenderKey(key);
 }
 async function getSenderKeyById(
-  id: string
+  id: SenderKeyIdType
 ): Promise<SenderKeyType | undefined> {
   return channels.getSenderKeyById(id);
 }
@@ -790,7 +851,7 @@ async function removeAllSenderKeys(): Promise<void> {
 async function getAllSenderKeys(): Promise<Array<SenderKeyType>> {
   return channels.getAllSenderKeys();
 }
-async function removeSenderKeyById(id: string): Promise<void> {
+async function removeSenderKeyById(id: SenderKeyIdType): Promise<void> {
   return channels.removeSenderKeyById(id);
 }
 
@@ -822,11 +883,11 @@ async function insertProtoRecipients(options: {
 }): Promise<void> {
   await channels.insertProtoRecipients(options);
 }
-async function deleteSentProtoRecipient(options: {
-  timestamp: number;
-  recipientUuid: string;
-  deviceId: number;
-}): Promise<void> {
+async function deleteSentProtoRecipient(
+  options:
+    | DeleteSentProtoRecipientOptionsType
+    | ReadonlyArray<DeleteSentProtoRecipientOptionsType>
+): Promise<void> {
   await channels.deleteSentProtoRecipient(options);
 }
 
@@ -862,16 +923,17 @@ async function createOrUpdateSession(data: SessionType) {
 async function createOrUpdateSessions(array: Array<SessionType>) {
   await channels.createOrUpdateSessions(array);
 }
-async function commitSessionsAndUnprocessed(options: {
+async function commitDecryptResult(options: {
+  senderKeys: Array<SenderKeyType>;
   sessions: Array<SessionType>;
   unprocessed: Array<UnprocessedType>;
 }) {
-  await channels.commitSessionsAndUnprocessed(options);
+  await channels.commitDecryptResult(options);
 }
 async function bulkAddSessions(array: Array<SessionType>) {
   await channels.bulkAddSessions(array);
 }
-async function removeSessionById(id: string) {
+async function removeSessionById(id: SessionIdType) {
   await channels.removeSessionById(id);
 }
 
@@ -901,17 +963,8 @@ async function saveConversations(array: Array<ConversationType>) {
   await channels.saveConversations(array);
 }
 
-async function getConversationById(
-  id: string,
-  { Conversation }: { Conversation: typeof ConversationModel }
-) {
-  const data = await channels.getConversationById(id);
-
-  if (!data) {
-    return undefined;
-  }
-
-  return new Conversation(data);
+async function getConversationById(id: string) {
+  return channels.getConversationById(id);
 }
 
 const updateConversationBatcher = createBatcher<ConversationType>({
@@ -922,13 +975,11 @@ const updateConversationBatcher = createBatcher<ConversationType>({
     // We only care about the most recent update for each conversation
     const byId = groupBy(items, item => item.id);
     const ids = Object.keys(byId);
-    const mostRecent = ids.map(
-      (id: string): ConversationType => {
-        const maybeLast = last(byId[id]);
-        assert(maybeLast !== undefined, 'Empty array in `groupBy` result');
-        return maybeLast;
-      }
-    );
+    const mostRecent = ids.map((id: string): ConversationType => {
+      const maybeLast = last(byId[id]);
+      assert(maybeLast !== undefined, 'Empty array in `groupBy` result');
+      return maybeLast;
+    });
 
     await updateConversations(mostRecent);
   },
@@ -947,40 +998,25 @@ async function updateConversations(array: Array<ConversationType>) {
   await channels.updateConversations(cleaned);
 }
 
-async function removeConversation(
-  id: string,
-  { Conversation }: { Conversation: typeof ConversationModel }
-) {
-  const existing = await getConversationById(id, { Conversation });
+async function removeConversation(id: string) {
+  const existing = await getConversationById(id);
 
   // Note: It's important to have a fully database-hydrated model to delete here because
   //   it needs to delete all associated on-disk files along with the database delete.
   if (existing) {
     await channels.removeConversation(id);
-    await existing.cleanup();
+    await deleteExternalFiles(existing, {
+      deleteAttachmentData: window.Signal.Migrations.deleteAttachmentData,
+    });
   }
-}
-
-// Note: this method will not clean up external files, just delete from SQL
-async function _removeConversations(ids: Array<string>) {
-  await channels.removeConversation(ids);
 }
 
 async function eraseStorageServiceStateFromConversations() {
   await channels.eraseStorageServiceStateFromConversations();
 }
 
-async function getAllConversations({
-  ConversationCollection,
-}: {
-  ConversationCollection: typeof ConversationModelCollectionType;
-}): Promise<ConversationModelCollectionType> {
-  const conversations = await channels.getAllConversations();
-
-  const collection = new ConversationCollection();
-  collection.add(conversations);
-
-  return collection;
+async function getAllConversations() {
+  return channels.getAllConversations();
 }
 
 async function getAllConversationIds() {
@@ -989,43 +1025,12 @@ async function getAllConversationIds() {
   return ids;
 }
 
-async function getAllPrivateConversations({
-  ConversationCollection,
-}: {
-  ConversationCollection: typeof ConversationModelCollectionType;
-}) {
-  const conversations = await channels.getAllPrivateConversations();
-
-  const collection = new ConversationCollection();
-  collection.add(conversations);
-
-  return collection;
-}
-
-async function getAllGroupsInvolvingId(
-  id: string,
-  {
-    ConversationCollection,
-  }: {
-    ConversationCollection: typeof ConversationModelCollectionType;
-  }
-) {
-  const conversations = await channels.getAllGroupsInvolvingId(id);
-
-  const collection = new ConversationCollection();
-  collection.add(conversations);
-
-  return collection;
-}
-
-async function searchConversations(query: string) {
-  const conversations = await channels.searchConversations(query);
-
-  return conversations;
+async function getAllGroupsInvolvingUuid(uuid: UUIDStringType) {
+  return channels.getAllGroupsInvolvingUuid(uuid);
 }
 
 function handleSearchMessageJSON(
-  messages: Array<SearchResultMessageType>
+  messages: Array<ServerSearchResultMessageType>
 ): Array<ClientSearchResultMessageType> {
   return messages.map(message => ({
     json: message.json,
@@ -1067,11 +1072,22 @@ async function getMessageCount(conversationId?: string) {
   return channels.getMessageCount(conversationId);
 }
 
+async function getStoryCount(conversationId: string) {
+  return channels.getStoryCount(conversationId);
+}
+
 async function saveMessage(
   data: MessageType,
-  options?: { forceSave?: boolean }
+  options: {
+    jobToInsert?: Readonly<StoredJob>;
+    forceSave?: boolean;
+    ourUuid: UUIDStringType;
+  }
 ) {
-  const id = await channels.saveMessage(_cleanMessageData(data), options);
+  const id = await channels.saveMessage(_cleanMessageData(data), {
+    ...options,
+    jobToInsert: options.jobToInsert && formatJobForInsert(options.jobToInsert),
+  });
 
   window.Whisper.ExpiringMessagesListener.update();
   window.Whisper.TapToViewMessagesListener.update();
@@ -1080,8 +1096,8 @@ async function saveMessage(
 }
 
 async function saveMessages(
-  arrayOfMessages: Array<MessageType>,
-  options?: { forceSave?: boolean }
+  arrayOfMessages: ReadonlyArray<MessageType>,
+  options: { forceSave?: boolean; ourUuid: UUIDStringType }
 ) {
   await channels.saveMessages(
     arrayOfMessages.map(message => _cleanMessageData(message)),
@@ -1092,17 +1108,14 @@ async function saveMessages(
   window.Whisper.TapToViewMessagesListener.update();
 }
 
-async function removeMessage(
-  id: string,
-  { Message }: { Message: typeof MessageModel }
-) {
-  const message = await getMessageById(id, { Message });
+async function removeMessage(id: string) {
+  const message = await getMessageById(id);
 
   // Note: It's important to have a fully database-hydrated model to delete here because
   //   it needs to delete all associated on-disk files along with the database delete.
   if (message) {
     await channels.removeMessage(id);
-    await message.cleanup();
+    await cleanupMessage(message);
   }
 }
 
@@ -1111,27 +1124,23 @@ async function removeMessages(ids: Array<string>) {
   await channels.removeMessages(ids);
 }
 
-async function getMessageById(
-  id: string,
-  { Message }: { Message: typeof MessageModel }
-) {
-  const message = await channels.getMessageById(id);
-  if (!message) {
-    return undefined;
-  }
+async function getMessageById(id: string) {
+  return channels.getMessageById(id);
+}
 
-  return new Message(message);
+async function getMessagesById(messageIds: Array<string>) {
+  if (!messageIds.length) {
+    return [];
+  }
+  return channels.getMessagesById(messageIds);
 }
 
 // For testing only
-async function _getAllMessages({
-  MessageCollection,
-}: {
-  MessageCollection: typeof MessageModelCollectionType;
-}) {
-  const messages = await channels._getAllMessages();
-
-  return new MessageCollection(messages);
+async function _getAllMessages() {
+  return channels._getAllMessages();
+}
+async function _removeAllMessages() {
+  await channels._removeAllMessages();
 }
 
 async function getAllMessageIds() {
@@ -1140,54 +1149,51 @@ async function getAllMessageIds() {
   return ids;
 }
 
-async function getMessageBySender(
-  {
-    source,
-    sourceUuid,
-    sourceDevice,
-    sent_at,
-  }: {
-    source: string;
-    sourceUuid: string;
-    sourceDevice: number;
-    sent_at: number;
-  },
-  { Message }: { Message: typeof MessageModel }
-) {
-  const messages = await channels.getMessageBySender({
+async function getMessageBySender({
+  source,
+  sourceUuid,
+  sourceDevice,
+  sent_at,
+}: {
+  source: string;
+  sourceUuid: string;
+  sourceDevice: number;
+  sent_at: number;
+}) {
+  return channels.getMessageBySender({
     source,
     sourceUuid,
     sourceDevice,
     sent_at,
   });
-  if (!messages || !messages.length) {
-    return null;
+}
+
+async function getTotalUnreadForConversation(
+  conversationId: string,
+  options: {
+    storyId: UUIDStringType | undefined;
+    isGroup: boolean;
   }
-
-  return new Message(messages[0]);
-}
-
-async function getUnreadCountForConversation(conversationId: string) {
-  return channels.getUnreadCountForConversation(conversationId);
-}
-
-async function getUnreadByConversationAndMarkRead(
-  conversationId: string,
-  newestUnreadId: number,
-  readAt?: number
 ) {
-  return channels.getUnreadByConversationAndMarkRead(
-    conversationId,
-    newestUnreadId,
-    readAt
-  );
+  return channels.getTotalUnreadForConversation(conversationId, options);
 }
 
-async function getUnreadReactionsAndMarkRead(
-  conversationId: string,
-  newestUnreadId: number
-) {
-  return channels.getUnreadReactionsAndMarkRead(conversationId, newestUnreadId);
+async function getUnreadByConversationAndMarkRead(options: {
+  conversationId: string;
+  isGroup?: boolean;
+  newestUnreadAt: number;
+  readAt?: number;
+  storyId?: UUIDStringType;
+}) {
+  return channels.getUnreadByConversationAndMarkRead(options);
+}
+
+async function getUnreadReactionsAndMarkRead(options: {
+  conversationId: string;
+  newestUnreadAt: number;
+  storyId?: UUIDStringType;
+}) {
+  return channels.getUnreadReactionsAndMarkRead(options);
 }
 
 async function markReactionAsRead(
@@ -1210,94 +1216,149 @@ async function addReaction(reactionObj: ReactionType) {
   return channels.addReaction(reactionObj);
 }
 
-function handleMessageJSON(messages: Array<MessageTypeUnhydrated>) {
+async function _getAllReactions() {
+  return channels._getAllReactions();
+}
+async function _removeAllReactions() {
+  await channels._removeAllReactions();
+}
+
+function handleMessageJSON(
+  messages: Array<MessageTypeUnhydrated>
+): Array<MessageType> {
   return messages.map(message => JSON.parse(message.json));
 }
 
 async function getOlderMessagesByConversation(
   conversationId: string,
   {
+    isGroup,
     limit = 100,
+    messageId,
     receivedAt = Number.MAX_VALUE,
     sentAt = Number.MAX_VALUE,
-    messageId,
-    MessageCollection,
+    storyId,
   }: {
+    isGroup?: boolean;
     limit?: number;
+    messageId?: string;
     receivedAt?: number;
     sentAt?: number;
-    messageId?: string;
-    MessageCollection: typeof MessageModelCollectionType;
+    storyId?: string;
   }
 ) {
   const messages = await channels.getOlderMessagesByConversation(
     conversationId,
     {
+      isGroup,
       limit,
       receivedAt,
       sentAt,
       messageId,
+      storyId,
     }
   );
 
-  return new MessageCollection(handleMessageJSON(messages));
+  return handleMessageJSON(messages);
 }
+async function getOlderStories(options: {
+  conversationId?: string;
+  limit?: number;
+  receivedAt?: number;
+  sentAt?: number;
+  sourceUuid?: string;
+}): Promise<Array<MessageType>> {
+  return channels.getOlderStories(options);
+}
+
 async function getNewerMessagesByConversation(
   conversationId: string,
   {
+    isGroup,
     limit = 100,
     receivedAt = 0,
     sentAt = 0,
-    MessageCollection,
+    storyId,
   }: {
+    isGroup?: boolean;
     limit?: number;
     receivedAt?: number;
     sentAt?: number;
-    MessageCollection: typeof MessageModelCollectionType;
+    storyId?: UUIDStringType;
   }
 ) {
   const messages = await channels.getNewerMessagesByConversation(
     conversationId,
     {
+      isGroup,
       limit,
       receivedAt,
       sentAt,
+      storyId,
     }
   );
 
-  return new MessageCollection(handleMessageJSON(messages));
+  return handleMessageJSON(messages);
 }
-async function getLastConversationMessages({
+async function getConversationMessageStats({
   conversationId,
-  ourConversationId,
-  Message,
+  isGroup,
+  ourUuid,
 }: {
   conversationId: string;
-  ourConversationId: string;
-  Message: typeof MessageModel;
-}): Promise<LastConversationMessagesType> {
-  const {
+  isGroup?: boolean;
+  ourUuid: UUIDStringType;
+}): Promise<ConversationMessageStatsType> {
+  const { preview, activity, hasUserInitiatedMessages } =
+    await channels.getConversationMessageStats({
+      conversationId,
+      isGroup,
+      ourUuid,
+    });
+
+  return {
     preview,
     activity,
     hasUserInitiatedMessages,
-  } = await channels.getLastConversationMessages({
-    conversationId,
-    ourConversationId,
-  });
-
-  return {
-    preview: preview ? new Message(preview) : undefined,
-    activity: activity ? new Message(activity) : undefined,
-    hasUserInitiatedMessages,
   };
 }
-async function getMessageMetricsForConversation(conversationId: string) {
+async function getLastConversationMessage({
+  conversationId,
+}: {
+  conversationId: string;
+}) {
+  return channels.getLastConversationMessage({ conversationId });
+}
+async function getMessageMetricsForConversation(
+  conversationId: string,
+  storyId?: UUIDStringType,
+  isGroup?: boolean
+) {
   const result = await channels.getMessageMetricsForConversation(
-    conversationId
+    conversationId,
+    storyId,
+    isGroup
   );
 
   return result;
 }
+async function getConversationRangeCenteredOnMessage(options: {
+  conversationId: string;
+  limit?: number;
+  messageId: string;
+  receivedAt: number;
+  sentAt?: number;
+  storyId?: UUIDStringType;
+}) {
+  const result = await channels.getConversationRangeCenteredOnMessage(options);
+
+  return {
+    ...result,
+    older: handleMessageJSON(result.older),
+    newer: handleMessageJSON(result.newer),
+  };
+}
+
 function hasGroupCallHistoryMessage(
   conversationId: string,
   eraId: string
@@ -1315,64 +1376,50 @@ async function removeAllMessagesInConversation(
   conversationId: string,
   {
     logId,
-    MessageCollection,
   }: {
     logId: string;
-    MessageCollection: typeof MessageModelCollectionType;
   }
 ) {
   let messages;
   do {
     const chunkSize = 20;
-    window.log.info(
+    log.info(
       `removeAllMessagesInConversation/${logId}: Fetching chunk of ${chunkSize} messages`
     );
     // Yes, we really want the await in the loop. We're deleting a chunk at a
     //   time so we don't use too much memory.
     messages = await getOlderMessagesByConversation(conversationId, {
       limit: chunkSize,
-      MessageCollection,
     });
 
     if (!messages.length) {
       return;
     }
 
-    const ids = messages.map((message: MessageModel) => message.id);
+    const ids = messages.map(message => message.id);
 
-    window.log.info(`removeAllMessagesInConversation/${logId}: Cleanup...`);
+    log.info(`removeAllMessagesInConversation/${logId}: Cleanup...`);
     // Note: It's very important that these models are fully hydrated because
     //   we need to delete all associated on-disk files along with the database delete.
     const queue = new window.PQueue({ concurrency: 3, timeout: 1000 * 60 * 2 });
     queue.addAll(
-      messages.map((message: MessageModel) => async () => message.cleanup())
+      messages.map(
+        (message: MessageType) => async () => cleanupMessage(message)
+      )
     );
     await queue.onIdle();
 
-    window.log.info(`removeAllMessagesInConversation/${logId}: Deleting...`);
+    log.info(`removeAllMessagesInConversation/${logId}: Deleting...`);
     await channels.removeMessages(ids);
   } while (messages.length > 0);
 }
 
-async function getMessagesBySentAt(
-  sentAt: number,
-  {
-    MessageCollection,
-  }: { MessageCollection: typeof MessageModelCollectionType }
-) {
-  const messages = await channels.getMessagesBySentAt(sentAt);
-
-  return new MessageCollection(messages);
+async function getMessagesBySentAt(sentAt: number) {
+  return channels.getMessagesBySentAt(sentAt);
 }
 
-async function getExpiredMessages({
-  MessageCollection,
-}: {
-  MessageCollection: typeof MessageModelCollectionType;
-}) {
-  const messages = await channels.getExpiredMessages();
-
-  return new MessageCollection(messages);
+async function getExpiredMessages() {
+  return channels.getExpiredMessages();
 }
 
 function getMessagesUnexpectedlyMissingExpirationStartTimestamp() {
@@ -1386,14 +1433,8 @@ function getSoonestMessageExpiry() {
 async function getNextTapToViewMessageTimestampToAgeOut() {
   return channels.getNextTapToViewMessageTimestampToAgeOut();
 }
-async function getTapToViewMessagesNeedingErase({
-  MessageCollection,
-}: {
-  MessageCollection: typeof MessageModelCollectionType;
-}) {
-  const messages = await channels.getTapToViewMessagesNeedingErase();
-
-  return new MessageCollection(messages);
+async function getTapToViewMessagesNeedingErase() {
+  return channels.getTapToViewMessagesNeedingErase();
 }
 
 // Unprocessed
@@ -1410,9 +1451,6 @@ async function getUnprocessedById(id: string) {
   return channels.getUnprocessedById(id);
 }
 
-async function updateUnprocessedAttempts(id: string, attempts: number) {
-  await channels.updateUnprocessedAttempts(id, attempts);
-}
 async function updateUnprocessedWithData(
   id: string,
   data: UnprocessedUpdateType
@@ -1521,14 +1559,107 @@ async function getRecentEmojis(limit = 32) {
   return channels.getRecentEmojis(limit);
 }
 
+// Badges
+
+function getAllBadges(): Promise<Array<BadgeType>> {
+  return channels.getAllBadges();
+}
+
+async function updateOrCreateBadges(
+  badges: ReadonlyArray<BadgeType>
+): Promise<void> {
+  if (badges.length) {
+    await channels.updateOrCreateBadges(badges);
+  }
+}
+
+function badgeImageFileDownloaded(
+  url: string,
+  localPath: string
+): Promise<void> {
+  return channels.badgeImageFileDownloaded(url, localPath);
+}
+
+// Story Distributions
+
+async function _getAllStoryDistributions(): Promise<
+  Array<StoryDistributionType>
+> {
+  return channels._getAllStoryDistributions();
+}
+async function _getAllStoryDistributionMembers(): Promise<
+  Array<StoryDistributionMemberType>
+> {
+  return channels._getAllStoryDistributionMembers();
+}
+async function _deleteAllStoryDistributions(): Promise<void> {
+  await channels._deleteAllStoryDistributions();
+}
+async function createNewStoryDistribution(
+  distribution: StoryDistributionWithMembersType
+): Promise<void> {
+  await channels.createNewStoryDistribution(distribution);
+}
+async function getAllStoryDistributionsWithMembers(): Promise<
+  Array<StoryDistributionWithMembersType>
+> {
+  return channels.getAllStoryDistributionsWithMembers();
+}
+async function getStoryDistributionWithMembers(
+  id: string
+): Promise<StoryDistributionWithMembersType | undefined> {
+  return channels.getStoryDistributionWithMembers(id);
+}
+async function modifyStoryDistribution(
+  distribution: StoryDistributionType
+): Promise<void> {
+  await channels.modifyStoryDistribution(distribution);
+}
+async function modifyStoryDistributionMembers(
+  id: string,
+  options: {
+    toAdd: Array<UUIDStringType>;
+    toRemove: Array<UUIDStringType>;
+  }
+): Promise<void> {
+  await channels.modifyStoryDistributionMembers(id, options);
+}
+async function deleteStoryDistribution(id: UUIDStringType): Promise<void> {
+  await channels.deleteStoryDistribution(id);
+}
+
+// Story Reads
+
+async function _getAllStoryReads(): Promise<Array<StoryReadType>> {
+  return channels._getAllStoryReads();
+}
+async function _deleteAllStoryReads(): Promise<void> {
+  await channels._deleteAllStoryReads();
+}
+async function addNewStoryRead(read: StoryReadType): Promise<void> {
+  return channels.addNewStoryRead(read);
+}
+async function getLastStoryReadsForAuthor(options: {
+  authorId: UUIDStringType;
+  conversationId?: UUIDStringType;
+  limit?: number;
+}): Promise<Array<StoryReadType>> {
+  return channels.getLastStoryReadsForAuthor(options);
+}
+async function countStoryReadsByConversation(
+  conversationId: string
+): Promise<number> {
+  return channels.countStoryReadsByConversation(conversationId);
+}
+
 // Other
 
 async function removeAll() {
   await channels.removeAll();
 }
 
-async function removeAllConfiguration() {
-  await channels.removeAllConfiguration();
+async function removeAllConfiguration(type?: RemoveAllConfiguration) {
+  await channels.removeAllConfiguration(type);
 }
 
 async function cleanupOrphanedAttachments() {
@@ -1551,22 +1682,22 @@ async function removeOtherData() {
 }
 
 async function callChannel(name: string) {
-  return new Promise<void>((resolve, reject) => {
-    ipcRenderer.send(name);
-    ipcRenderer.once(`${name}-done`, (_, error) => {
-      if (error) {
-        reject(error);
+  return createTaskWithTimeout(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        ipc.send(name);
+        ipc.once(`${name}-done`, (_, error) => {
+          if (error) {
+            reject(error);
 
-        return;
-      }
+            return;
+          }
 
-      resolve();
-    });
-
-    setTimeout(() => {
-      reject(new Error(`callChannel call to ${name} timed out`));
-    }, DATABASE_UPDATE_TIMEOUT);
-  });
+          resolve();
+        });
+      }),
+    `callChannel call to ${name}`
+  )();
 }
 
 async function getMessagesNeedingUpgrade(
@@ -1641,6 +1772,10 @@ async function updateAllConversationColors(
     conversationColor,
     customColorData
   );
+}
+
+function getMaxMessageCounter(): Promise<number | undefined> {
+  return channels.getMaxMessageCounter();
 }
 
 function getStatisticsForLogging(): Promise<Record<string, string>> {

@@ -1,18 +1,19 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { FunctionComponent, useMemo } from 'react';
+import type { FunctionComponent } from 'react';
+import React, { useMemo } from 'react';
 
-import { ConversationTypeType } from '../../../state/ducks/conversations';
-import { LocalizerType } from '../../../types/Util';
+import type { ConversationTypeType } from '../../../state/ducks/conversations';
+import type { LocalizerType } from '../../../types/Util';
 import { PanelSection } from './PanelSection';
 import { PanelRow } from './PanelRow';
-import { ConversationDetailsIcon } from './ConversationDetailsIcon';
+import { ConversationDetailsIcon, IconType } from './ConversationDetailsIcon';
 import { Select } from '../../Select';
 import { isMuted } from '../../../util/isMuted';
-import { assert } from '../../../util/assert';
 import { getMuteOptions } from '../../../util/getMuteOptions';
 import { parseIntOrThrow } from '../../../util/parseIntOrThrow';
+import { useUniqueId } from '../../../hooks/useUniqueId';
 
 type PropsType = {
   conversationType: ConversationTypeType;
@@ -25,7 +26,9 @@ type PropsType = {
   setMuteExpiration: (muteExpiresAt: undefined | number) => unknown;
 };
 
-export const ConversationNotificationsSettings: FunctionComponent<PropsType> = ({
+export const ConversationNotificationsSettings: FunctionComponent<
+  PropsType
+> = ({
   conversationType,
   dontNotifyForMentionsIfMuted,
   i18n,
@@ -33,13 +36,8 @@ export const ConversationNotificationsSettings: FunctionComponent<PropsType> = (
   setMuteExpiration,
   setDontNotifyForMentionsIfMuted,
 }) => {
-  // This assertion is here to prevent accidental usage of this component in an untested
-  //   context.
-  assert(
-    conversationType === 'group',
-    '<ConversationNotificationsSettings> SHOULD work for non-group conversations, but it has not been tested there'
-  );
-
+  const muteNotificationsSelectId = useUniqueId();
+  const mentionsSelectId = useUniqueId();
   const muteOptions = useMemo(
     () => [
       ...(isMuted(muteExpiresAt)
@@ -81,12 +79,21 @@ export const ConversationNotificationsSettings: FunctionComponent<PropsType> = (
           icon={
             <ConversationDetailsIcon
               ariaLabel={i18n('muteNotificationsTitle')}
-              icon="mute"
+              icon={IconType.mute}
             />
           }
-          label={i18n('muteNotificationsTitle')}
+          label={
+            <label htmlFor={muteNotificationsSelectId}>
+              {i18n('muteNotificationsTitle')}
+            </label>
+          }
           right={
-            <Select options={muteOptions} onChange={onMuteChange} value={-1} />
+            <Select
+              id={muteNotificationsSelectId}
+              options={muteOptions}
+              onChange={onMuteChange}
+              value={-1}
+            />
           }
         />
         {conversationType === 'group' && (
@@ -96,13 +103,18 @@ export const ConversationNotificationsSettings: FunctionComponent<PropsType> = (
                 ariaLabel={i18n(
                   'ConversationNotificationsSettings__mentions__label'
                 )}
-                icon="mention"
+                icon={IconType.mention}
               />
             }
-            label={i18n('ConversationNotificationsSettings__mentions__label')}
+            label={
+              <label htmlFor={mentionsSelectId}>
+                {i18n('ConversationNotificationsSettings__mentions__label')}
+              </label>
+            }
             info={i18n('ConversationNotificationsSettings__mentions__info')}
             right={
               <Select
+                id={mentionsSelectId}
                 options={[
                   {
                     text: i18n(

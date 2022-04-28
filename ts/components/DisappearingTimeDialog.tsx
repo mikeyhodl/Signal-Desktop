@@ -1,12 +1,12 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useState } from 'react';
 
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { Select } from './Select';
-import { LocalizerType } from '../types/Util';
-import { Theme } from '../util/theme';
+import type { LocalizerType } from '../types/Util';
+import type { Theme } from '../util/theme';
 
 const CSS_MODULE = 'module-disappearing-time-dialog';
 
@@ -91,12 +91,14 @@ export function DisappearingTimeDialog(props: PropsType): JSX.Element {
       <p>{i18n('DisappearingTimeDialog__body')}</p>
       <section className={`${CSS_MODULE}__time-boxes`}>
         <Select
+          ariaLabel={i18n('DisappearingTimeDialog__label--value')}
           moduleClassName={`${CSS_MODULE}__time-boxes__value`}
           value={unitValue}
           onChange={newValue => setUnitValue(parseInt(newValue, 10))}
           options={values.map(value => ({ value, text: value.toString() }))}
         />
         <Select
+          ariaLabel={i18n('DisappearingTimeDialog__label--units')}
           moduleClassName={`${CSS_MODULE}__time-boxes__units`}
           value={unit}
           onChange={newUnit => {

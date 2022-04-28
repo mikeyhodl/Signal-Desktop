@@ -1,21 +1,43 @@
-// Copyright 2019-2020 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useEffect } from 'react';
-import classNames from 'classnames';
 import { createPortal } from 'react-dom';
-import { Theme, themeClassName } from '../util/theme';
+import FocusTrap from 'focus-trap-react';
+import type { SpringValues } from '@react-spring/web';
+import { animated } from '@react-spring/web';
+import classNames from 'classnames';
 
-export type PropsType = {
-  readonly noMouseClose?: boolean;
-  readonly onEscape?: () => unknown;
-  readonly onClose: () => unknown;
-  readonly children: React.ReactElement;
-  readonly theme?: Theme;
-};
+import type { ModalConfigType } from '../hooks/useAnimated';
+import type { Theme } from '../util/theme';
+import { getClassNamesFor } from '../util/getClassNamesFor';
+import { themeClassName } from '../util/theme';
+import { useEscapeHandling } from '../hooks/useEscapeHandling';
+
+export type PropsType = Readonly<{
+  children: React.ReactElement;
+  moduleClassName?: string;
+  noMouseClose?: boolean;
+  onClose: () => unknown;
+  onEscape?: () => unknown;
+  onTopOfEverything?: boolean;
+  overlayStyles?: SpringValues<ModalConfigType>;
+  theme?: Theme;
+  useFocusTrap?: boolean;
+}>;
 
 export const ModalHost = React.memo(
-  ({ onEscape, onClose, children, noMouseClose, theme }: PropsType) => {
+  ({
+    children,
+    moduleClassName,
+    noMouseClose,
+    onClose,
+    onEscape,
+    onTopOfEverything,
+    overlayStyles,
+    theme,
+    useFocusTrap = true,
+  }: PropsType) => {
     const [root, setRoot] = React.useState<HTMLElement | null>(null);
     const [isMouseDown, setIsMouseDown] = React.useState(false);
 
@@ -30,25 +52,7 @@ export const ModalHost = React.memo(
       };
     }, []);
 
-    useEffect(() => {
-      const handler = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          if (onEscape) {
-            onEscape();
-          } else {
-            onClose();
-          }
-
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      };
-      document.addEventListener('keydown', handler);
-
-      return () => {
-        document.removeEventListener('keydown', handler);
-      };
-    }, [onEscape, onClose]);
+    useEscapeHandling(onEscape || onClose);
 
     // This makes it easier to write dialogs to be hosted here; they won't have to worry
     //   as much about preventing propagation of mouse events.
@@ -71,19 +75,43 @@ export const ModalHost = React.memo(
       [onClose, isMouseDown, setIsMouseDown]
     );
 
+    const className = classNames([
+      theme ? themeClassName(theme) : undefined,
+      onTopOfEverything ? 'module-modal-host--on-top-of-everything' : undefined,
+    ]);
+    const getClassName = getClassNamesFor('module-modal-host', moduleClassName);
+
+    const modalContent = (
+      <div className={className}>
+        <animated.div
+          role="presentation"
+          className={getClassName('__overlay')}
+          style={overlayStyles}
+        />
+        <div
+          className={getClassName('__overlay-container')}
+          onMouseDown={noMouseClose ? undefined : handleMouseDown}
+          onMouseUp={noMouseClose ? undefined : handleMouseUp}
+        >
+          {children}
+        </div>
+      </div>
+    );
+
     return root
       ? createPortal(
-          <div
-            role="presentation"
-            className={classNames(
-              'module-modal-host__overlay',
-              theme ? themeClassName(theme) : undefined
-            )}
-            onMouseDown={noMouseClose ? undefined : handleMouseDown}
-            onMouseUp={noMouseClose ? undefined : handleMouseUp}
-          >
-            {children}
-          </div>,
+          useFocusTrap ? (
+            <FocusTrap
+              focusTrapOptions={{
+                // This is alright because the overlay covers the entire screen
+                allowOutsideClick: false,
+              }}
+            >
+              {modalContent}
+            </FocusTrap>
+          ) : (
+            modalContent
+          ),
           root
         )
       : null;

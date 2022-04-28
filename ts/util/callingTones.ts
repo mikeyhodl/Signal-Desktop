@@ -1,4 +1,4 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import PQueue from 'p-queue';
@@ -7,12 +7,12 @@ import { Sound } from './Sound';
 const ringtoneEventQueue = new PQueue({
   concurrency: 1,
   timeout: 1000 * 60 * 2,
+  throwOnTimeout: true,
 });
 
 class CallingTones {
   private ringtone?: Sound;
 
-  // eslint-disable-next-line class-methods-use-this
   async playEndCall(): Promise<void> {
     const canPlayTone = window.Events.getCallRingtoneNotification();
     if (!canPlayTone) {
@@ -55,7 +55,6 @@ class CallingTones {
     });
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async someonePresenting() {
     const canPlayTone = window.Events.getCallRingtoneNotification();
     if (!canPlayTone) {

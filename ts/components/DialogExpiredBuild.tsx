@@ -3,14 +3,20 @@
 
 import React from 'react';
 
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
+import type { WidthBreakpoint } from './_util';
+
+import { LeftPaneDialog } from './LeftPaneDialog';
+import { openLinkInWebBrowser } from '../util/openLinkInWebBrowser';
 
 type PropsType = {
+  containerWidthBreakpoint: WidthBreakpoint;
   hasExpired: boolean;
   i18n: LocalizerType;
 };
 
 export const DialogExpiredBuild = ({
+  containerWidthBreakpoint,
   hasExpired,
   i18n,
 }: PropsType): JSX.Element | null => {
@@ -19,19 +25,16 @@ export const DialogExpiredBuild = ({
   }
 
   return (
-    <div className="LeftPaneDialog LeftPaneDialog--error">
-      <div className="LeftPaneDialog__message">
-        {i18n('expiredWarning')}{' '}
-        <a
-          className="LeftPaneDialog__action-text"
-          href="https://signal.org/download/"
-          rel="noreferrer"
-          tabIndex={-1}
-          target="_blank"
-        >
-          {i18n('upgrade')}
-        </a>
-      </div>
-    </div>
+    <LeftPaneDialog
+      containerWidthBreakpoint={containerWidthBreakpoint}
+      type="error"
+      onClick={() => {
+        openLinkInWebBrowser('https://signal.org/download/');
+      }}
+      clickLabel={i18n('upgrade')}
+      hasAction
+    >
+      {i18n('expiredWarning')}{' '}
+    </LeftPaneDialog>
   );
 };

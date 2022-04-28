@@ -5,12 +5,19 @@ import * as React from 'react';
 
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
-import { boolean } from '@storybook/addon-knobs';
+import { boolean, select } from '@storybook/addon-knobs';
 
 import { IMAGE_JPEG } from '../types/MIME';
-import { CompositionArea, Props } from './CompositionArea';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { Props } from './CompositionArea';
+import { CompositionArea } from './CompositionArea';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
+import { StorybookThemeContext } from '../../.storybook/StorybookThemeContext';
+
+import { fakeDraftAttachment } from '../test-both/helpers/fakeAttachment';
+import { landscapeGreenUrl } from '../storybook/Fixtures';
+import { RecordingState } from '../state/ducks/audioRecorder';
+import { ConversationColors } from '../types/Colors';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -19,26 +26,29 @@ const story = storiesOf('Components/CompositionArea', module);
 // necessary for the add attachment button to render properly
 story.addDecorator(storyFn => <div className="file-input">{storyFn()}</div>);
 
-// necessary for the mic button to render properly
-const micCellEl = new DOMParser().parseFromString(
-  `
-    <div class="capture-audio">
-      <button class="microphone"></button>
-    </div>
-  `,
-  'text/html'
-).body.firstElementChild as HTMLElement;
-
-const createProps = (overrideProps: Partial<Props> = {}): Props => ({
+const useProps = (overrideProps: Partial<Props> = {}): Props => ({
+  addAttachment: action('addAttachment'),
+  addPendingAttachment: action('addPendingAttachment'),
+  conversationId: '123',
   i18n,
-  micCellEl,
-  onChooseAttachment: action('onChooseAttachment'),
+  onSendMessage: action('onSendMessage'),
+  processAttachments: action('processAttachments'),
+  removeAttachment: action('removeAttachment'),
+  theme: React.useContext(StorybookThemeContext),
+
   // AttachmentList
   draftAttachments: overrideProps.draftAttachments || [],
-  onAddAttachment: action('onAddAttachment'),
   onClearAttachments: action('onClearAttachments'),
-  onClickAttachment: action('onClickAttachment'),
-  onCloseAttachment: action('onCloseAttachment'),
+  // AudioCapture
+  cancelRecording: action('cancelRecording'),
+  completeRecording: action('completeRecording'),
+  errorRecording: action('errorRecording'),
+  recordingState: select(
+    'recordingState',
+    RecordingState,
+    overrideProps.recordingState || RecordingState.Idle
+  ),
+  startRecording: action('startRecording'),
   // StagedLinkPreview
   linkPreviewLoading: Boolean(overrideProps.linkPreviewLoading),
   linkPreviewResult: overrideProps.linkPreviewResult,
@@ -53,11 +63,11 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
     overrideProps.shouldSendHighQualityAttachments
   ),
   // CompositionInput
-  onSubmit: action('onSubmit'),
   onEditorStateChange: action('onEditorStateChange'),
   onTextTooLong: action('onTextTooLong'),
   draftText: overrideProps.draftText || undefined,
   clearQuotedMessage: action('clearQuotedMessage'),
+  getPreferredBadge: () => undefined,
   getQuotedMessage: action('getQuotedMessage'),
   sortedGroupMembers: [],
   // EmojiButton
@@ -106,13 +116,13 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
 });
 
 story.add('Default', () => {
-  const props = createProps();
+  const props = useProps();
 
   return <CompositionArea {...props} />;
 });
 
 story.add('Starting Text', () => {
-  const props = createProps({
+  const props = useProps({
     draftText: "here's some starting text",
   });
 
@@ -120,7 +130,7 @@ story.add('Starting Text', () => {
 });
 
 story.add('Sticker Button', () => {
-  const props = createProps({
+  const props = useProps({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     knownPacks: [{} as any],
   });
@@ -129,7 +139,7 @@ story.add('Sticker Button', () => {
 });
 
 story.add('Message Request', () => {
-  const props = createProps({
+  const props = useProps({
     messageRequestsEnabled: true,
   });
 
@@ -137,7 +147,7 @@ story.add('Message Request', () => {
 });
 
 story.add('SMS-only fetching UUID', () => {
-  const props = createProps({
+  const props = useProps({
     isSMSOnly: true,
     isFetchingUUID: true,
   });
@@ -146,7 +156,7 @@ story.add('SMS-only fetching UUID', () => {
 });
 
 story.add('SMS-only', () => {
-  const props = createProps({
+  const props = useProps({
     isSMSOnly: true,
   });
 
@@ -154,11 +164,12 @@ story.add('SMS-only', () => {
 });
 
 story.add('Attachments', () => {
-  const props = createProps({
+  const props = useProps({
     draftAttachments: [
-      {
+      fakeDraftAttachment({
         contentType: IMAGE_JPEG,
-      },
+        url: landscapeGreenUrl,
+      }),
     ],
   });
 
@@ -167,9 +178,24 @@ story.add('Attachments', () => {
 
 story.add('Announcements Only group', () => (
   <CompositionArea
-    {...createProps({
+    {...useProps({
       announcementsOnly: true,
       areWeAdmin: false,
+    })}
+  />
+));
+
+story.add('Quote', () => (
+  <CompositionArea
+    {...useProps({
+      quotedMessageProps: {
+        text: 'something',
+        conversationColor: ConversationColors[10],
+        isViewOnce: false,
+        referencedMessageNotFound: false,
+        authorTitle: 'Someone',
+        isFromMe: false,
+      },
     })}
   />
 ));

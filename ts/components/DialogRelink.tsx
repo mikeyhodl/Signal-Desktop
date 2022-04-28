@@ -3,15 +3,20 @@
 
 import React from 'react';
 
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
+import type { WidthBreakpoint } from './_util';
+
+import { LeftPaneDialog } from './LeftPaneDialog';
 
 export type PropsType = {
+  containerWidthBreakpoint: WidthBreakpoint;
   i18n: LocalizerType;
   isRegistrationDone: boolean;
   relinkDevice: () => void;
 };
 
 export const DialogRelink = ({
+  containerWidthBreakpoint,
   i18n,
   isRegistrationDone,
   relinkDevice,
@@ -21,20 +26,14 @@ export const DialogRelink = ({
   }
 
   return (
-    <div className="LeftPaneDialog LeftPaneDialog--warning">
-      <div className="LeftPaneDialog__icon LeftPaneDialog__icon--relink" />
-      <div className="LeftPaneDialog__message">
-        <h3>{i18n('unlinked')}</h3>
-        <div>
-          <button
-            className="LeftPaneDialog__action-text"
-            onClick={relinkDevice}
-            type="button"
-          >
-            {i18n('unlinkedWarning')}
-          </button>
-        </div>
-      </div>
-    </div>
+    <LeftPaneDialog
+      containerWidthBreakpoint={containerWidthBreakpoint}
+      type="warning"
+      icon="relink"
+      clickLabel={i18n('unlinkedWarning')}
+      onClick={relinkDevice}
+      title={i18n('unlinked')}
+      hasAction
+    />
   );
 };

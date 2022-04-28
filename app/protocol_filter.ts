@@ -1,7 +1,7 @@
 // Copyright 2018-2020 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import {
+import type {
   protocol as ElectronProtocol,
   ProtocolRequest,
   ProtocolResponse,
@@ -9,6 +9,15 @@ import {
 
 import { isAbsolute, normalize } from 'path';
 import { existsSync, realpathSync } from 'fs';
+import {
+  getAvatarsPath,
+  getBadgesPath,
+  getDraftPath,
+  getPath,
+  getStickersPath,
+  getTempPath,
+  getUpdateCachePath,
+} from '../ts/util/attachments';
 
 type CallbackType = (response: string | ProtocolResponse) => void;
 
@@ -29,7 +38,13 @@ export function _urlToPath(
   options?: { isWindows: boolean }
 ): string {
   const decoded = decodeURIComponent(targetUrl);
-  const withoutScheme = decoded.slice(options?.isWindows ? 8 : 7);
+
+  // We generally expect URLs to start with file:// or file:/// here, but for users with
+  //   their home directory redirected to a UNC share, it will start with //.
+  const withoutScheme = decoded.startsWith('//')
+    ? decoded
+    : decoded.slice(options?.isWindows ? 8 : 7);
+
   const withoutQuerystring = _eliminateAllAfterCharacter(withoutScheme, '?');
   const withoutHash = _eliminateAllAfterCharacter(withoutQuerystring, '#');
 
@@ -45,6 +60,17 @@ function _createFileHandler({
   installPath: string;
   isWindows: boolean;
 }) {
+  const allowedRoots = [
+    userDataPath,
+    installPath,
+    getAvatarsPath(userDataPath),
+    getBadgesPath(userDataPath),
+    getDraftPath(userDataPath),
+    getPath(userDataPath),
+    getStickersPath(userDataPath),
+    getTempPath(userDataPath),
+    getUpdateCachePath(userDataPath),
+  ];
   return (request: ProtocolRequest, callback: CallbackType): void => {
     let targetPath;
 
@@ -89,24 +115,17 @@ function _createFileHandler({
       return;
     }
 
-    if (
-      !properCasing.startsWith(
-        isWindows ? userDataPath.toLowerCase() : userDataPath
-      ) &&
-      !properCasing.startsWith(
-        isWindows ? installPath.toLowerCase() : installPath
-      )
-    ) {
-      console.log(
-        `Warning: denying request to path '${realPath}' (userDataPath: '${userDataPath}', installPath: '${installPath}')`
-      );
-      callback({ error: -10 });
-      return;
+    for (const root of allowedRoots) {
+      if (properCasing.startsWith(isWindows ? root.toLowerCase() : root)) {
+        callback({ path: realPath });
+        return;
+      }
     }
 
-    callback({
-      path: realPath,
-    });
+    console.log(
+      `Warning: denying request to path '${realPath}' (allowedRoots: '${allowedRoots}')`
+    );
+    callback({ error: -10 });
   };
 }
 
@@ -140,7 +159,7 @@ export function installWebHandler({
   enableHttp,
 }: {
   protocol: typeof ElectronProtocol;
-  enableHttp: string;
+  enableHttp: boolean;
 }): void {
   protocol.interceptFileProtocol('about', _disabledHandler);
   protocol.interceptFileProtocol('content', _disabledHandler);

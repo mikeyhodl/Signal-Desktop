@@ -1,8 +1,20 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { format as formatPhoneNumber } from './PhoneNumber';
-import { AttachmentType } from './Attachment';
+import { omit } from 'lodash';
+
+import { SignalService as Proto } from '../protobuf';
+import type { MessageAttributesType } from '../model-types.d';
+
+import { isNotNil } from '../util/isNotNil';
+import {
+  format as formatPhoneNumber,
+  parse as parsePhoneNumber,
+} from './PhoneNumber';
+import type { AttachmentType, migrateDataToFileSystem } from './Attachment';
+import { toLogFormat } from './errors';
+import type { LoggerType } from './Logging';
+import type { UUIDStringType } from './UUID';
 
 export type EmbeddedContactType = {
   name?: Name;
@@ -14,7 +26,7 @@ export type EmbeddedContactType = {
 
   // Populated by selector
   firstNumber?: string;
-  isNumberOnSignal?: boolean;
+  uuid?: UUIDStringType;
 };
 
 type Name = {
@@ -63,26 +75,70 @@ export type PostalAddress = {
   country?: string;
 };
 
-type Avatar = {
+export type Avatar = {
   avatar: AttachmentType;
   isProfile: boolean;
 };
 
+const DEFAULT_PHONE_TYPE = Proto.DataMessage.Contact.Phone.Type.HOME;
+const DEFAULT_EMAIL_TYPE = Proto.DataMessage.Contact.Email.Type.HOME;
+const DEFAULT_ADDRESS_TYPE = Proto.DataMessage.Contact.PostalAddress.Type.HOME;
+
+export function numberToPhoneType(
+  type: number
+): Proto.DataMessage.Contact.Phone.Type {
+  if (type === Proto.DataMessage.Contact.Phone.Type.MOBILE) {
+    return type;
+  }
+  if (type === Proto.DataMessage.Contact.Phone.Type.WORK) {
+    return type;
+  }
+  if (type === Proto.DataMessage.Contact.Phone.Type.CUSTOM) {
+    return type;
+  }
+
+  return DEFAULT_PHONE_TYPE;
+}
+
+export function numberToEmailType(
+  type: number
+): Proto.DataMessage.Contact.Email.Type {
+  if (type === Proto.DataMessage.Contact.Email.Type.MOBILE) {
+    return type;
+  }
+  if (type === Proto.DataMessage.Contact.Email.Type.WORK) {
+    return type;
+  }
+  if (type === Proto.DataMessage.Contact.Email.Type.CUSTOM) {
+    return type;
+  }
+
+  return DEFAULT_EMAIL_TYPE;
+}
+
+export function numberToAddressType(
+  type: number
+): Proto.DataMessage.Contact.PostalAddress.Type {
+  if (type === Proto.DataMessage.Contact.PostalAddress.Type.WORK) {
+    return type;
+  }
+  if (type === Proto.DataMessage.Contact.PostalAddress.Type.CUSTOM) {
+    return type;
+  }
+
+  return DEFAULT_ADDRESS_TYPE;
+}
+
 export function embeddedContactSelector(
   contact: EmbeddedContactType,
   options: {
-    regionCode: string;
+    regionCode?: string;
     firstNumber?: string;
-    isNumberOnSignal?: boolean;
+    uuid?: UUIDStringType;
     getAbsoluteAttachmentPath: (path: string) => string;
   }
 ): EmbeddedContactType {
-  const {
-    getAbsoluteAttachmentPath,
-    firstNumber,
-    isNumberOnSignal,
-    regionCode,
-  } = options;
+  const { getAbsoluteAttachmentPath, firstNumber, uuid, regionCode } = options;
 
   let { avatar } = contact;
   if (avatar && avatar.avatar) {
@@ -104,7 +160,7 @@ export function embeddedContactSelector(
   return {
     ...contact,
     firstNumber,
-    isNumberOnSignal,
+    uuid,
     avatar,
     number:
       contact.number &&
@@ -126,4 +182,168 @@ export function getName(contact: EmbeddedContactType): string | undefined {
     (givenName && familyName && `${givenName} ${familyName}`) || undefined;
 
   return displayName || organization || backupName || givenName || familyName;
+}
+
+export function parseAndWriteAvatar(
+  upgradeAttachment: typeof migrateDataToFileSystem
+) {
+  return async (
+    contact: EmbeddedContactType,
+    context: {
+      message: MessageAttributesType;
+      regionCode: string;
+      logger: Pick<LoggerType, 'error'>;
+      writeNewAttachmentData: (data: Uint8Array) => Promise<string>;
+    }
+  ): Promise<EmbeddedContactType> => {
+    const { message, regionCode, logger } = context;
+    const { avatar } = contact;
+
+    const contactWithUpdatedAvatar =
+      avatar && avatar.avatar
+        ? {
+            ...contact,
+            avatar: {
+              ...avatar,
+              avatar: await upgradeAttachment(avatar.avatar, context),
+            },
+          }
+        : omit(contact, ['avatar']);
+
+    // eliminates empty numbers, emails, and addresses; adds type if not provided
+    const parsedContact = parseContact(contactWithUpdatedAvatar, {
+      regionCode,
+    });
+
+    const error = _validate(parsedContact, {
+      messageId: idForLogging(message),
+    });
+    if (error) {
+      logger.error(
+        'parseAndWriteAvatar: contact was malformed.',
+        toLogFormat(error)
+      );
+    }
+
+    return parsedContact;
+  };
+}
+
+function parseContact(
+  contact: EmbeddedContactType,
+  { regionCode }: { regionCode: string }
+): EmbeddedContactType {
+  const boundParsePhone = (phoneNumber: Phone): Phone | undefined =>
+    parsePhoneItem(phoneNumber, { regionCode });
+
+  const skipEmpty = <T>(arr: Array<T | undefined>): Array<T> | undefined => {
+    const filtered: Array<T> = arr.filter(isNotNil);
+    return filtered.length ? filtered : undefined;
+  };
+
+  const number = skipEmpty((contact.number || []).map(boundParsePhone));
+  const email = skipEmpty((contact.email || []).map(parseEmailItem));
+  const address = skipEmpty((contact.address || []).map(parseAddress));
+
+  let result = {
+    ...omit(contact, ['avatar', 'number', 'email', 'address']),
+    ...parseAvatar(contact.avatar),
+  };
+
+  if (number) {
+    result = { ...result, number };
+  }
+  if (email) {
+    result = { ...result, email };
+  }
+  if (address) {
+    result = { ...result, address };
+  }
+  return result;
+}
+
+function idForLogging(message: MessageAttributesType): string {
+  return `${message.source}.${message.sourceDevice} ${message.sent_at}`;
+}
+
+// Exported for testing
+export function _validate(
+  contact: EmbeddedContactType,
+  { messageId }: { messageId: string }
+): Error | undefined {
+  const { name, number, email, address, organization } = contact;
+
+  if ((!name || !name.displayName) && !organization) {
+    return new Error(
+      `Message ${messageId}: Contact had neither 'displayName' nor 'organization'`
+    );
+  }
+
+  if (
+    (!number || !number.length) &&
+    (!email || !email.length) &&
+    (!address || !address.length)
+  ) {
+    return new Error(
+      `Message ${messageId}: Contact had no included numbers, email or addresses`
+    );
+  }
+
+  return undefined;
+}
+
+function parsePhoneItem(
+  item: Phone,
+  { regionCode }: { regionCode: string }
+): Phone | undefined {
+  if (!item.value) {
+    return undefined;
+  }
+
+  return {
+    ...item,
+    type: item.type || DEFAULT_PHONE_TYPE,
+    value: parsePhoneNumber(item.value, { regionCode }),
+  };
+}
+
+function parseEmailItem(item: Email): Email | undefined {
+  if (!item.value) {
+    return undefined;
+  }
+
+  return { ...item, type: item.type || DEFAULT_EMAIL_TYPE };
+}
+
+function parseAddress(address: PostalAddress): PostalAddress | undefined {
+  if (!address) {
+    return undefined;
+  }
+
+  if (
+    !address.street &&
+    !address.pobox &&
+    !address.neighborhood &&
+    !address.city &&
+    !address.region &&
+    !address.postcode &&
+    !address.country
+  ) {
+    return undefined;
+  }
+
+  return { ...address, type: address.type || DEFAULT_ADDRESS_TYPE };
+}
+
+function parseAvatar(avatar?: Avatar): { avatar: Avatar } | undefined {
+  if (!avatar) {
+    return undefined;
+  }
+
+  return {
+    avatar: {
+      ...avatar,
+      isProfile: avatar.isProfile || false,
+    },
+  };
 }

@@ -1,6 +1,8 @@
 // Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { UUIDStringType } from './UUID';
+
 export type BodyRangeType = {
   start: number;
   length: number;
@@ -11,17 +13,22 @@ export type BodyRangeType = {
 
 export type BodyRangesType = Array<BodyRangeType>;
 
+export type StoryContextType = {
+  authorUuid?: UUIDStringType;
+  timestamp: number;
+};
+
 export type RenderTextCallbackType = (options: {
   text: string;
   key: number;
 }) => JSX.Element | string;
 
 export type ReplacementValuesType = {
-  [key: string]: string | undefined;
+  [key: string]: string | number | undefined;
 };
 
 export type LocalizerType = {
-  (key: string, values?: Array<string | null> | ReplacementValuesType): string;
+  (key: string, values?: Array<string> | ReplacementValuesType): string;
   getLocale(): string;
 };
 
@@ -42,13 +49,12 @@ type InternalAssertProps<
   Missing = Omit<Result, keyof Value>
 > = keyof Missing extends never
   ? Result
-  : Result &
-      {
-        [key in keyof Required<Missing>]: [
-          never,
-          'AssertProps: missing property'
-        ];
-      };
+  : Result & {
+      [key in keyof Required<Missing>]: [
+        never,
+        'AssertProps: missing property'
+      ];
+    };
 
 export type AssertProps<Result, Value> = InternalAssertProps<Result, Value>;
 

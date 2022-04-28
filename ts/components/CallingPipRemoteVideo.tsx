@@ -1,24 +1,24 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useMemo, useEffect } from 'react';
 import { maxBy } from 'lodash';
+import type { VideoFrameSource } from 'ringrtc';
 import { Avatar } from './Avatar';
 import { CallBackgroundBlur } from './CallBackgroundBlur';
 import { DirectCallRemoteParticipant } from './DirectCallRemoteParticipant';
 import { GroupCallRemoteParticipant } from './GroupCallRemoteParticipant';
-import { LocalizerType } from '../types/Util';
-import {
+import type { LocalizerType } from '../types/Util';
+import type {
   ActiveCallType,
-  CallMode,
   GroupCallRemoteParticipantType,
   GroupCallVideoRequest,
-  VideoFrameSource,
 } from '../types/Calling';
+import { CallMode } from '../types/Calling';
 import { AvatarColors } from '../types/Colors';
-import { SetRendererCanvasType } from '../state/ducks/calling';
+import type { SetRendererCanvasType } from '../state/ducks/calling';
 import { useGetCallingFrameBuffer } from '../calling/useGetCallingFrameBuffer';
-import { usePageVisibility } from '../util/hooks';
+import { usePageVisibility } from '../hooks/usePageVisibility';
 import { missingCaseError } from '../util/missingCaseError';
 import { nonRenderedRemoteParticipant } from '../util/ringrtc/nonRenderedRemoteParticipant';
 
@@ -51,6 +51,7 @@ const NoVideo = ({
           <Avatar
             acceptedMessageRequest={acceptedMessageRequest}
             avatarPath={avatarPath}
+            badge={undefined}
             color={color || AvatarColors[0]}
             noteToSelf={false}
             conversationType="direct"
@@ -90,17 +91,16 @@ export const CallingPipRemoteVideo = ({
 
   const isPageVisible = usePageVisibility();
 
-  const activeGroupCallSpeaker:
-    | undefined
-    | GroupCallRemoteParticipantType = useMemo(() => {
-    if (activeCall.callMode !== CallMode.Group) {
-      return undefined;
-    }
+  const activeGroupCallSpeaker: undefined | GroupCallRemoteParticipantType =
+    useMemo(() => {
+      if (activeCall.callMode !== CallMode.Group) {
+        return undefined;
+      }
 
-    return maxBy(activeCall.remoteParticipants, participant =>
-      participant.presenting ? Infinity : participant.speakerTime || -Infinity
-    );
-  }, [activeCall.callMode, activeCall.remoteParticipants]);
+      return maxBy(activeCall.remoteParticipants, participant =>
+        participant.presenting ? Infinity : participant.speakerTime || -Infinity
+      );
+    }, [activeCall.callMode, activeCall.remoteParticipants]);
 
   useEffect(() => {
     if (activeCall.callMode !== CallMode.Group) {

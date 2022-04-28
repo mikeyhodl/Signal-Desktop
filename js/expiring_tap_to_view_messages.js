@@ -13,18 +13,19 @@
 
   async function eraseTapToViewMessages() {
     try {
-      window.log.info('eraseTapToViewMessages: Loading messages...');
-      const messages = await window.Signal.Data.getTapToViewMessagesNeedingErase(
-        {
-          MessageCollection: Whisper.MessageCollection,
-        }
+      window.SignalContext.log.info(
+        'eraseTapToViewMessages: Loading messages...'
       );
+      const messages =
+        await window.Signal.Data.getTapToViewMessagesNeedingErase({
+          MessageCollection: Whisper.MessageCollection,
+        });
 
       await Promise.all(
         messages.map(async fromDB => {
           const message = MessageController.register(fromDB.id, fromDB);
 
-          window.log.info(
+          window.SignalContext.log.info(
             'eraseTapToViewMessages: message data erased',
             message.idForLogging()
           );
@@ -33,13 +34,13 @@
         })
       );
     } catch (error) {
-      window.log.error(
+      window.SignalContext.log.error(
         'eraseTapToViewMessages: Error erasing messages',
         error && error.stack ? error.stack : error
       );
     }
 
-    window.log.info('eraseTapToViewMessages: complete');
+    window.SignalContext.log.info('eraseTapToViewMessages: complete');
   }
 
   let timeout;
@@ -49,7 +50,8 @@
     const HOUR = 60 * MINUTE;
     const THIRTY_DAYS = 30 * 24 * HOUR;
 
-    const receivedAt = await window.Signal.Data.getNextTapToViewMessageTimestampToAgeOut();
+    const receivedAt =
+      await window.Signal.Data.getNextTapToViewMessageTimestampToAgeOut();
     if (!receivedAt) {
       return;
     }
@@ -57,7 +59,7 @@
     const nextCheck = receivedAt + THIRTY_DAYS;
 
     Whisper.TapToViewMessagesListener.nextCheck = nextCheck;
-    window.log.info(
+    window.SignalContext.log.info(
       'checkTapToViewMessages: next check at',
       new Date(nextCheck).toISOString()
     );

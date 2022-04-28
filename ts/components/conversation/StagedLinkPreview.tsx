@@ -3,12 +3,14 @@
 
 import React from 'react';
 import classNames from 'classnames';
+import { unescape } from 'lodash';
 
-import { Image } from './Image';
+import { CurveType, Image } from './Image';
 import { LinkPreviewDate } from './LinkPreviewDate';
 
-import { AttachmentType, isImageAttachment } from '../../types/Attachment';
-import { LocalizerType } from '../../types/Util';
+import type { AttachmentType } from '../../types/Attachment';
+import { isImageAttachment } from '../../types/Attachment';
+import type { LocalizerType } from '../../types/Util';
 
 export type Props = {
   title?: string;
@@ -49,7 +51,10 @@ export const StagedLinkPreview: React.FC<Props> = ({
         <div className="module-staged-link-preview__icon-container">
           <Image
             alt={i18n('stagedPreviewThumbnail', [domain])}
-            softCorners
+            curveBottomLeft={CurveType.Tiny}
+            curveBottomRight={CurveType.Tiny}
+            curveTopRight={CurveType.Tiny}
+            curveTopLeft={CurveType.Tiny}
             height={72}
             width={72}
             url={image.url}
@@ -63,7 +68,7 @@ export const StagedLinkPreview: React.FC<Props> = ({
           <div className="module-staged-link-preview__title">{title}</div>
           {description && (
             <div className="module-staged-link-preview__description">
-              {description}
+              {unescape(description)}
             </div>
           )}
           <div className="module-staged-link-preview__footer">

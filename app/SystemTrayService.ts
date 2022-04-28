@@ -2,9 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { join } from 'path';
-import { BrowserWindow, app, Menu, Tray } from 'electron';
+import type { BrowserWindow, NativeImage } from 'electron';
+import { Menu, Tray, app, nativeImage } from 'electron';
 import * as log from '../ts/logging/log';
 import type { LocaleMessagesType } from '../ts/types/I18N';
+
+export type SystemTrayServiceOptionsType = Readonly<{
+  messages: LocaleMessagesType;
+
+  // For testing
+  createTrayInstance?: (icon: NativeImage) => Tray;
+}>;
 
 /**
  * A class that manages an [Electron `Tray` instance][0]. It's responsible for creating
@@ -22,14 +30,19 @@ export class SystemTrayService {
 
   private isEnabled = false;
 
+  private isQuitting = false;
+
   private unreadCount = 0;
 
   private boundRender: typeof SystemTrayService.prototype.render;
 
-  constructor({ messages }: Readonly<{ messages: LocaleMessagesType }>) {
+  private createTrayInstance: (icon: NativeImage) => Tray;
+
+  constructor({ messages, createTrayInstance }: SystemTrayServiceOptionsType) {
     log.info('System tray service: created');
     this.messages = messages;
     this.boundRender = this.render.bind(this);
+    this.createTrayInstance = createTrayInstance || (icon => new Tray(icon));
   }
 
   /**
@@ -91,6 +104,19 @@ export class SystemTrayService {
     this.render();
   }
 
+  /**
+   * Workaround for: https://github.com/electron/electron/issues/32581#issuecomment-1020359931
+   *
+   * Tray is automatically destroyed when app quits so we shouldn't destroy it
+   * twice when all windows will close.
+   */
+  markShouldQuit(): void {
+    log.info('System tray service: markShouldQuit');
+
+    this.tray = undefined;
+    this.isQuitting = true;
+  }
+
   private render(): void {
     if (this.isEnabled && this.browserWindow) {
       this.renderEnabled();
@@ -100,12 +126,24 @@ export class SystemTrayService {
   }
 
   private renderEnabled() {
+    if (this.isQuitting) {
+      log.info('System tray service: not rendering the tray, quitting');
+      return;
+    }
+
     log.info('System tray service: rendering the tray');
 
     this.tray = this.tray || this.createTray();
     const { browserWindow, tray } = this;
 
-    tray.setImage(getIcon(this.unreadCount));
+    try {
+      tray.setImage(getIcon(this.unreadCount));
+    } catch (err: unknown) {
+      log.warn(
+        'System tray service: failed to set preferred image. Falling back...'
+      );
+      tray.setImage(getDefaultIcon());
+    }
 
     // NOTE: we want to have the show/hide entry available in the tray icon
     // context menu, since the 'click' event may not work on all platforms.
@@ -169,7 +207,7 @@ export class SystemTrayService {
     log.info('System tray service: creating the tray');
 
     // This icon may be swiftly overwritten.
-    const result = new Tray(getIcon(this.unreadCount));
+    const result = this.createTrayInstance(getDefaultIcon());
 
     // Note: "When app indicator is used on Linux, the click event is ignored." This
     //   doesn't mean that the click event is always ignored on Linux; it depends on how
@@ -221,6 +259,12 @@ function getIcon(unreadCount: number) {
   }
 
   return join(__dirname, '..', 'images', `icon_${iconSize}.png`);
+}
+
+let defaultIcon: undefined | NativeImage;
+function getDefaultIcon(): NativeImage {
+  defaultIcon ??= nativeImage.createFromPath(getIcon(0));
+  return defaultIcon;
 }
 
 function forceOnTop(browserWindow: BrowserWindow) {

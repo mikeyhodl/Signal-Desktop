@@ -5,11 +5,16 @@ import * as React from 'react';
 import { groupBy, mapValues, orderBy } from 'lodash';
 import classNames from 'classnames';
 import { ContactName } from './ContactName';
-import { Avatar, Props as AvatarProps } from '../Avatar';
+import type { Props as AvatarProps } from '../Avatar';
+import { Avatar } from '../Avatar';
 import { Emoji } from '../emoji/Emoji';
-import { useRestoreFocus } from '../../util/hooks/useRestoreFocus';
-import { ConversationType } from '../../state/ducks/conversations';
-import { emojiToData, EmojiData } from '../emoji/lib';
+import { useRestoreFocus } from '../../hooks/useRestoreFocus';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../../state/selectors/badges';
+import type { EmojiData } from '../emoji/lib';
+import { emojiToData } from '../emoji/lib';
+import { useEscapeHandling } from '../../hooks/useEscapeHandling';
+import type { ThemeType } from '../../types/Util';
 
 export type Reaction = {
   emoji: string;
@@ -18,6 +23,7 @@ export type Reaction = {
     ConversationType,
     | 'acceptedMessageRequest'
     | 'avatarPath'
+    | 'badges'
     | 'color'
     | 'id'
     | 'isMe'
@@ -30,9 +36,11 @@ export type Reaction = {
 };
 
 export type OwnProps = {
+  getPreferredBadge: PreferredBadgeSelectorType;
   reactions: Array<Reaction>;
   pickedReaction?: string;
   onClose?: () => unknown;
+  theme: ThemeType;
 };
 
 export type Props = OwnProps &
@@ -59,7 +67,18 @@ type ReactionCategory = {
 type ReactionWithEmojiData = Reaction & EmojiData;
 
 export const ReactionViewer = React.forwardRef<HTMLDivElement, Props>(
-  ({ i18n, reactions, onClose, pickedReaction, ...rest }, ref) => {
+  (
+    {
+      getPreferredBadge,
+      i18n,
+      onClose,
+      pickedReaction,
+      reactions,
+      theme,
+      ...rest
+    },
+    ref
+  ) => {
     const reactionsWithEmojiData = React.useMemo(
       () =>
         reactions
@@ -120,24 +139,11 @@ export const ReactionViewer = React.forwardRef<HTMLDivElement, Props>(
       [reactionsWithEmojiData, groupedAndSortedReactions]
     );
 
-    const [
-      selectedReactionCategory,
-      setSelectedReactionCategory,
-    ] = React.useState(pickedReaction || 'all');
+    const [selectedReactionCategory, setSelectedReactionCategory] =
+      React.useState(pickedReaction || 'all');
+
     // Handle escape key
-    React.useEffect(() => {
-      const handler = (e: KeyboardEvent) => {
-        if (onClose && e.key === 'Escape') {
-          onClose();
-        }
-      };
-
-      document.addEventListener('keydown', handler);
-
-      return () => {
-        document.removeEventListener('keydown', handler);
-      };
-    }, [onClose]);
+    useEscapeHandling(onClose);
 
     // Focus first button and restore focus on unmount
     const [focusRef] = useRestoreFocus();
@@ -215,6 +221,7 @@ export const ReactionViewer = React.forwardRef<HTMLDivElement, Props>(
                 <Avatar
                   acceptedMessageRequest={from.acceptedMessageRequest}
                   avatarPath={from.avatarPath}
+                  badge={getPreferredBadge(from.badges)}
                   conversationType="direct"
                   sharedGroupNames={from.sharedGroupNames}
                   size={32}
@@ -223,6 +230,7 @@ export const ReactionViewer = React.forwardRef<HTMLDivElement, Props>(
                   name={from.name}
                   profileName={from.profileName}
                   phoneNumber={from.phoneNumber}
+                  theme={theme}
                   title={from.title}
                   i18n={i18n}
                 />
@@ -233,11 +241,7 @@ export const ReactionViewer = React.forwardRef<HTMLDivElement, Props>(
                 ) : (
                   <ContactName
                     module="module-reaction-viewer__body__row__name__contact-name"
-                    name={from.name}
-                    profileName={from.profileName}
-                    phoneNumber={from.phoneNumber}
                     title={from.title}
-                    i18n={i18n}
                   />
                 )}
               </div>

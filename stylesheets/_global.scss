@@ -35,6 +35,10 @@ body {
     background-color: $color-gray-95;
     color: $color-gray-05;
   }
+
+  &.is-resizing-left-pane {
+    cursor: col-resize;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -89,7 +93,7 @@ audio {
   bottom: 0;
 
   opacity: 0.25;
-  z-index: 200;
+  z-index: $z-index-popup-overlay;
 
   @include light-theme {
     background-color: $color-black;
@@ -156,99 +160,18 @@ button.grey {
 }
 
 a {
-  color: $color-ultramarine;
-}
-
-.file-input {
-  position: relative;
-  .choose-file {
-    cursor: pointer;
+  @include light-theme {
+    color: $color-ultramarine;
   }
 
-  .paperclip {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    opacity: 0.5;
-    border: none;
-    background: transparent;
-
-    &:focus,
-    &:hover {
-      opacity: 1;
-    }
-
-    outline: none;
-
-    &:before {
-      content: '';
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-
-      @include light-theme {
-        @include color-svg('../images/icons/v2/plus-24.svg', $color-gray-75);
-      }
-      @include dark-theme {
-        @include color-svg('../images/icons/v2/plus-24.svg', $color-gray-15);
-      }
-    }
-  }
-
-  input[type='file'] {
-    display: none;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    top: 0;
-    left: 0;
-    cursor: pointer;
-    z-index: 1;
+  @include dark-theme {
+    color: $color-gray-05;
   }
 }
 
 .group-member-list {
   .container {
     outline: none;
-  }
-}
-
-.banner {
-  z-index: 100;
-
-  background-color: $color-ios-blue-tint;
-  color: $color-black;
-  box-shadow: 0px 3px 5px 0px $color-black-alpha-20;
-
-  position: absolute;
-  top: 25px;
-  right: 30px;
-  left: 30px;
-
-  padding: 5px 25px 5px 10px;
-
-  text-align: center;
-  border-radius: 10px;
-
-  cursor: pointer;
-
-  .warning {
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    vertical-align: text-bottom;
-    @include color-svg('../images/icons/v2/error-solid-24.svg', black);
-  }
-
-  .dismiss {
-    position: absolute;
-    right: 3px;
-    top: 3px;
-
-    height: 23px;
-    width: 23px;
-    @include color-svg('../images/icons/v2/x-24.svg', black);
   }
 }
 
@@ -306,7 +229,7 @@ $loading-height: 16px;
 }
 
 .app-loading-screen {
-  z-index: 99;
+  z-index: $z-index-on-top-of-everything;
   position: absolute;
   left: 0;
   right: 0;
@@ -362,8 +285,7 @@ $loading-height: 16px;
   bottom: 0;
 
   &.overlay {
-    // .modal, used for the settings view, is 100
-    z-index: 200;
+    z-index: $z-index-popup-overlay;
   }
 
   color: $color-black;
@@ -401,66 +323,9 @@ $loading-height: 16px;
     }
   }
 
-  #qr {
-    display: inline-block;
-
-    &.ready {
-      border: 5px solid $color-ultramarine;
-      box-shadow: 2px 2px 4px $color-black-alpha-40;
-    }
-
-    img {
-      height: 20em;
-      border: 5px solid $color-white;
-    }
-
-    @media (max-height: 475px) {
-      img {
-        width: 8em;
-        height: 8em;
-      }
-    }
-
-    .dot {
-      width: 14px;
-      height: 14px;
-      border: 3px solid $color-ultramarine;
-      border-radius: 50%;
-      float: left;
-      margin: 0 6px;
-      transform: scale(0);
-
-      animation: loading 1500ms ease infinite 0ms;
-      &:nth-child(2) {
-        animation: loading 1500ms ease infinite 333ms;
-      }
-      &:nth-child(3) {
-        animation: loading 1500ms ease infinite 666ms;
-      }
-    }
-
-    canvas {
-      display: none;
-    }
-  }
-
-  .os-icon {
-    height: 3em;
-    width: 3em;
-    vertical-align: text-bottom;
-    display: inline-block;
-    margin: 0.5em;
-
-    &.apple {
-      @include color-svg('../images/full-screen-flow/apple.svg', black);
-    }
-    &.android {
-      @include color-svg('../images/full-screen-flow/android.svg', black);
-    }
-  }
-
   .header {
     font-weight: normal;
+    line-height: 1em;
     margin-bottom: 1.5em;
 
     font-size: 20pt;
@@ -608,7 +473,28 @@ $loading-height: 16px;
     @media (min-height: 750px) and (min-width: 700px) {
       font-size: 20pt;
     }
+
+    &:disabled {
+      background-color: $color-gray-20;
+      cursor: auto;
+    }
   }
+
+  button.link {
+    @include button-reset;
+
+    display: block;
+    margin: 0.5em auto;
+    text-align: center;
+    text-decoration: underline;
+    color: $color-ultramarine;
+
+    &:disabled {
+      color: $color-gray-20;
+      cursor: auto;
+    }
+  }
+
   a.link {
     display: block;
     cursor: pointer;

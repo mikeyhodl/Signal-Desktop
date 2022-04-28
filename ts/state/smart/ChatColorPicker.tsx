@@ -4,17 +4,15 @@
 import { connect } from 'react-redux';
 
 import { mapDispatchToProps } from '../actions';
-import {
-  ChatColorPicker,
-  PropsDataType,
-} from '../../components/ChatColorPicker';
-import { StateType } from '../reducer';
+import type { PropsDataType } from '../../components/ChatColorPicker';
+import { ChatColorPicker } from '../../components/ChatColorPicker';
+import type { StateType } from '../reducer';
 import {
   getConversationSelector,
   getConversationsWithCustomColorSelector,
 } from '../selectors/conversations';
-import { getDefaultConversationColor } from '../selectors/items';
 import { getIntl } from '../selectors/user';
+import { getConversationColorAttributes } from '../../util/getConversationColorAttributes';
 
 export type SmartChatColorPickerProps = {
   conversationId?: string;
@@ -24,14 +22,10 @@ const mapStateToProps = (
   state: StateType,
   props: SmartChatColorPickerProps
 ): PropsDataType => {
-  const defaultConversationColor = getDefaultConversationColor(state);
-  const colorValues = props.conversationId
+  const conversation = props.conversationId
     ? getConversationSelector(state)(props.conversationId)
-    : {
-        conversationColor: defaultConversationColor.color,
-        customColorId: defaultConversationColor.customColorData?.id,
-        customColor: defaultConversationColor.customColorData?.value,
-      };
+    : {};
+  const colorValues = getConversationColorAttributes(conversation);
 
   const { customColors } = state.items;
 

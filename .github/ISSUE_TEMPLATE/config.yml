@@ -1,3 +1,6 @@
+# Copyright 2021 Signal Messenger, LLC
+# SPDX-License-Identifier: AGPL-3.0-only
+
 blank_issues_enabled: false
 contact_links:
   - name: ✨ Feature request
@@ -13,7 +16,7 @@ contact_links:
     url: https://community.signalusers.org/c/support/
     about: Feel free to ask anything
   - name: 📖 Contribution instructions
-    url: https://github.com/signalapp/Signal-Desktop/blob/development/CONTRIBUTING.md
+    url: https://github.com/signalapp/Signal-Desktop/blob/main/CONTRIBUTING.md
     about: Want to contribute to Signal Desktop? Start here.
   - name: ❓ Other issue?
     url: https://community.signalusers.org/

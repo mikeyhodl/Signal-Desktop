@@ -4,13 +4,15 @@
 import * as React from 'react';
 import classNames from 'classnames';
 
-import { Avatar, Props as AvatarProps } from './Avatar';
-import { useRestoreFocus } from '../util/hooks/useRestoreFocus';
+import type { Props as AvatarProps } from './Avatar';
+import { Avatar } from './Avatar';
+import { useRestoreFocus } from '../hooks/useRestoreFocus';
 
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType, ThemeType } from '../types/Util';
 
 export type Props = {
   readonly i18n: LocalizerType;
+  readonly theme: ThemeType;
 
   hasPendingUpdate: boolean;
   startUpdate: () => unknown;

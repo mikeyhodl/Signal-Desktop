@@ -5,14 +5,15 @@ import { assert } from 'chai';
 import * as moment from 'moment';
 import { v4 as uuid } from 'uuid';
 import { SendStatus } from '../../../messages/MessageSendState';
-import {
+import type {
   MessageAttributesType,
   ShallowChallengeError,
 } from '../../../model-types.d';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { ConversationType } from '../../../state/ducks/conversations';
 
 import {
   canDeleteForEveryone,
+  canReact,
   canReply,
   getMessagePropStatus,
   isEndSession,
@@ -77,7 +78,7 @@ describe('state/selectors/messages', () => {
       assert.isFalse(canDeleteForEveryone(message));
     });
 
-    it('returns false for messages that failed to send to anyone', () => {
+    it("returns false for messages that haven't been sent to anyone", () => {
       const message = {
         type: 'outgoing' as const,
         sent_at: Date.now() - 1000,
@@ -87,7 +88,7 @@ describe('state/selectors/messages', () => {
             updatedAt: Date.now(),
           },
           [uuid()]: {
-            status: SendStatus.Failed,
+            status: SendStatus.Pending,
             updatedAt: Date.now(),
           },
         },
@@ -102,11 +103,11 @@ describe('state/selectors/messages', () => {
         sent_at: Date.now() - 1000,
         sendStateByConversationId: {
           [ourConversationId]: {
-            status: SendStatus.Pending,
+            status: SendStatus.Sent,
             updatedAt: Date.now(),
           },
           [uuid()]: {
-            status: SendStatus.Pending,
+            status: SendStatus.Delivered,
             updatedAt: Date.now(),
           },
           [uuid()]: {
@@ -120,6 +121,118 @@ describe('state/selectors/messages', () => {
     });
   });
 
+  describe('canReact', () => {
+    const defaultConversation: ConversationType = {
+      id: uuid(),
+      type: 'direct',
+      title: 'Test conversation',
+      isMe: false,
+      sharedGroupNames: [],
+      acceptedMessageRequest: true,
+      badges: [],
+    };
+
+    it('returns false for disabled v1 groups', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'incoming' as const,
+      };
+      const getConversationById = () => ({
+        ...defaultConversation,
+        type: 'group' as const,
+        isGroupV1AndDisabled: true,
+      });
+
+      assert.isFalse(canReact(message, ourConversationId, getConversationById));
+    });
+
+    // NOTE: This is missing a test for mandatory profile sharing.
+
+    it('returns false if the message was deleted for everyone', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'incoming' as const,
+        deletedForEveryone: true,
+      };
+      const getConversationById = () => defaultConversation;
+
+      assert.isFalse(canReact(message, ourConversationId, getConversationById));
+    });
+
+    it('returns false for outgoing messages that have not been sent', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'outgoing' as const,
+        sendStateByConversationId: {
+          [ourConversationId]: {
+            status: SendStatus.Sent,
+            updatedAt: Date.now(),
+          },
+          [uuid()]: {
+            status: SendStatus.Pending,
+            updatedAt: Date.now(),
+          },
+        },
+      };
+      const getConversationById = () => defaultConversation;
+
+      assert.isFalse(canReact(message, ourConversationId, getConversationById));
+    });
+
+    it('returns true for outgoing messages that are only sent to yourself', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'outgoing' as const,
+        sendStateByConversationId: {
+          [ourConversationId]: {
+            status: SendStatus.Pending,
+            updatedAt: Date.now(),
+          },
+        },
+      };
+      const getConversationById = () => defaultConversation;
+
+      assert.isTrue(canReact(message, ourConversationId, getConversationById));
+    });
+
+    it('returns true for outgoing messages that have been sent to at least one person', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'outgoing' as const,
+        sendStateByConversationId: {
+          [ourConversationId]: {
+            status: SendStatus.Sent,
+            updatedAt: Date.now(),
+          },
+          [uuid()]: {
+            status: SendStatus.Pending,
+            updatedAt: Date.now(),
+          },
+          [uuid()]: {
+            status: SendStatus.Sent,
+            updatedAt: Date.now(),
+          },
+        },
+      };
+      const getConversationById = () => ({
+        ...defaultConversation,
+        type: 'group' as const,
+      });
+
+      assert.isTrue(canReact(message, ourConversationId, getConversationById));
+    });
+
+    it('returns true for incoming messages', () => {
+      const message = {
+        conversationId: 'fake-conversation-id',
+        type: 'incoming' as const,
+      };
+      const getConversationById = () => defaultConversation;
+
+      assert.isTrue(canReact(message, ourConversationId, getConversationById));
+    });
+  });
+
   describe('canReply', () => {
     const defaultConversation: ConversationType = {
       id: uuid(),
@@ -128,6 +241,7 @@ describe('state/selectors/messages', () => {
       isMe: false,
       sharedGroupNames: [],
       acceptedMessageRequest: true,
+      badges: [],
     };
 
     it('returns false for disabled v1 groups', () => {

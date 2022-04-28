@@ -1,10 +1,12 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
 import * as Errors from '../../types/errors';
+import * as log from '../../logging/log';
 
 export type Props = {
   i18n: LocalizerType;
@@ -27,14 +29,14 @@ export class ErrorBoundary extends React.PureComponent<Props, State> {
   }
 
   public static getDerivedStateFromError(error: Error): State {
-    window.log.error(
+    log.error(
       'ErrorBoundary: captured rendering error',
       Errors.toLogFormat(error)
     );
     return { error };
   }
 
-  public render(): ReactNode {
+  public override render(): ReactNode {
     const { error } = this.state;
     const { i18n, children } = this.props;
 

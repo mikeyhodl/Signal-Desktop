@@ -8,8 +8,10 @@ module.exports = {
   plugins: [
     'react-hot-loader/babel',
     'lodash',
+    '@babel/plugin-transform-typescript',
     '@babel/plugin-proposal-class-properties',
     '@babel/plugin-proposal-optional-chaining',
+    '@babel/plugin-proposal-nullish-coalescing-operator',
     // This plugin converts commonjs to esmodules which is required for
     // importing commonjs modules from esmodules in storybook. As a part of
     // converting to TypeScript we should use esmodules and can eventually

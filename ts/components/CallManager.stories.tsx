@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -6,7 +6,8 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { boolean, select, text } from '@storybook/addon-knobs';
 
-import { CallManager, PropsType } from './CallManager';
+import type { PropsType } from './CallManager';
+import { CallManager } from './CallManager';
 import {
   CallEndedReason,
   CallMode,
@@ -14,13 +15,15 @@ import {
   GroupCallConnectionState,
   GroupCallJoinState,
 } from '../types/Calling';
-import { ConversationTypeType } from '../state/ducks/conversations';
-import { AvatarColors, AvatarColorType } from '../types/Colors';
+import type { ConversationTypeType } from '../state/ducks/conversations';
+import type { AvatarColorType } from '../types/Colors';
+import { AvatarColors } from '../types/Colors';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
 import { fakeGetGroupCallVideoFrameSource } from '../test-both/helpers/fakeGetGroupCallVideoFrameSource';
-import { setup as setupI18n } from '../../js/modules/i18n';
-import { Props as SafetyNumberViewerProps } from '../state/smart/SafetyNumberViewer';
+import { setupI18n } from '../util/setupI18n';
+import type { SafetyNumberProps } from './SafetyNumberChangeDialog';
 import enMessages from '../../_locales/en/messages.json';
+import { ThemeType } from '../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -47,6 +50,7 @@ const getCommonActiveCallData = () => ({
   joinedAt: Date.now(),
   hasLocalAudio: boolean('hasLocalAudio', true),
   hasLocalVideo: boolean('hasLocalVideo', false),
+  amISpeaking: boolean('amISpeaking', false),
   isInSpeakerView: boolean('isInSpeakerView', false),
   outgoingRing: boolean('outgoingRing', true),
   pip: boolean('pip', false),
@@ -65,12 +69,12 @@ const createProps = (storyProps: Partial<PropsType> = {}): PropsType => ({
   declineCall: action('decline-call'),
   getGroupCallVideoFrameSource: (_: string, demuxId: number) =>
     fakeGetGroupCallVideoFrameSource(demuxId),
+  getPreferredBadge: () => undefined,
   getPresentingSources: action('get-presenting-sources'),
-  hangUp: action('hang-up'),
+  hangUpActiveCall: action('hang-up-active-call'),
   i18n,
   isGroupCallOutboundRingEnabled: true,
   keyChangeOk: action('key-change-ok'),
-  maxGroupCallRingSize: 16,
   me: {
     ...getDefaultConversation({
       color: select(
@@ -86,8 +90,9 @@ const createProps = (storyProps: Partial<PropsType> = {}): PropsType => ({
   openSystemPreferencesAction: action('open-system-preferences-action'),
   playRingtone: action('play-ringtone'),
   renderDeviceSelection: () => <div />,
-  renderSafetyNumberViewer: (_: SafetyNumberViewerProps) => <div />,
+  renderSafetyNumberViewer: (_: SafetyNumberProps) => <div />,
   setGroupCallVideoRequest: action('set-group-call-video-request'),
+  setIsCallActive: action('set-is-call-active'),
   setLocalAudio: action('set-local-audio'),
   setLocalPreview: action('set-local-preview'),
   setLocalVideo: action('set-local-video'),
@@ -96,6 +101,7 @@ const createProps = (storyProps: Partial<PropsType> = {}): PropsType => ({
   setOutgoingRing: action('set-outgoing-ring'),
   startCall: action('start-call'),
   stopRingtone: action('stop-ringtone'),
+  theme: ThemeType.light,
   toggleParticipants: action('toggle-participants'),
   togglePip: action('toggle-pip'),
   toggleScreenRecordingPermissionsDialog: action(
@@ -139,6 +145,7 @@ story.add('Ongoing Group Call', () => (
         groupMembers: [],
         peekedParticipants: [],
         remoteParticipants: [],
+        speakingDemuxIds: new Set<number>(),
       },
     })}
   />
@@ -213,6 +220,7 @@ story.add('Group call - Safety Number Changed', () => (
         groupMembers: [],
         peekedParticipants: [],
         remoteParticipants: [],
+        speakingDemuxIds: new Set<number>(),
       },
     })}
   />

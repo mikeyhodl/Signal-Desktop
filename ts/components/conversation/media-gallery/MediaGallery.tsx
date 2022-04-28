@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
@@ -9,12 +9,12 @@ import moment from 'moment';
 import { AttachmentSection } from './AttachmentSection';
 import { EmptyState } from './EmptyState';
 import { groupMediaItemsByDate } from './groupMediaItemsByDate';
-import { ItemClickEvent } from './types/ItemClickEvent';
+import type { ItemClickEvent } from './types/ItemClickEvent';
 import { missingCaseError } from '../../../util/missingCaseError';
-import { LocalizerType } from '../../../types/Util';
+import type { LocalizerType } from '../../../types/Util';
 import { getMessageTimestamp } from '../../../util/getMessageTimestamp';
 
-import { MediaItemType } from '../../../types/MediaItem';
+import type { MediaItemType } from '../../../types/MediaItem';
 
 export type Props = {
   documents: Array<MediaItemType>;
@@ -78,7 +78,7 @@ export class MediaGallery extends React.Component<Props, State> {
     };
   }
 
-  public componentDidMount(): void {
+  public override componentDidMount(): void {
     // When this component is created, it's initially not part of the DOM, and then it's
     //   added off-screen and animated in. This ensures that the focus takes.
     setTimeout(() => {
@@ -88,7 +88,7 @@ export class MediaGallery extends React.Component<Props, State> {
     });
   }
 
-  public render(): JSX.Element {
+  public override render(): JSX.Element {
     const { selectedTab } = this.state;
 
     return (

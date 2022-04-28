@@ -9,15 +9,17 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
-import { CompositionInput, Props } from './CompositionInput';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { Props } from './CompositionInput';
+import { CompositionInput } from './CompositionInput';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
+import { StorybookThemeContext } from '../../.storybook/StorybookThemeContext';
 
 const i18n = setupI18n('en', enMessages);
 
 const story = storiesOf('Components/CompositionInput', module);
 
-const createProps = (overrideProps: Partial<Props> = {}): Props => ({
+const useProps = (overrideProps: Partial<Props> = {}): Props => ({
   i18n,
   disabled: boolean('disabled', overrideProps.disabled || false),
   onSubmit: action('onSubmit'),
@@ -26,6 +28,7 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
   draftText: overrideProps.draftText || undefined,
   draftBodyRanges: overrideProps.draftBodyRanges || [],
   clearQuotedMessage: action('clearQuotedMessage'),
+  getPreferredBadge: () => undefined,
   getQuotedMessage: action('getQuotedMessage'),
   onPickEmoji: action('onPickEmoji'),
   large: boolean('large', overrideProps.large || false),
@@ -42,16 +45,17 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
     },
     overrideProps.skinTone || undefined
   ),
+  theme: React.useContext(StorybookThemeContext),
 });
 
 story.add('Default', () => {
-  const props = createProps();
+  const props = useProps();
 
   return <CompositionInput {...props} />;
 });
 
 story.add('Large', () => {
-  const props = createProps({
+  const props = useProps({
     large: true,
   });
 
@@ -59,7 +63,7 @@ story.add('Large', () => {
 });
 
 story.add('Disabled', () => {
-  const props = createProps({
+  const props = useProps({
     disabled: true,
   });
 
@@ -67,7 +71,7 @@ story.add('Disabled', () => {
 });
 
 story.add('Starting Text', () => {
-  const props = createProps({
+  const props = useProps({
     draftText: "here's some starting text",
   });
 
@@ -75,7 +79,7 @@ story.add('Starting Text', () => {
 });
 
 story.add('Multiline Text', () => {
-  const props = createProps({
+  const props = useProps({
     draftText: `here's some starting text
 and more on another line
 and yet another line
@@ -91,7 +95,7 @@ and we're done`,
 });
 
 story.add('Emojis', () => {
-  const props = createProps({
+  const props = useProps({
     draftText: `⁣😐😐😐😐😐😐😐
 😐😐😐😐😐😐😐
 😐😐😐😂⁣😐😐😐
@@ -103,7 +107,7 @@ story.add('Emojis', () => {
 });
 
 story.add('Mentions', () => {
-  const props = createProps({
+  const props = useProps({
     sortedGroupMembers: [
       getDefaultConversation({
         title: 'Kate Beaton',

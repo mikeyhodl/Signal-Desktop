@@ -7,11 +7,15 @@ import { times } from 'lodash';
 import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import { UUID } from '../../../types/UUID';
+import { setupI18n } from '../../../util/setupI18n';
 import enMessages from '../../../../_locales/en/messages.json';
-import { PendingInvites, PropsType } from './PendingInvites';
-import { ConversationType } from '../../../state/ducks/conversations';
+import type { PropsType } from './PendingInvites';
+import { PendingInvites } from './PendingInvites';
+import type { ConversationType } from '../../../state/ducks/conversations';
 import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
+import { getFakeBadge } from '../../../test-both/helpers/getFakeBadge';
+import { StorybookThemeContext } from '../../../../.storybook/StorybookThemeContext';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -29,6 +33,7 @@ const sortedGroupMembers = Array.from(Array(32)).map((_, i) =>
 const conversation: ConversationType = {
   acceptedMessageRequest: true,
   areWeAdmin: true,
+  badges: [],
   id: '',
   lastUpdated: 0,
   markedUnread: false,
@@ -39,11 +44,14 @@ const conversation: ConversationType = {
   sharedGroupNames: [],
 };
 
-const createProps = (): PropsType => ({
+const OUR_UUID = UUID.generate().toString();
+
+const useProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   approvePendingMembership: action('approvePendingMembership'),
   conversation,
+  getPreferredBadge: () => undefined,
   i18n,
-  ourConversationId: 'abc123',
+  ourUuid: OUR_UUID,
   pendingApprovalMemberships: times(5, () => ({
     member: getDefaultConversation(),
   })),
@@ -51,21 +59,29 @@ const createProps = (): PropsType => ({
     ...times(4, () => ({
       member: getDefaultConversation(),
       metadata: {
-        addedByUserId: 'abc123',
+        addedByUserId: OUR_UUID,
       },
     })),
     ...times(8, () => ({
       member: getDefaultConversation(),
       metadata: {
-        addedByUserId: 'def456',
+        addedByUserId: UUID.generate().toString(),
       },
     })),
   ],
   revokePendingMemberships: action('revokePendingMemberships'),
+  theme: React.useContext(StorybookThemeContext),
+  ...overrideProps,
 });
 
 story.add('Basic', () => {
-  const props = createProps();
+  const props = useProps();
+
+  return <PendingInvites {...props} />;
+});
+
+story.add('With badges', () => {
+  const props = useProps({ getPreferredBadge: () => getFakeBadge() });
 
   return <PendingInvites {...props} />;
 });

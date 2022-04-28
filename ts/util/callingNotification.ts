@@ -1,12 +1,14 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { CallMode } from '../types/Calling';
 import { missingCaseError } from './missingCaseError';
+import * as log from '../logging/log';
 
 type DirectCallNotificationType = {
   callMode: CallMode.Direct;
+  activeCallConversationId?: string;
   wasIncoming: boolean;
   wasVideoCall: boolean;
   wasDeclined: boolean;
@@ -102,7 +104,7 @@ export function getCallingNotificationText(
     case CallMode.Group:
       return getGroupCallNotificationText(notification, i18n);
     default:
-      window.log.error(
+      log.error(
         `getCallingNotificationText: missing case ${missingCaseError(
           notification
         )}`
@@ -152,7 +154,7 @@ export function getCallingIcon(
     case CallMode.Group:
       return 'video';
     default:
-      window.log.error(
+      log.error(
         `getCallingNotificationText: missing case ${missingCaseError(
           notification
         )}`

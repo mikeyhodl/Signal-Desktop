@@ -8,11 +8,13 @@ import FormData from 'form-data';
 import * as util from 'util';
 import * as zlib from 'zlib';
 
-import { uploadDebugLogs } from '../../logging/debuglogs';
+import * as durations from '../../util/durations';
+import { upload } from '../../logging/uploadDebugLog';
+import * as logger from '../../logging/log';
 
 const gzip: (_: zlib.InputType) => Promise<Buffer> = util.promisify(zlib.gzip);
 
-describe('uploadDebugLogs', () => {
+describe('upload', () => {
   beforeEach(function beforeEach() {
     this.sandbox = sinon.createSandbox();
 
@@ -39,14 +41,15 @@ describe('uploadDebugLogs', () => {
 
   it('makes a request to get the S3 bucket, then uploads it there', async function test() {
     assert.strictEqual(
-      await uploadDebugLogs('hello world', '1.2.3'),
+      await upload({ content: 'hello world', appVersion: '1.2.3', logger }),
       'https://debuglogs.org/abc123.gz'
     );
 
     sinon.assert.calledOnce(this.fakeGet);
-    sinon.assert.calledWith(this.fakeGet, 'https://debuglogs.org', {
-      json: true,
+    sinon.assert.calledWith(this.fakeGet, 'https://debuglogs.org/', {
+      responseType: 'json',
       headers: { 'User-Agent': 'Signal-Desktop/1.2.3 Linux' },
+      timeout: { request: durations.MINUTE },
     });
 
     const compressedContent = await gzip('hello world');
@@ -54,6 +57,7 @@ describe('uploadDebugLogs', () => {
     sinon.assert.calledOnce(this.fakePost);
     sinon.assert.calledWith(this.fakePost, 'https://example.com/fake-upload', {
       headers: { 'User-Agent': 'Signal-Desktop/1.2.3 Linux' },
+      timeout: { request: durations.MINUTE },
       body: sinon.match((value: unknown) => {
         if (!(value instanceof FormData)) {
           return false;
@@ -76,7 +80,7 @@ describe('uploadDebugLogs', () => {
 
     let err: unknown;
     try {
-      await uploadDebugLogs('hello world', '1.2.3');
+      await upload({ content: 'hello world', appVersion: '1.2.3', logger });
     } catch (e) {
       err = e;
     }
@@ -102,7 +106,7 @@ describe('uploadDebugLogs', () => {
       try {
         // Again, these should be run serially.
         // eslint-disable-next-line no-await-in-loop
-        await uploadDebugLogs('hello world', '1.2.3');
+        await upload({ content: 'hello world', appVersion: '1.2.3', logger });
       } catch (e) {
         err = e;
       }
@@ -115,7 +119,7 @@ describe('uploadDebugLogs', () => {
 
     let err: unknown;
     try {
-      await uploadDebugLogs('hello world', '1.2.3');
+      await upload({ content: 'hello world', appVersion: '1.2.3', logger });
     } catch (e) {
       err = e;
     }

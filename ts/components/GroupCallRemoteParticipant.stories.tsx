@@ -1,17 +1,15 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
 import { memoize, noop } from 'lodash';
 import { storiesOf } from '@storybook/react';
 
-import {
-  GroupCallRemoteParticipant,
-  PropsType,
-} from './GroupCallRemoteParticipant';
+import type { PropsType } from './GroupCallRemoteParticipant';
+import { GroupCallRemoteParticipant } from './GroupCallRemoteParticipant';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
 import { FRAME_BUFFER_SIZE } from '../calling/constants';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
 
 const i18n = setupI18n('en', enMessages);
@@ -28,7 +26,7 @@ type OverridePropsType =
       width: number;
     };
 
-const getFrameBuffer = memoize(() => new ArrayBuffer(FRAME_BUFFER_SIZE));
+const getFrameBuffer = memoize(() => Buffer.alloc(FRAME_BUFFER_SIZE));
 
 const createProps = (
   overrideProps: OverridePropsType,
@@ -38,6 +36,7 @@ const createProps = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getGroupCallVideoFrameSource: noop as any,
   i18n,
+  isSpeaking: false,
   remoteParticipant: {
     demuxId: 123,
     hasRemoteAudio: false,
@@ -53,6 +52,7 @@ const createProps = (
     }),
   },
   ...overrideProps,
+  ...(overrideProps.isInPip ? {} : { isSpeaking: false }),
 });
 
 const story = storiesOf('Components/GroupCallRemoteParticipant', module);

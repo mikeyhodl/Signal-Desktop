@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useState } from 'react';
-import { ConversationType } from '../state/ducks/conversations';
+import type { ConversationType } from '../state/ducks/conversations';
 import { Intl } from './Intl';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType, ThemeType } from '../types/Util';
 import { Modal } from './Modal';
 import { ConversationListItem } from './conversationList/ConversationListItem';
 
@@ -12,12 +12,14 @@ type PropsType = {
   groupAdmins: Array<ConversationType>;
   i18n: LocalizerType;
   openConversation: (conversationId: string) => unknown;
+  theme: ThemeType;
 };
 
 export const AnnouncementsOnlyGroupBanner = ({
   groupAdmins,
   i18n,
   openConversation,
+  theme,
 }: PropsType): JSX.Element => {
   const [isShowingAdmins, setIsShowingAdmins] = useState(false);
 
@@ -39,7 +41,7 @@ export const AnnouncementsOnlyGroupBanner = ({
               draftPreview=""
               lastMessage={undefined}
               lastUpdated={undefined}
-              typingContact={undefined}
+              theme={theme}
             />
           ))}
         </Modal>

@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { connect } from 'react-redux';
@@ -7,44 +7,39 @@ import {
   ConversationHeader,
   OutgoingCallButtonStyle,
 } from '../../components/conversation/ConversationHeader';
+import { getPreferredBadgeSelector } from '../selectors/badges';
 import {
   getConversationSelector,
   isMissingRequiredProfileSharing,
 } from '../selectors/conversations';
-import { StateType } from '../reducer';
+import type { StateType } from '../reducer';
 import { CallMode } from '../../types/Calling';
-import {
-  ConversationType,
-  getConversationCallMode,
-} from '../ducks/conversations';
+import type { ConversationType } from '../ducks/conversations';
+import { getConversationCallMode } from '../ducks/conversations';
 import { getActiveCall, isAnybodyElseInGroupCall } from '../ducks/calling';
-import { getUserUuid, getIntl } from '../selectors/user';
+import { getUserUuid, getIntl, getTheme } from '../selectors/user';
 import { getOwn } from '../../util/getOwn';
 import { missingCaseError } from '../../util/missingCaseError';
 import { isConversationSMSOnly } from '../../util/isConversationSMSOnly';
+import { strictAssert } from '../../util/assert';
 
 export type OwnProps = {
   id: string;
 
+  onArchive: () => void;
   onDeleteMessages: () => void;
   onGoBack: () => void;
+  onMarkUnread: () => void;
+  onMoveToInbox: () => void;
   onOutgoingAudioCallInConversation: () => void;
   onOutgoingVideoCallInConversation: () => void;
-  onResetSession: () => void;
   onSearchInConversation: () => void;
   onSetDisappearingMessages: (seconds: number) => void;
   onSetMuteNotifications: (seconds: number) => void;
   onSetPin: (value: boolean) => void;
   onShowAllMedia: () => void;
-  onShowChatColorEditor: () => void;
-  onShowContactModal: (contactId: string) => void;
-  onShowGroupMembers: () => void;
-
-  onArchive: () => void;
-  onMarkUnread: () => void;
-  onMoveToInbox: () => void;
-  onShowSafetyNumber: () => void;
   onShowConversationDetails: () => void;
+  onShowGroupMembers: () => void;
 };
 
 const getOutgoingCallButtonStyle = (
@@ -52,6 +47,8 @@ const getOutgoingCallButtonStyle = (
   state: StateType
 ): OutgoingCallButtonStyle => {
   const { calling } = state;
+  const ourUuid = getUserUuid(state);
+  strictAssert(ourUuid, 'getOutgoingCallButtonStyle missing our uuid');
 
   if (getActiveCall(calling)) {
     return OutgoingCallButtonStyle.None;
@@ -67,7 +64,7 @@ const getOutgoingCallButtonStyle = (
       const call = getOwn(calling.callsByConversation, conversation.id);
       if (
         call?.callMode === CallMode.Group &&
-        isAnybodyElseInGroupCall(call.peekInfo, getUserUuid(state))
+        isAnybodyElseInGroupCall(call.peekInfo, ourUuid)
       ) {
         return OutgoingCallButtonStyle.Join;
       }
@@ -111,14 +108,15 @@ const mapStateToProps = (state: StateType, ownProps: OwnProps) => {
       'type',
       'unblurredAvatarPath',
     ]),
+    badge: getPreferredBadgeSelector(state)(conversation.badges),
     conversationTitle: state.conversations.selectedConversationTitle,
-    isMissingMandatoryProfileSharing: isMissingRequiredProfileSharing(
-      conversation
-    ),
+    isMissingMandatoryProfileSharing:
+      isMissingRequiredProfileSharing(conversation),
     isSMSOnly: isConversationSMSOnly(conversation),
     i18n: getIntl(state),
     showBackButton: state.conversations.selectedConversationPanelDepth > 0,
     outgoingCallButtonStyle: getOutgoingCallButtonStyle(conversation, state),
+    theme: getTheme(state),
   };
 };
 

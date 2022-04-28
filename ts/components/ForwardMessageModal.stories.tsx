@@ -8,21 +8,26 @@ import { action } from '@storybook/addon-actions';
 import { text } from '@storybook/addon-knobs';
 
 import enMessages from '../../_locales/en/messages.json';
-import { AttachmentType } from '../types/Attachment';
-import { ForwardMessageModal, PropsType } from './ForwardMessageModal';
+import type { AttachmentType } from '../types/Attachment';
+import type { PropsType } from './ForwardMessageModal';
+import { ForwardMessageModal } from './ForwardMessageModal';
 import { IMAGE_JPEG, VIDEO_MP4, stringToMIMEType } from '../types/MIME';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
+import { StorybookThemeContext } from '../../.storybook/StorybookThemeContext';
 
 const createAttachment = (
   props: Partial<AttachmentType> = {}
 ): AttachmentType => ({
+  pending: false,
+  path: 'fileName.jpg',
   contentType: stringToMIMEType(
     text('attachment contentType', props.contentType || '')
   ),
   fileName: text('attachment fileName', props.fileName || ''),
-  screenshot: props.screenshot,
-  url: text('attachment url', props.url || ''),
+  screenshotPath: props.pending === false ? props.screenshotPath : undefined,
+  url: text('attachment url', props.pending === false ? props.url || '' : ''),
+  size: 3433,
 });
 
 const story = storiesOf('Components/ForwardMessageModal', module);
@@ -37,11 +42,13 @@ const candidateConversations = Array.from(Array(100), () =>
   getDefaultConversation()
 );
 
-const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
+const useProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   attachments: overrideProps.attachments,
   candidateConversations,
   doForwardMessage: action('doForwardMessage'),
+  getPreferredBadge: () => undefined,
   i18n,
+  hasContact: Boolean(overrideProps.hasContact),
   isSticker: Boolean(overrideProps.isSticker),
   linkPreview: overrideProps.linkPreview,
   messageBody: text('messageBody', overrideProps.messageBody || ''),
@@ -53,24 +60,30 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   recentEmojis: [],
   removeLinkPreview: action('removeLinkPreview'),
   skinTone: 0,
+  theme: React.useContext(StorybookThemeContext),
+  regionCode: 'US',
 });
 
 story.add('Modal', () => {
-  return <ForwardMessageModal {...createProps()} />;
+  return <ForwardMessageModal {...useProps()} />;
 });
 
 story.add('with text', () => {
-  return <ForwardMessageModal {...createProps({ messageBody: 'sup' })} />;
+  return <ForwardMessageModal {...useProps({ messageBody: 'sup' })} />;
 });
 
 story.add('a sticker', () => {
-  return <ForwardMessageModal {...createProps({ isSticker: true })} />;
+  return <ForwardMessageModal {...useProps({ isSticker: true })} />;
+});
+
+story.add('with a contact', () => {
+  return <ForwardMessageModal {...useProps({ hasContact: true })} />;
 });
 
 story.add('link preview', () => {
   return (
     <ForwardMessageModal
-      {...createProps({
+      {...useProps({
         linkPreview: {
           description: LONG_DESCRIPTION,
           date: Date.now(),
@@ -92,8 +105,11 @@ story.add('link preview', () => {
 story.add('media attachments', () => {
   return (
     <ForwardMessageModal
-      {...createProps({
+      {...useProps({
         attachments: [
+          createAttachment({
+            pending: true,
+          }),
           createAttachment({
             contentType: IMAGE_JPEG,
             fileName: 'tina-rolf-269345-unsplash.jpg',
@@ -103,13 +119,7 @@ story.add('media attachments', () => {
             contentType: VIDEO_MP4,
             fileName: 'pixabay-Soap-Bubble-7141.mp4',
             url: '/fixtures/pixabay-Soap-Bubble-7141.mp4',
-            screenshot: {
-              height: 112,
-              width: 112,
-              url: '/fixtures/kitten-4-112-112.jpg',
-              contentType: IMAGE_JPEG,
-              path: 'originalPath',
-            },
+            screenshotPath: '/fixtures/kitten-4-112-112.jpg',
           }),
         ],
         messageBody: 'cats',
@@ -120,7 +130,7 @@ story.add('media attachments', () => {
 
 story.add('announcement only groups non-admin', () => (
   <ForwardMessageModal
-    {...createProps()}
+    {...useProps()}
     candidateConversations={[
       getDefaultConversation({
         announcementsOnly: true,

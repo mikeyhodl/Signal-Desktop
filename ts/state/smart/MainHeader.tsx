@@ -1,41 +1,37 @@
-// Copyright 2019-2020 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { connect } from 'react-redux';
 import { mapDispatchToProps } from '../actions';
 
 import { MainHeader } from '../../components/MainHeader';
-import { StateType } from '../reducer';
+import type { StateType } from '../reducer';
 
-import {
-  getQuery,
-  getSearchConversationId,
-  getSearchConversationName,
-  getStartSearchCounter,
-} from '../selectors/search';
+import { getPreferredBadgeSelector } from '../selectors/badges';
 import {
   getIntl,
   getRegionCode,
+  getTheme,
   getUserConversationId,
   getUserNumber,
   getUserUuid,
 } from '../selectors/user';
-import { getMe, getSelectedConversation } from '../selectors/conversations';
+import { getMe } from '../selectors/conversations';
+import { getStoriesEnabled } from '../selectors/items';
 
 const mapStateToProps = (state: StateType) => {
+  const me = getMe(state);
+
   return {
-    disabled: state.network.challengeStatus !== 'idle',
+    areStoriesEnabled: getStoriesEnabled(state),
     hasPendingUpdate: Boolean(state.updates.didSnooze),
-    searchTerm: getQuery(state),
-    searchConversationId: getSearchConversationId(state),
-    searchConversationName: getSearchConversationName(state),
-    selectedConversation: getSelectedConversation(state),
-    startSearchCounter: getStartSearchCounter(state),
     regionCode: getRegionCode(state),
     ourConversationId: getUserConversationId(state),
     ourNumber: getUserNumber(state),
     ourUuid: getUserUuid(state),
-    ...getMe(state),
+    ...me,
+    badge: getPreferredBadgeSelector(state)(me.badges),
+    theme: getTheme(state),
     i18n: getIntl(state),
   };
 };

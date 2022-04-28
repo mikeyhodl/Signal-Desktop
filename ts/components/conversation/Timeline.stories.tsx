@@ -1,26 +1,32 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
 import * as moment from 'moment';
-import { isBoolean, times } from 'lodash';
+import { times } from 'lodash';
 import { v4 as uuid } from 'uuid';
 import { storiesOf } from '@storybook/react';
 import { text, boolean, number } from '@storybook/addon-knobs';
 import { action } from '@storybook/addon-actions';
 
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
-import { PropsType, Timeline } from './Timeline';
-import { TimelineItem, TimelineItemType } from './TimelineItem';
+import type { PropsType } from './Timeline';
+import { Timeline } from './Timeline';
+import type { TimelineItemType } from './TimelineItem';
+import { TimelineItem } from './TimelineItem';
+import { ContactSpoofingReviewDialog } from './ContactSpoofingReviewDialog';
+import { StorybookThemeContext } from '../../../.storybook/StorybookThemeContext';
 import { ConversationHero } from './ConversationHero';
+import type { PropsType as SmartContactSpoofingReviewDialogPropsType } from '../../state/smart/ContactSpoofingReviewDialog';
 import { getDefaultConversation } from '../../test-both/helpers/getDefaultConversation';
 import { getRandomColor } from '../../test-both/helpers/getRandomColor';
-import { LastSeenIndicator } from './LastSeenIndicator';
-import { TimelineLoadingRow } from './TimelineLoadingRow';
 import { TypingBubble } from './TypingBubble';
 import { ContactSpoofingType } from '../../util/contactSpoofing';
 import { ReadStatus } from '../../messages/MessageReadStatus';
+import type { WidthBreakpoint } from '../_util';
+import { ThemeType } from '../../types/Util';
+import { TextDirection } from './Message';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -43,7 +49,10 @@ const items: Record<string, TimelineItemType> = {
       }),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'forest',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -54,8 +63,10 @@ const items: Record<string, TimelineItemType> = {
       previews: [],
       readStatus: ReadStatus.Read,
       text: '🔥',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-2': {
     type: 'message',
@@ -63,7 +74,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'forest',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -74,8 +88,10 @@ const items: Record<string, TimelineItemType> = {
       previews: [],
       readStatus: ReadStatus.Read,
       text: 'Hello there from the new world! http://somewhere.com',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-2.5': {
     type: 'unsupportedMessage',
@@ -89,6 +105,7 @@ const items: Record<string, TimelineItemType> = {
         title: 'Mr. Pig',
       },
     },
+    timestamp: Date.now(),
   },
   'id-3': {
     type: 'message',
@@ -96,7 +113,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'crimson',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -107,8 +127,10 @@ const items: Record<string, TimelineItemType> = {
       previews: [],
       readStatus: ReadStatus.Read,
       text: 'Hello there from the new world!',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-4': {
     type: 'timerNotification',
@@ -118,40 +140,37 @@ const items: Record<string, TimelineItemType> = {
       title: "It's Me",
       type: 'fromMe',
     },
+    timestamp: Date.now(),
   },
   'id-5': {
     type: 'timerNotification',
     data: {
       disabled: false,
       expireTimer: moment.duration(2, 'hours').asSeconds(),
-      phoneNumber: '(202) 555-0000',
       title: '(202) 555-0000',
       type: 'fromOther',
     },
+    timestamp: Date.now(),
   },
   'id-6': {
     type: 'safetyNumberNotification',
     data: {
       contact: {
         id: '+1202555000',
-        phoneNumber: '(202) 555-0000',
-        profileName: 'Mr. Fire',
         title: 'Mr. Fire',
       },
       isGroup: true,
     },
+    timestamp: Date.now(),
   },
   'id-7': {
     type: 'verificationNotification',
     data: {
-      contact: {
-        name: 'Mrs. Ice',
-        phoneNumber: '(202) 555-0001',
-        title: 'Mrs. Ice',
-      },
+      contact: { title: 'Mrs. Ice' },
       isLocal: true,
       type: 'markVerified',
     },
+    timestamp: Date.now(),
   },
   'id-8': {
     type: 'groupNotification',
@@ -164,30 +183,29 @@ const items: Record<string, TimelineItemType> = {
         {
           type: 'add',
           contacts: [
-            {
+            getDefaultConversation({
               phoneNumber: '(202) 555-0002',
-              profileName: 'Mr. Fire',
               title: 'Mr. Fire',
-            },
-            {
+            }),
+            getDefaultConversation({
               phoneNumber: '(202) 555-0003',
-              profileName: 'Ms. Water',
               title: 'Ms. Water',
-            },
+            }),
           ],
         },
       ],
-      from: {
+      from: getDefaultConversation({
         phoneNumber: '(202) 555-0001',
-        name: 'Mrs. Ice',
         title: 'Mrs. Ice',
         isMe: false,
-      },
+      }),
     },
+    timestamp: Date.now(),
   },
   'id-9': {
     type: 'resetSessionNotification',
     data: null,
+    timestamp: Date.now(),
   },
   'id-10': {
     type: 'message',
@@ -195,7 +213,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'plum',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -207,8 +228,10 @@ const items: Record<string, TimelineItemType> = {
       readStatus: ReadStatus.Read,
       status: 'sent',
       text: '🔥',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-11': {
     type: 'message',
@@ -216,7 +239,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'crimson',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -228,8 +254,10 @@ const items: Record<string, TimelineItemType> = {
       readStatus: ReadStatus.Read,
       status: 'read',
       text: 'Hello there from the new world! http://somewhere.com',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-12': {
     type: 'message',
@@ -237,7 +265,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'crimson',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -249,8 +280,10 @@ const items: Record<string, TimelineItemType> = {
       readStatus: ReadStatus.Read,
       status: 'sent',
       text: 'Hello there from the new world! 🔥',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-13': {
     type: 'message',
@@ -258,7 +291,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'crimson',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -269,10 +305,11 @@ const items: Record<string, TimelineItemType> = {
       previews: [],
       readStatus: ReadStatus.Read,
       status: 'sent',
-      text:
-        'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
+      text: 'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
+    timestamp: Date.now(),
   },
   'id-14': {
     type: 'message',
@@ -280,7 +317,10 @@ const items: Record<string, TimelineItemType> = {
       author: getDefaultConversation({}),
       canDeleteForEveryone: false,
       canDownload: true,
+      canReact: true,
       canReply: true,
+      canRetry: true,
+      canRetryDeleteForEveryone: true,
       conversationColor: 'crimson',
       conversationId: 'conversation-id',
       conversationType: 'group',
@@ -291,14 +331,11 @@ const items: Record<string, TimelineItemType> = {
       previews: [],
       readStatus: ReadStatus.Read,
       status: 'read',
-      text:
-        'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
+      text: 'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
+      textDirection: TextDirection.Default,
       timestamp: Date.now(),
     },
-  },
-  'id-15': {
-    type: 'linkNotification',
-    data: null,
+    timestamp: Date.now(),
   },
 };
 
@@ -306,12 +343,11 @@ const actions = () => ({
   acknowledgeGroupMemberNameCollisions: action(
     'acknowledgeGroupMemberNameCollisions'
   ),
+  blockGroupLinkRequests: action('blockGroupLinkRequests'),
   checkForAccount: action('checkForAccount'),
-  clearChangedMessages: action('clearChangedMessages'),
-  clearInvitedConversationsForNewlyCreatedGroup: action(
-    'clearInvitedConversationsForNewlyCreatedGroup'
+  clearInvitedUuidsForNewlyCreatedGroup: action(
+    'clearInvitedUuidsForNewlyCreatedGroup'
   ),
-  setLoadCountdownStart: action('setLoadCountdownStart'),
   setIsNearBottom: action('setIsNearBottom'),
   learnMoreAboutDeliveryIssue: action('learnMoreAboutDeliveryIssue'),
   loadAndScroll: action('loadAndScroll'),
@@ -325,6 +361,7 @@ const actions = () => ({
 
   reactToMessage: action('reactToMessage'),
   replyToMessage: action('replyToMessage'),
+  retryDeleteForEveryone: action('retryDeleteForEveryone'),
   retrySend: action('retrySend'),
   deleteMessage: action('deleteMessage'),
   deleteMessageForEveryone: action('deleteMessageForEveryone'),
@@ -335,12 +372,12 @@ const actions = () => ({
   kickOffAttachmentDownload: action('kickOffAttachmentDownload'),
   markAttachmentAsCorrupted: action('markAttachmentAsCorrupted'),
   markViewed: action('markViewed'),
+  messageExpanded: action('messageExpanded'),
   showVisualAttachment: action('showVisualAttachment'),
   downloadAttachment: action('downloadAttachment'),
   displayTapToViewMessage: action('displayTapToViewMessage'),
   doubleCheckMissingQuoteReference: action('doubleCheckMissingQuoteReference'),
 
-  onHeightChange: action('onHeightChange'),
   openLink: action('openLink'),
   scrollToQuotedMessage: action('scrollToQuotedMessage'),
   showExpiredIncomingTapToViewToast: action(
@@ -355,8 +392,8 @@ const actions = () => ({
 
   downloadNewVersion: action('downloadNewVersion'),
 
-  messageSizeChanged: action('messageSizeChanged'),
   startCallingLobby: action('startCallingLobby'),
+  startConversation: action('startConversation'),
   returnToActiveCall: action('returnToActiveCall'),
 
   contactSupport: action('contactSupport'),
@@ -374,36 +411,64 @@ const actions = () => ({
   removeMember: action('removeMember'),
 
   unblurAvatar: action('unblurAvatar'),
+
+  peekGroupCallForTheFirstTime: action('peekGroupCallForTheFirstTime'),
+  peekGroupCallIfItHasMembers: action('peekGroupCallIfItHasMembers'),
 });
 
-const renderItem = (
-  id: string,
-  _conversationId: unknown,
-  _onHeightChange: unknown,
-  _actionProps: unknown,
-  containerElementRef: React.RefObject<HTMLElement>
-) => (
+const renderItem = ({
+  messageId,
+  containerElementRef,
+  containerWidthBreakpoint,
+}: {
+  messageId: string;
+  containerElementRef: React.RefObject<HTMLElement>;
+  containerWidthBreakpoint: WidthBreakpoint;
+}) => (
   <TimelineItem
+    getPreferredBadge={() => undefined}
     id=""
     isSelected={false}
     renderEmojiPicker={() => <div />}
-    item={items[id]}
+    renderReactionPicker={() => <div />}
+    item={items[messageId]}
     i18n={i18n}
     interactionMode="keyboard"
+    isNextItemCallingNotification={false}
+    theme={ThemeType.light}
     containerElementRef={containerElementRef}
+    containerWidthBreakpoint={containerWidthBreakpoint}
     conversationId=""
     renderContact={() => '*ContactName*'}
     renderUniversalTimerNotification={() => (
       <div>*UniversalTimerNotification*</div>
     )}
     renderAudioAttachment={() => <div>*AudioAttachment*</div>}
+    shouldCollapseAbove={false}
+    shouldCollapseBelow={false}
+    shouldHideMetadata={false}
+    shouldRenderDateHeader={false}
     {...actions()}
   />
 );
 
-const renderLastSeenIndicator = () => (
-  <LastSeenIndicator count={2} i18n={i18n} />
-);
+const renderContactSpoofingReviewDialog = (
+  props: SmartContactSpoofingReviewDialogPropsType
+) => {
+  if (props.type === ContactSpoofingType.MultipleGroupMembersWithSameTitle) {
+    return (
+      <ContactSpoofingReviewDialog
+        {...props}
+        group={{
+          ...getDefaultConversation(),
+          areWeAdmin: true,
+        }}
+      />
+    );
+  }
+
+  return <ContactSpoofingReviewDialog {...props} />;
+};
 
 const getAbout = () => text('about', '👍 Free to chat');
 const getTitle = () => text('name', 'Cayce Bollard');
@@ -413,57 +478,66 @@ const getAvatarPath = () =>
   text('avatarPath', '/fixtures/kitten-4-112-112.jpg');
 const getPhoneNumber = () => text('phoneNumber', '+1 (808) 555-1234');
 
-const renderHeroRow = () => (
-  <ConversationHero
-    about={getAbout()}
-    acceptedMessageRequest
-    i18n={i18n}
-    isMe={false}
-    title={getTitle()}
-    avatarPath={getAvatarPath()}
-    name={getName()}
-    profileName={getProfileName()}
-    phoneNumber={getPhoneNumber()}
-    conversationType="direct"
-    sharedGroupNames={['NYC Rock Climbers', 'Dinner Party']}
-    unblurAvatar={action('unblurAvatar')}
-    updateSharedGroups={noop}
-  />
-);
-const renderLoadingRow = () => <TimelineLoadingRow state="loading" />;
+const renderHeroRow = () => {
+  const Wrapper = () => {
+    const theme = React.useContext(StorybookThemeContext);
+    return (
+      <ConversationHero
+        about={getAbout()}
+        acceptedMessageRequest
+        badge={undefined}
+        i18n={i18n}
+        isMe={false}
+        title={getTitle()}
+        avatarPath={getAvatarPath()}
+        name={getName()}
+        profileName={getProfileName()}
+        phoneNumber={getPhoneNumber()}
+        conversationType="direct"
+        sharedGroupNames={['NYC Rock Climbers', 'Dinner Party']}
+        theme={theme}
+        unblurAvatar={action('unblurAvatar')}
+        updateSharedGroups={noop}
+      />
+    );
+  };
+  return <Wrapper />;
+};
 const renderTypingBubble = () => (
   <TypingBubble
     acceptedMessageRequest
+    badge={undefined}
     color={getRandomColor()}
     conversationType="direct"
     phoneNumber="+18005552222"
     i18n={i18n}
     isMe={false}
     title="title"
+    theme={ThemeType.light}
     sharedGroupNames={[]}
   />
 );
 
-const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
+const useProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
+  discardMessages: action('discardMessages'),
+  getPreferredBadge: () => undefined,
   i18n,
+  theme: React.useContext(StorybookThemeContext),
 
+  getTimestampForMessage: Date.now,
   haveNewest: boolean('haveNewest', overrideProps.haveNewest !== false),
   haveOldest: boolean('haveOldest', overrideProps.haveOldest !== false),
+  isConversationSelected: true,
   isIncomingMessageRequest: boolean(
     'isIncomingMessageRequest',
     overrideProps.isIncomingMessageRequest === true
   ),
-  isLoadingMessages: boolean(
-    'isLoadingMessages',
-    overrideProps.isLoadingMessages === false
-  ),
   items: overrideProps.items || Object.keys(items),
-  resetCounter: 0,
   scrollToIndex: overrideProps.scrollToIndex,
   scrollToIndexCounter: 0,
-  totalUnread: number('totalUnread', overrideProps.totalUnread || 0),
-  oldestUnreadIndex:
-    number('oldestUnreadIndex', overrideProps.oldestUnreadIndex || 0) ||
+  totalUnseen: number('totalUnseen', overrideProps.totalUnseen || 0),
+  oldestUnseenIndex:
+    number('oldestUnseenIndex', overrideProps.oldestUnseenIndex || 0) ||
     undefined,
   invitedContactsForNewlyCreatedGroup:
     overrideProps.invitedContactsForNewlyCreatedGroup || [],
@@ -471,26 +545,22 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
 
   id: uuid(),
   renderItem,
-  renderLastSeenIndicator,
   renderHeroRow,
-  renderLoadingRow,
   renderTypingBubble,
-  typingContact: boolean(
-    'typingContact',
-    isBoolean(overrideProps.typingContact) ? overrideProps.typingContact : false
-  ),
+  renderContactSpoofingReviewDialog,
+  isSomeoneTyping: overrideProps.isSomeoneTyping || false,
 
   ...actions(),
 });
 
 story.add('Oldest and Newest', () => {
-  const props = createProps();
+  const props = useProps();
 
   return <Timeline {...props} />;
 });
 
 story.add('With active message request', () => {
-  const props = createProps({
+  const props = useProps({
     isIncomingMessageRequest: true,
   });
 
@@ -498,7 +568,7 @@ story.add('With active message request', () => {
 });
 
 story.add('Without Newest Message', () => {
-  const props = createProps({
+  const props = useProps({
     haveNewest: false,
   });
 
@@ -506,7 +576,7 @@ story.add('Without Newest Message', () => {
 });
 
 story.add('Without newest message, active message request', () => {
-  const props = createProps({
+  const props = useProps({
     haveOldest: false,
     isIncomingMessageRequest: true,
   });
@@ -515,7 +585,7 @@ story.add('Without newest message, active message request', () => {
 });
 
 story.add('Without Oldest Message', () => {
-  const props = createProps({
+  const props = useProps({
     haveOldest: false,
     scrollToIndex: -1,
   });
@@ -524,7 +594,7 @@ story.add('Without Oldest Message', () => {
 });
 
 story.add('Empty (just hero)', () => {
-  const props = createProps({
+  const props = useProps({
     items: [],
   });
 
@@ -532,16 +602,16 @@ story.add('Empty (just hero)', () => {
 });
 
 story.add('Last Seen', () => {
-  const props = createProps({
-    oldestUnreadIndex: 13,
-    totalUnread: 2,
+  const props = useProps({
+    oldestUnseenIndex: 13,
+    totalUnseen: 2,
   });
 
   return <Timeline {...props} />;
 });
 
 story.add('Target Index to Top', () => {
-  const props = createProps({
+  const props = useProps({
     scrollToIndex: 0,
   });
 
@@ -549,15 +619,13 @@ story.add('Target Index to Top', () => {
 });
 
 story.add('Typing Indicator', () => {
-  const props = createProps({
-    typingContact: true,
-  });
+  const props = useProps({ isSomeoneTyping: true });
 
   return <Timeline {...props} />;
 });
 
 story.add('With invited contacts for a newly-created group', () => {
-  const props = createProps({
+  const props = useProps({
     invitedContactsForNewlyCreatedGroup: [
       getDefaultConversation({
         id: 'abc123',
@@ -574,7 +642,7 @@ story.add('With invited contacts for a newly-created group', () => {
 });
 
 story.add('With "same name in direct conversation" warning', () => {
-  const props = createProps({
+  const props = useProps({
     warning: {
       type: ContactSpoofingType.DirectConversationWithSameTitle,
       safeConversation: getDefaultConversation(),
@@ -586,7 +654,7 @@ story.add('With "same name in direct conversation" warning', () => {
 });
 
 story.add('With "same name in group conversation" warning', () => {
-  const props = createProps({
+  const props = useProps({
     warning: {
       type: ContactSpoofingType.MultipleGroupMembersWithSameTitle,
       acknowledgedGroupNameCollisions: {},

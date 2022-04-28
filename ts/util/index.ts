@@ -14,7 +14,11 @@ import { getStringForProfileChange } from './getStringForProfileChange';
 import { getTextWithMentions } from './getTextWithMentions';
 import { getUserAgent } from './getUserAgent';
 import { hasExpired } from './hasExpired';
-import { incrementMessageCounter } from './incrementMessageCounter';
+import {
+  initializeMessageCounter,
+  incrementMessageCounter,
+  flushMessageCounter,
+} from './incrementMessageCounter';
 import { isFileDangerous } from './isFileDangerous';
 import { makeLookup } from './makeLookup';
 import {
@@ -30,11 +34,10 @@ import { toWebSafeBase64, fromWebSafeBase64 } from './webSafeBase64';
 import { mapToSupportLocale } from './mapToSupportLocale';
 import {
   sessionRecordToProtobuf,
-  sessionStructureToArrayBuffer,
+  sessionStructureToBytes,
 } from './sessionTranslation';
 import * as zkgroup from './zkgroup';
 import { StartupQueue } from './StartupQueue';
-import { postLinkExperience } from './postLinkExperience';
 import { sendToGroup, sendContentMessageToGroup } from './sendToGroup';
 import { RetryPlaceholders } from './retryPlaceholders';
 import * as expirationTimer from './expirationTimer';
@@ -50,6 +53,7 @@ export {
   createWaitBatcher,
   deleteForEveryone,
   downloadAttachment,
+  flushMessageCounter,
   fromWebSafeBase64,
   generateSecurityNumber,
   getStringForProfileChange,
@@ -57,6 +61,7 @@ export {
   getUserAgent,
   hasExpired,
   incrementMessageCounter,
+  initializeMessageCounter,
   isFileDangerous,
   longRunningTaskWrapper,
   makeLookup,
@@ -64,7 +69,6 @@ export {
   MessageController,
   missingCaseError,
   parseRemoteClientExpiration,
-  postLinkExperience,
   queueUpdateMessage,
   RetryPlaceholders,
   saveNewMessageBatcher,
@@ -72,7 +76,7 @@ export {
   sendToGroup,
   setBatchingStrategy,
   sessionRecordToProtobuf,
-  sessionStructureToArrayBuffer,
+  sessionStructureToBytes,
   sleep,
   toWebSafeBase64,
   zkgroup,

@@ -1,8 +1,9 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useCallback, useEffect } from 'react';
 import { noop } from 'lodash';
+import type { VideoFrameSource } from 'ringrtc';
 import { CallNeedPermissionScreen } from './CallNeedPermissionScreen';
 import { CallScreen } from './CallScreen';
 import { CallingLobby } from './CallingLobby';
@@ -10,27 +11,26 @@ import { CallingParticipantsList } from './CallingParticipantsList';
 import { CallingSelectPresentingSourcesModal } from './CallingSelectPresentingSourcesModal';
 import { CallingPip } from './CallingPip';
 import { IncomingCallBar } from './IncomingCallBar';
-import {
-  SafetyNumberChangeDialog,
-  SafetyNumberProps,
-} from './SafetyNumberChangeDialog';
-import {
+import type { SafetyNumberProps } from './SafetyNumberChangeDialog';
+import { SafetyNumberChangeDialog } from './SafetyNumberChangeDialog';
+import type {
   ActiveCallType,
+  GroupCallVideoRequest,
+  PresentedSource,
+} from '../types/Calling';
+import {
   CallEndedReason,
   CallMode,
   CallState,
   GroupCallConnectionState,
   GroupCallJoinState,
-  GroupCallVideoRequest,
-  PresentedSource,
-  VideoFrameSource,
 } from '../types/Calling';
-import { ConversationType } from '../state/ducks/conversations';
-import {
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
+import type {
   AcceptCallType,
   CancelCallType,
   DeclineCallType,
-  HangUpType,
   KeyChangeOkType,
   SetGroupCallVideoRequestType,
   SetLocalAudioType,
@@ -39,14 +39,10 @@ import {
   SetRendererCanvasType,
   StartCallType,
 } from '../state/ducks/calling';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType, ThemeType } from '../types/Util';
 import { missingCaseError } from '../util/missingCaseError';
 
 const GROUP_CALL_RING_DURATION = 60 * 1000;
-
-type MeType = ConversationType & {
-  uuid: string;
-};
 
 export type PropsType = {
   activeCall?: ActiveCallType;
@@ -57,6 +53,7 @@ export type PropsType = {
     conversationId: string,
     demuxId: number
   ) => VideoFrameSource;
+  getPreferredBadge: PreferredBadgeSelectorType;
   getPresentingSources: () => void;
   incomingCall?:
     | {
@@ -81,12 +78,12 @@ export type PropsType = {
   declineCall: (_: DeclineCallType) => void;
   i18n: LocalizerType;
   isGroupCallOutboundRingEnabled: boolean;
-  maxGroupCallRingSize: number;
-  me: MeType;
+  me: ConversationType;
   notifyForCall: (title: string, isVideoCall: boolean) => unknown;
   openSystemPreferencesAction: () => unknown;
   playRingtone: () => unknown;
   setGroupCallVideoRequest: (_: SetGroupCallVideoRequestType) => void;
+  setIsCallActive: (_: boolean) => void;
   setLocalAudio: (_: SetLocalAudioType) => void;
   setLocalVideo: (_: SetLocalVideoType) => void;
   setLocalPreview: (_: SetLocalPreviewType) => void;
@@ -94,7 +91,8 @@ export type PropsType = {
   setPresenting: (_?: PresentedSource) => void;
   setRendererCanvas: (_: SetRendererCanvasType) => void;
   stopRingtone: () => unknown;
-  hangUp: (_: HangUpType) => void;
+  hangUpActiveCall: () => void;
+  theme: ThemeType;
   togglePip: () => void;
   toggleScreenRecordingPermissionsDialog: () => unknown;
   toggleSettings: () => void;
@@ -110,13 +108,13 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
   availableCameras,
   cancelCall,
   closeNeedPermissionScreen,
-  hangUp,
+  hangUpActiveCall,
   i18n,
   isGroupCallOutboundRingEnabled,
   keyChangeOk,
   getGroupCallVideoFrameSource,
+  getPreferredBadge,
   getPresentingSources,
-  maxGroupCallRingSize,
   me,
   openSystemPreferencesAction,
   renderDeviceSelection,
@@ -129,6 +127,7 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
   setRendererCanvas,
   setOutgoingRing,
   startCall,
+  theme,
   toggleParticipants,
   togglePip,
   toggleScreenRecordingPermissionsDialog,
@@ -234,7 +233,6 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
           isGroupCall={activeCall.callMode === CallMode.Group}
           isGroupCallOutboundRingEnabled={isGroupCallOutboundRingEnabled}
           isCallFull={isCallFull}
-          maxGroupCallRingSize={maxGroupCallRingSize}
           me={me}
           onCallCanceled={cancelActiveCall}
           onJoinCall={joinActiveCall}
@@ -266,13 +264,14 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
       <CallingPip
         activeCall={activeCall}
         getGroupCallVideoFrameSource={getGroupCallVideoFrameSourceForActiveCall}
-        hangUp={hangUp}
+        hangUpActiveCall={hangUpActiveCall}
         hasLocalVideo={hasLocalVideo}
         i18n={i18n}
         setGroupCallVideoRequest={setGroupCallVideoRequestForConversation}
         setLocalPreview={setLocalPreview}
         setRendererCanvas={setRendererCanvas}
         togglePip={togglePip}
+        toggleSpeakerView={toggleSpeakerView}
       />
     );
   }
@@ -302,7 +301,7 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
         getPresentingSources={getPresentingSources}
         getGroupCallVideoFrameSource={getGroupCallVideoFrameSourceForActiveCall}
         groupMembers={groupMembers}
-        hangUp={hangUp}
+        hangUpActiveCall={hangUpActiveCall}
         i18n={i18n}
         joinedAt={joinedAt}
         me={me}
@@ -343,14 +342,14 @@ const ActiveCallManager: React.FC<ActiveCallManagerPropsType> = ({
         <SafetyNumberChangeDialog
           confirmText={i18n('continueCall')}
           contacts={activeCall.conversationsWithSafetyNumberChanges}
+          getPreferredBadge={getPreferredBadge}
           i18n={i18n}
-          onCancel={() => {
-            hangUp({ conversationId: activeCall.conversation.id });
-          }}
+          onCancel={hangUpActiveCall}
           onConfirm={() => {
             keyChangeOk({ conversationId: activeCall.conversation.id });
           }}
           renderSafetyNumber={renderSafetyNumberViewer}
+          theme={theme}
         />
       ) : null}
     </>
@@ -369,8 +368,14 @@ export const CallManager: React.FC<PropsType> = props => {
     notifyForCall,
     playRingtone,
     stopRingtone,
+    setIsCallActive,
     setOutgoingRing,
   } = props;
+
+  const isCallActive = Boolean(activeCall);
+  useEffect(() => {
+    setIsCallActive(isCallActive);
+  }, [isCallActive, setIsCallActive]);
 
   const shouldRing = getShouldRing(props);
   useEffect(() => {
@@ -385,10 +390,12 @@ export const CallManager: React.FC<PropsType> = props => {
     return noop;
   }, [shouldRing, playRingtone, stopRingtone]);
 
-  const hasActiveCall = Boolean(activeCall);
-  const isGroupCall = activeCall?.callMode === CallMode.Group;
+  const mightBeRingingOutgoingGroupCall =
+    activeCall?.callMode === CallMode.Group &&
+    activeCall.outgoingRing &&
+    activeCall.joinState !== GroupCallJoinState.NotJoined;
   useEffect(() => {
-    if (!hasActiveCall || !isGroupCall) {
+    if (!mightBeRingingOutgoingGroupCall) {
       return noop;
     }
 
@@ -398,7 +405,7 @@ export const CallManager: React.FC<PropsType> = props => {
     return () => {
       clearTimeout(timeout);
     };
-  }, [hasActiveCall, setOutgoingRing, isGroupCall]);
+  }, [mightBeRingingOutgoingGroupCall, setOutgoingRing]);
 
   if (activeCall) {
     // `props` should logically have an `activeCall` at this point, but TypeScript can't

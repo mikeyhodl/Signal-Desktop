@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -7,13 +7,16 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 
 import { EmojiPicker } from '../emoji/EmojiPicker';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
-import { PropsType as TimelineItemProps, TimelineItem } from './TimelineItem';
+import type { PropsType as TimelineItemProps } from './TimelineItem';
+import { TimelineItem } from './TimelineItem';
 import { UniversalTimerNotification } from './UniversalTimerNotification';
 import { CallMode } from '../../types/Calling';
 import { AvatarColors } from '../../types/Colors';
 import { getDefaultConversation } from '../../test-both/helpers/getDefaultConversation';
+import { WidthBreakpoint } from '../_util';
+import { ThemeType } from '../../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -32,6 +35,10 @@ const renderEmojiPicker: TimelineItemProps['renderEmojiPicker'] = ({
   />
 );
 
+const renderReactionPicker: TimelineItemProps['renderReactionPicker'] = () => (
+  <div />
+);
+
 const renderContact = (conversationId: string) => (
   <React.Fragment key={conversationId}>{conversationId}</React.Fragment>
 );
@@ -42,23 +49,30 @@ const renderUniversalTimerNotification = () => (
 
 const getDefaultProps = () => ({
   containerElementRef: React.createRef<HTMLElement>(),
+  containerWidthBreakpoint: WidthBreakpoint.Wide,
   conversationId: 'conversation-id',
+  getPreferredBadge: () => undefined,
   id: 'asdf',
+  isNextItemCallingNotification: false,
   isSelected: false,
   interactionMode: 'keyboard' as const,
+  theme: ThemeType.light,
   selectMessage: action('selectMessage'),
   reactToMessage: action('reactToMessage'),
   checkForAccount: action('checkForAccount'),
   clearSelectedMessage: action('clearSelectedMessage'),
   contactSupport: action('contactSupport'),
   replyToMessage: action('replyToMessage'),
+  retryDeleteForEveryone: action('retryDeleteForEveryone'),
   retrySend: action('retrySend'),
+  blockGroupLinkRequests: action('blockGroupLinkRequests'),
   deleteMessage: action('deleteMessage'),
   deleteMessageForEveryone: action('deleteMessageForEveryone'),
   kickOffAttachmentDownload: action('kickOffAttachmentDownload'),
   learnMoreAboutDeliveryIssue: action('learnMoreAboutDeliveryIssue'),
   markAttachmentAsCorrupted: action('markAttachmentAsCorrupted'),
   markViewed: action('markViewed'),
+  messageExpanded: action('messageExpanded'),
   showMessageDetail: action('showMessageDetail'),
   openConversation: action('openConversation'),
   showContactDetail: action('showContactDetail'),
@@ -74,18 +88,24 @@ const getDefaultProps = () => ({
   showExpiredOutgoingTapToViewToast: action(
     'showExpiredIncomingTapToViewToast'
   ),
-  onHeightChange: action('onHeightChange'),
   openLink: action('openLink'),
   scrollToQuotedMessage: action('scrollToQuotedMessage'),
   downloadNewVersion: action('downloadNewVersion'),
   showIdentity: action('showIdentity'),
-  messageSizeChanged: action('messageSizeChanged'),
   startCallingLobby: action('startCallingLobby'),
+  startConversation: action('startConversation'),
   returnToActiveCall: action('returnToActiveCall'),
+  shouldCollapseAbove: false,
+  shouldCollapseBelow: false,
+  shouldHideMetadata: false,
+  shouldRenderDateHeader: false,
+
+  now: Date.now(),
 
   renderContact,
   renderUniversalTimerNotification,
   renderEmojiPicker,
+  renderReactionPicker,
   renderAudioAttachment: () => <div>*AudioAttachment*</div>,
 });
 
@@ -398,10 +418,6 @@ storiesOf('Components/Conversation/TimelineItem', module)
         },
       },
       {
-        type: 'linkNotification',
-        data: null,
-      },
-      {
         type: 'profileChange',
         data: {
           change: {
@@ -479,21 +495,19 @@ storiesOf('Components/Conversation/TimelineItem', module)
     );
   })
   .add('Unknown Type', () => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: intentional
     const item = {
       type: 'random',
       data: {
         somethin: 'somethin',
       },
-    } as TimelineItemProps['item'];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any as TimelineItemProps['item'];
 
     return <TimelineItem {...getDefaultProps()} item={item} i18n={i18n} />;
   })
   .add('Missing Item', () => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: intentional
-    const item = null as TimelineItemProps['item'];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const item = null as any as TimelineItemProps['item'];
 
     return <TimelineItem {...getDefaultProps()} item={item} i18n={i18n} />;
   });

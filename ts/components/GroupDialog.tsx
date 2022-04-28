@@ -1,10 +1,12 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactChild, ReactNode } from 'react';
+import type { ReactChild, ReactNode } from 'react';
+import React from 'react';
 
-import { LocalizerType } from '../types/Util';
-import { ConversationType } from '../state/ducks/conversations';
+import type { LocalizerType, ThemeType } from '../types/Util';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
 import { ModalHost } from './ModalHost';
 import { Button, ButtonVariant } from './Button';
 import { Avatar, AvatarSize } from './Avatar';
@@ -91,20 +93,29 @@ GroupDialog.Paragraph = ({
 
 type ContactsPropsType = {
   contacts: Array<ConversationType>;
+  getPreferredBadge: PreferredBadgeSelectorType;
   i18n: LocalizerType;
+  theme: ThemeType;
 };
 
-GroupDialog.Contacts = ({ contacts, i18n }: Readonly<ContactsPropsType>) => (
+GroupDialog.Contacts = ({
+  contacts,
+  getPreferredBadge,
+  i18n,
+  theme,
+}: Readonly<ContactsPropsType>) => (
   <ul className="module-GroupDialog__contacts">
     {contacts.map(contact => (
       <li key={contact.id} className="module-GroupDialog__contacts__contact">
         <Avatar
           acceptedMessageRequest={contact.acceptedMessageRequest}
           avatarPath={contact.avatarPath}
+          badge={getPreferredBadge(contact.badges)}
           color={contact.color}
           conversationType={contact.type}
           isMe={contact.isMe}
           noteToSelf={contact.isMe}
+          theme={theme}
           title={contact.title}
           unblurredAvatarPath={contact.unblurredAvatarPath}
           sharedGroupNames={contact.sharedGroupNames}
@@ -112,7 +123,6 @@ GroupDialog.Contacts = ({ contacts, i18n }: Readonly<ContactsPropsType>) => (
           i18n={i18n}
         />
         <ContactName
-          i18n={i18n}
           module="module-GroupDialog__contacts__contact__name"
           title={contact.title}
         />

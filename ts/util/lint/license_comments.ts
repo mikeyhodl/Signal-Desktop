@@ -1,4 +1,4 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // This file doesn't check the format of license files, just the end year. See
@@ -14,7 +14,7 @@ import pMap from 'p-map';
 
 const exec = promisify(childProcess.exec);
 
-const rootPath = path.join(__dirname, '..', '..');
+const rootPath = path.join(__dirname, '..', '..', '..');
 
 const EXTENSIONS_TO_CHECK = new Set([
   '.eslintignore',
@@ -34,15 +34,25 @@ const EXTENSIONS_TO_CHECK = new Set([
   '.md',
   '.plist',
 ]);
-const FILES_TO_IGNORE = new Set([
-  'ISSUE_TEMPLATE.md',
-  'Mp3LameEncoder.min.js',
-  'PULL_REQUEST_TEMPLATE.md',
-  'WebAudioRecorderMp3.js',
-]);
+const FILES_TO_IGNORE = new Set(
+  [
+    '.github/ISSUE_TEMPLATE/bug_report.md',
+    '.github/PULL_REQUEST_TEMPLATE.md',
+    'components/mp3lameencoder/lib/Mp3LameEncoder.js',
+    'components/recorderjs/recorder.js',
+    'components/recorderjs/recorderWorker.js',
+    'components/webaudiorecorder/lib/WebAudioRecorder.js',
+    'components/webaudiorecorder/lib/WebAudioRecorderMp3.js',
+    'js/Mp3LameEncoder.min.js',
+    'js/WebAudioRecorderMp3.js',
+  ].map(
+    // This makes sure the files are correct on Windows.
+    path.normalize
+  )
+);
 
 // This is not technically the real extension.
-function getExtension(file: string): string {
+export function getExtension(file: string): string {
   if (file.startsWith('.')) {
     return getExtension(`x.${file}`);
   }
@@ -63,7 +73,8 @@ export async function forEachRelevantFile(
   await pMap(
     gitFiles,
     async (file: string) => {
-      if (FILES_TO_IGNORE.has(path.basename(file))) {
+      const repoPath = path.relative(rootPath, file);
+      if (FILES_TO_IGNORE.has(repoPath)) {
         return;
       }
 

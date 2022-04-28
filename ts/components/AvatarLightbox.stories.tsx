@@ -9,8 +9,9 @@ import { select } from '@storybook/addon-knobs';
 
 import enMessages from '../../_locales/en/messages.json';
 import { AvatarColors } from '../types/Colors';
-import { AvatarLightbox, PropsType } from './AvatarLightbox';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './AvatarLightbox';
+import { AvatarLightbox } from './AvatarLightbox';
+import { setupI18n } from '../util/setupI18n';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
 
 const i18n = setupI18n('en', enMessages);

@@ -3,8 +3,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AvatarColorType } from '../types/Colors';
-import {
+import type { AvatarColorType } from '../types/Colors';
+import type {
   AvatarDataType,
   DeleteAvatarFromDiskActionType,
   ReplaceAvatarActionType,
@@ -16,8 +16,8 @@ import { AvatarPreview } from './AvatarPreview';
 import { AvatarTextEditor } from './AvatarTextEditor';
 import { AvatarUploadButton } from './AvatarUploadButton';
 import { BetterAvatar } from './BetterAvatar';
-import { LocalizerType } from '../types/Util';
-import { avatarDataToArrayBuffer } from '../util/avatarDataToArrayBuffer';
+import type { LocalizerType } from '../types/Util';
+import { avatarDataToBytes } from '../util/avatarDataToBytes';
 import { createAvatarData } from '../util/createAvatarData';
 import { isSameAvatarData } from '../util/isSameAvatarData';
 import { missingCaseError } from '../util/missingCaseError';
@@ -25,14 +25,14 @@ import { missingCaseError } from '../util/missingCaseError';
 export type PropsType = {
   avatarColor?: AvatarColorType;
   avatarPath?: string;
-  avatarValue?: ArrayBuffer;
+  avatarValue?: Uint8Array;
   conversationId?: string;
   conversationTitle?: string;
   deleteAvatarFromDisk: DeleteAvatarFromDiskActionType;
   i18n: LocalizerType;
   isGroup?: boolean;
   onCancel: () => unknown;
-  onSave: (buffer: ArrayBuffer | undefined) => unknown;
+  onSave: (buffer: Uint8Array | undefined) => unknown;
   userAvatarData: ReadonlyArray<AvatarDataType>;
   replaceAvatar: ReplaceAvatarActionType;
   saveAvatarToDisk: SaveAvatarToDiskActionType;
@@ -62,15 +62,16 @@ export const AvatarEditor = ({
   const [provisionalSelectedAvatar, setProvisionalSelectedAvatar] = useState<
     AvatarDataType | undefined
   >();
-  const [avatarPreview, setAvatarPreview] = useState<ArrayBuffer | undefined>(
+  const [avatarPreview, setAvatarPreview] = useState<Uint8Array | undefined>(
     avatarValue
   );
-  const [initialAvatar, setInitialAvatar] = useState<ArrayBuffer | undefined>(
+  const [initialAvatar, setInitialAvatar] = useState<Uint8Array | undefined>(
     avatarValue
   );
   const [localAvatarData, setLocalAvatarData] = useState<Array<AvatarDataType>>(
     userAvatarData.slice()
   );
+  const [pendingClear, setPendingClear] = useState(false);
 
   const [editMode, setEditMode] = useState<EditMode>(EditMode.Main);
 
@@ -84,7 +85,7 @@ export const AvatarEditor = ({
 
   const selectedAvatar = getSelectedAvatar(provisionalSelectedAvatar);
 
-  // Caching the ArrayBuffer produced into avatarData as buffer because
+  // Caching the Uint8Array produced into avatarData as buffer because
   // that function is a little expensive to run and so we don't flicker the UI.
   useEffect(() => {
     let shouldCancel = false;
@@ -95,7 +96,7 @@ export const AvatarEditor = ({
           if (avatarData.buffer) {
             return avatarData;
           }
-          const buffer = await avatarDataToArrayBuffer(avatarData);
+          const buffer = await avatarDataToBytes(avatarData);
           return {
             ...avatarData,
             buffer,
@@ -150,7 +151,8 @@ export const AvatarEditor = ({
     setInitialAvatar(avatarBuffer);
   }, []);
 
-  const hasChanges = initialAvatar !== avatarPreview;
+  const hasChanges =
+    initialAvatar !== avatarPreview || Boolean(pendingClear && avatarPath);
 
   let content: JSX.Element | undefined;
 
@@ -160,13 +162,14 @@ export const AvatarEditor = ({
         <div className="AvatarEditor__preview">
           <AvatarPreview
             avatarColor={avatarColor}
-            avatarPath={avatarPath}
+            avatarPath={pendingClear ? undefined : avatarPath}
             avatarValue={avatarPreview}
             conversationTitle={conversationTitle}
             i18n={i18n}
             isGroup={isGroup}
             onAvatarLoaded={handleAvatarLoaded}
             onClear={() => {
+              setPendingClear(true);
               setAvatarPreview(undefined);
               setProvisionalSelectedAvatar(undefined);
             }}

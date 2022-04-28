@@ -1,17 +1,17 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
 import classNames from 'classnames';
 
-import { EmbeddedContactType } from '../../types/EmbeddedContact';
+import type { EmbeddedContactType } from '../../types/EmbeddedContact';
 
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
 import {
   renderAvatar,
   renderContactShorthand,
   renderName,
-} from './_contactUtil';
+} from './contactUtil';
 
 export type Props = {
   contact: EmbeddedContactType;

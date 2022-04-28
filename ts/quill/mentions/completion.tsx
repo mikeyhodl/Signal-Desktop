@@ -1,36 +1,31 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import _ from 'lodash';
-import Quill from 'quill';
+import type Quill from 'quill';
 import Delta from 'quill-delta';
-import React, { RefObject } from 'react';
+import type { RefObject } from 'react';
+import React from 'react';
 
 import { Popper } from 'react-popper';
 import classNames from 'classnames';
 import { createPortal } from 'react-dom';
-import { ConversationType } from '../../state/ducks/conversations';
+import type { ConversationType } from '../../state/ducks/conversations';
 import { Avatar } from '../../components/Avatar';
-import { LocalizerType } from '../../types/Util';
-import { MemberRepository } from '../memberRepository';
+import type { LocalizerType, ThemeType } from '../../types/Util';
+import type { MemberRepository } from '../memberRepository';
+import type { PreferredBadgeSelectorType } from '../../state/selectors/badges';
 import { matchBlotTextPartitions } from '../util';
 import { sameWidthModifier } from '../../util/popperUtil';
 
 export type MentionCompletionOptions = {
+  getPreferredBadge: PreferredBadgeSelectorType;
   i18n: LocalizerType;
   memberRepositoryRef: RefObject<MemberRepository>;
   setMentionPickerElement: (element: JSX.Element | null) => void;
   me?: ConversationType;
+  theme: ThemeType;
 };
-
-declare global {
-  // We want to extend `HTMLElement`'s properties, so we need an interface.
-  // eslint-disable-next-line no-restricted-syntax
-  interface HTMLElement {
-    // Webkit-specific
-    scrollIntoViewIfNeeded: (bringToCenter: boolean) => void;
-  }
-}
 
 const MENTION_REGEX = /(?:^|\W)@([-+\w]*)$/;
 
@@ -212,6 +207,7 @@ export class MentionCompletion {
 
   render(): void {
     const { results: memberResults, index: memberResultsIndex } = this;
+    const { getPreferredBadge, theme } = this.options;
 
     if (memberResults.length === 0) {
       this.options.setMentionPickerElement(null);
@@ -257,11 +253,13 @@ export class MentionCompletion {
                   <Avatar
                     acceptedMessageRequest={member.acceptedMessageRequest}
                     avatarPath={member.avatarPath}
+                    badge={getPreferredBadge(member.badges)}
                     conversationType="direct"
                     i18n={this.options.i18n}
                     isMe={member.isMe}
                     sharedGroupNames={member.sharedGroupNames}
                     size={28}
+                    theme={theme}
                     title={member.title}
                     unblurredAvatarPath={member.unblurredAvatarPath}
                   />

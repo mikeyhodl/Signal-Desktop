@@ -1,19 +1,17 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
 
 import { Button, ButtonSize, ButtonVariant } from '../Button';
+import { SystemMessage } from './SystemMessage';
 import { ContactName } from './ContactName';
 import { Intl } from '../Intl';
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
 
 export type ContactType = {
   id: string;
-  phoneNumber?: string;
-  profileName?: string;
   title: string;
-  name?: string;
 };
 
 export type PropsData = {
@@ -42,32 +40,26 @@ export const SafetyNumberNotification = ({
     : 'safetyNumberChanged';
 
   return (
-    <div className="SystemMessage SystemMessage--multiline">
-      <div className="SystemMessage__line">
-        <div className="SystemMessage__icon SystemMessage__icon--safety-number" />
-        <span>
-          <Intl
-            id={changeKey}
-            components={[
-              <span
-                key="external-1"
-                className="module-safety-number-notification__contact"
-              >
-                <ContactName
-                  name={contact.name}
-                  profileName={contact.profileName}
-                  phoneNumber={contact.phoneNumber}
-                  title={contact.title}
-                  module="module-safety-number-notification__contact"
-                  i18n={i18n}
-                />
-              </span>,
-            ]}
-            i18n={i18n}
-          />
-        </span>
-      </div>
-      <div className="SystemMessage__line">
+    <SystemMessage
+      icon="safety-number"
+      contents={
+        <Intl
+          id={changeKey}
+          components={[
+            <span
+              key="external-1"
+              className="module-safety-number-notification__contact"
+            >
+              <ContactName
+                title={contact.title}
+                module="module-safety-number-notification__contact"
+              />
+            </span>,
+          ]}
+          i18n={i18n}
+        />
+      }
+      button={
         <Button
           onClick={() => {
             showIdentity(contact.id);
@@ -77,7 +69,7 @@ export const SafetyNumberNotification = ({
         >
           {i18n('verifyNewNumber')}
         </Button>
-      </div>
-    </div>
+      }
+    />
   );
 };

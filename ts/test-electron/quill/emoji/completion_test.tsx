@@ -5,7 +5,7 @@ import { assert } from 'chai';
 import sinon from 'sinon';
 
 import { EmojiCompletion } from '../../../quill/emoji/completion';
-import { EmojiData } from '../../../components/emoji/lib';
+import type { EmojiData } from '../../../components/emoji/lib';
 
 describe('emojiCompletion', () => {
   let emojiCompletion: EmojiCompletion;
@@ -43,10 +43,8 @@ describe('emojiCompletion', () => {
         text: ':smile:',
       };
       mockQuill.getLeaf.returns([blot, 2]);
-      const [
-        leftLeafText,
-        rightLeafText,
-      ] = emojiCompletion.getCurrentLeafTextPartitions();
+      const [leftLeafText, rightLeafText] =
+        emojiCompletion.getCurrentLeafTextPartitions();
       assert.equal(leftLeafText, ':s');
       assert.equal(rightLeafText, 'mile:');
     });

@@ -4,12 +4,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { AvatarColorPicker } from './AvatarColorPicker';
-import { AvatarColorType } from '../types/Colors';
-import { AvatarDataType } from '../types/Avatar';
+import type { AvatarColorType } from '../types/Colors';
+import type { AvatarDataType } from '../types/Avatar';
 import { AvatarModalButtons } from './AvatarModalButtons';
 import { AvatarPreview } from './AvatarPreview';
-import { LocalizerType } from '../types/Util';
-import { avatarDataToArrayBuffer } from '../util/avatarDataToArrayBuffer';
+import type { LocalizerType } from '../types/Util';
+import { avatarDataToBytes } from '../util/avatarDataToBytes';
 
 export type PropsType = {
   avatarData: AvatarDataType;
@@ -22,10 +22,9 @@ export const AvatarIconEditor = ({
   i18n,
   onClose,
 }: PropsType): JSX.Element => {
-  const [avatarBuffer, setAvatarBuffer] = useState<ArrayBuffer | undefined>();
-  const [avatarData, setAvatarData] = useState<AvatarDataType>(
-    initialAvatarData
-  );
+  const [avatarBuffer, setAvatarBuffer] = useState<Uint8Array | undefined>();
+  const [avatarData, setAvatarData] =
+    useState<AvatarDataType>(initialAvatarData);
 
   const onColorSelected = useCallback(
     (color: AvatarColorType) => {
@@ -41,7 +40,7 @@ export const AvatarIconEditor = ({
     let shouldCancel = false;
 
     async function loadAvatar() {
-      const buffer = await avatarDataToArrayBuffer(avatarData);
+      const buffer = await avatarDataToBytes(avatarData);
       if (!shouldCancel) {
         setAvatarBuffer(buffer);
       }

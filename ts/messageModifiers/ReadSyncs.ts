@@ -1,17 +1,19 @@
-// Copyright 2017-2020 Signal Messenger, LLC
+// Copyright 2017-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /* eslint-disable max-classes-per-file */
 
 import { Collection, Model } from 'backbone';
 
-import { MessageModel } from '../models/messages';
+import type { MessageModel } from '../models/messages';
 import { isIncoming } from '../state/selectors/message';
 import { isMessageUnread } from '../util/isMessageUnread';
+import { notificationService } from '../services/notifications';
+import * as log from '../logging/log';
 
-type ReadSyncAttributesType = {
+export type ReadSyncAttributesType = {
   senderId: string;
-  sender: string;
+  sender?: string;
   senderUuid: string;
   timestamp: number;
   readAt: number;
@@ -28,7 +30,7 @@ async function maybeItIsAReactionReadSync(sync: ReadSyncModel): Promise<void> {
   );
 
   if (!readReaction) {
-    window.log.info(
+    log.info(
       'Nothing found for read sync',
       sync.get('senderId'),
       sync.get('sender'),
@@ -38,7 +40,7 @@ async function maybeItIsAReactionReadSync(sync: ReadSyncModel): Promise<void> {
     return;
   }
 
-  window.Whisper.Notifications.removeBy({
+  notificationService.removeBy({
     conversationId: readReaction.conversationId,
     emoji: readReaction.emoji,
     targetAuthorUuid: readReaction.targetAuthorUuid,
@@ -67,9 +69,7 @@ export class ReadSyncs extends Collection {
       );
     });
     if (sync) {
-      window.log.info(
-        `Found early read sync for message ${sync.get('timestamp')}`
-      );
+      log.info(`Found early read sync for message ${sync.get('timestamp')}`);
       this.remove(sync);
       return sync;
     }
@@ -80,19 +80,16 @@ export class ReadSyncs extends Collection {
   async onSync(sync: ReadSyncModel): Promise<void> {
     try {
       const messages = await window.Signal.Data.getMessagesBySentAt(
-        sync.get('timestamp'),
-        {
-          MessageCollection: window.Whisper.MessageCollection,
-        }
+        sync.get('timestamp')
       );
 
       const found = messages.find(item => {
         const senderId = window.ConversationController.ensureContactIds({
-          e164: item.get('source'),
-          uuid: item.get('sourceUuid'),
+          e164: item.source,
+          uuid: item.sourceUuid,
         });
 
-        return isIncoming(item.attributes) && senderId === sync.get('senderId');
+        return isIncoming(item) && senderId === sync.get('senderId');
       });
 
       if (!found) {
@@ -100,7 +97,7 @@ export class ReadSyncs extends Collection {
         return;
       }
 
-      window.Whisper.Notifications.removeBy({ messageId: found.id });
+      notificationService.removeBy({ messageId: found.id });
 
       const message = window.MessageController.register(found.id, found);
       const readAt = Math.min(sync.get('readAt'), Date.now());
@@ -145,7 +142,7 @@ export class ReadSyncs extends Collection {
 
       this.remove(sync);
     } catch (error) {
-      window.log.error(
+      log.error(
         'ReadSyncs.onSync error:',
         error && error.stack ? error.stack : error
       );

@@ -9,15 +9,15 @@ import _ from 'lodash';
 import { Popper } from 'react-popper';
 import classNames from 'classnames';
 import { createPortal } from 'react-dom';
+import type { EmojiData } from '../../components/emoji/lib';
 import {
-  EmojiData,
   search,
   convertShortName,
   isShortName,
   convertShortNameToData,
 } from '../../components/emoji/lib';
 import { Emoji } from '../../components/emoji/Emoji';
-import { EmojiPickDataType } from '../../components/emoji/EmojiPicker';
+import type { EmojiPickDataType } from '../../components/emoji/EmojiPicker';
 import { getBlotTextPartitions, matchBlotTextPartitions } from '../util';
 import { sameWidthModifier } from '../../util/popperUtil';
 
@@ -104,7 +104,7 @@ export class EmojiCompletion {
     const range = this.quill.getSelection();
     const [blot, index] = this.quill.getLeaf(range ? range.index : -1);
 
-    return getBlotTextPartitions(blot, index);
+    return getBlotTextPartitions(blot.text, index);
   }
 
   onSelectionChange(): void {
@@ -175,7 +175,7 @@ export class EmojiCompletion {
         }
       }
 
-      if (leftTokenText.length < 2) {
+      if (leftTokenText.length < 3) {
         this.reset();
         return PASS_THROUGH;
       }

@@ -7,10 +7,11 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 
 import { NewlyCreatedGroupInvitedContactsDialog } from './NewlyCreatedGroupInvitedContactsDialog';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import { setupI18n } from '../util/setupI18n';
 import enMessages from '../../_locales/en/messages.json';
-import { ConversationType } from '../state/ducks/conversations';
+import type { ConversationType } from '../state/ducks/conversations';
 import { getDefaultConversation } from '../test-both/helpers/getDefaultConversation';
+import { ThemeType } from '../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -27,15 +28,19 @@ const story = storiesOf(
 story.add('One contact', () => (
   <NewlyCreatedGroupInvitedContactsDialog
     contacts={[conversations[0]]}
+    getPreferredBadge={() => undefined}
     i18n={i18n}
     onClose={action('onClose')}
+    theme={ThemeType.light}
   />
 ));
 
 story.add('Two contacts', () => (
   <NewlyCreatedGroupInvitedContactsDialog
     contacts={conversations}
+    getPreferredBadge={() => undefined}
     i18n={i18n}
     onClose={action('onClose')}
+    theme={ThemeType.light}
   />
 ));

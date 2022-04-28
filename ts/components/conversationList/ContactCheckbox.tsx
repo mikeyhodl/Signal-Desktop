@@ -1,11 +1,16 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { FunctionComponent, ReactNode } from 'react';
+import type { FunctionComponent, ReactNode } from 'react';
+import React from 'react';
 
-import { BaseConversationListItem } from './BaseConversationListItem';
-import { ConversationType } from '../../state/ducks/conversations';
-import { LocalizerType } from '../../types/Util';
+import {
+  BaseConversationListItem,
+  HEADER_CONTACT_NAME_CLASS_NAME,
+} from './BaseConversationListItem';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { BadgeType } from '../../badges/types';
+import type { LocalizerType, ThemeType } from '../../types/Util';
 import { ContactName } from '../conversation/ContactName';
 import { About } from '../conversation/About';
 
@@ -13,10 +18,10 @@ export enum ContactCheckboxDisabledReason {
   // We start the enum at 1 because the default starting value of 0 is falsy.
   AlreadyAdded = 1,
   MaximumContactsSelected,
-  NotCapable,
 }
 
 export type PropsDataType = {
+  badge: undefined | BadgeType;
   disabledReason?: ContactCheckboxDisabledReason;
   isChecked: boolean;
 } & Pick<
@@ -42,6 +47,7 @@ type PropsHousekeepingType = {
     id: string,
     disabledReason: undefined | ContactCheckboxDisabledReason
   ) => void;
+  theme: ThemeType;
 };
 
 type PropsType = PropsDataType & PropsHousekeepingType;
@@ -51,6 +57,7 @@ export const ContactCheckbox: FunctionComponent<PropsType> = React.memo(
     about,
     acceptedMessageRequest,
     avatarPath,
+    badge,
     color,
     disabledReason,
     i18n,
@@ -62,6 +69,7 @@ export const ContactCheckbox: FunctionComponent<PropsType> = React.memo(
     phoneNumber,
     profileName,
     sharedGroupNames,
+    theme,
     title,
     type,
     unblurredAvatarPath,
@@ -69,15 +77,11 @@ export const ContactCheckbox: FunctionComponent<PropsType> = React.memo(
     const disabled = Boolean(disabledReason);
 
     const headerName = isMe ? (
-      i18n('noteToSelf')
+      <span className={HEADER_CONTACT_NAME_CLASS_NAME}>
+        {i18n('noteToSelf')}
+      </span>
     ) : (
-      <ContactName
-        phoneNumber={phoneNumber}
-        name={name}
-        profileName={profileName}
-        title={title}
-        i18n={i18n}
-      />
+      <ContactName module={HEADER_CONTACT_NAME_CLASS_NAME} title={title} />
     );
 
     let messageText: ReactNode;
@@ -97,6 +101,7 @@ export const ContactCheckbox: FunctionComponent<PropsType> = React.memo(
       <BaseConversationListItem
         acceptedMessageRequest={acceptedMessageRequest}
         avatarPath={avatarPath}
+        badge={badge}
         checked={isChecked}
         color={color}
         conversationType={type}
@@ -112,6 +117,7 @@ export const ContactCheckbox: FunctionComponent<PropsType> = React.memo(
         phoneNumber={phoneNumber}
         profileName={profileName}
         sharedGroupNames={sharedGroupNames}
+        theme={theme}
         title={title}
         unblurredAvatarPath={unblurredAvatarPath}
       />

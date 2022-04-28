@@ -1,46 +1,34 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 .module-SearchInput {
   &__container {
-    border-radius: 8px;
-    border: none;
-    margin: 10px 16px;
-    padding: 5px 12px;
+    margin: {
+      left: 16px;
+      right: 16px;
+      bottom: 8px;
+    }
     position: relative;
-
-    @include font-body-2;
-
-    @include light-theme {
-      background-color: $color-gray-02;
-      border: solid 1px $color-gray-02;
-      color: $color-gray-90;
-    }
-
-    @include dark-theme {
-      background: $color-gray-90;
-      border: solid 1px $color-gray-90;
-      color: $color-gray-05;
-    }
-
-    &:focus-within {
-      border: solid 1px $color-ultramarine;
-      outline: none;
-    }
   }
 
   &__icon {
-    @include color-svg('../images/icons/v2/search-16.svg', $color-gray-45);
-    cursor: text;
     height: 16px;
     left: 8px;
+    pointer-events: none;
     position: absolute;
     top: 6px;
     width: 16px;
+
+    @include light-theme {
+      @include color-svg('../images/icons/v2/search-16.svg', $color-gray-45);
+    }
+    @include dark-theme {
+      @include color-svg('../images/icons/v2/search-16.svg', $color-gray-25);
+    }
   }
 
   &__input {
-    background: inherit;
+    background: transparent;
     border: none;
     padding-left: 16px;
     width: 100%;
@@ -59,6 +47,57 @@
 
     &:focus {
       outline: none;
+    }
+  }
+
+  &__input {
+    @include font-body-2;
+    border: solid 1px transparent;
+    border-radius: 8px;
+    height: 28px;
+    padding-left: 30px;
+    padding-right: 5px;
+    width: 100%;
+
+    @include light-theme {
+      background-color: $color-black-alpha-08;
+      color: $color-gray-90;
+
+      &:placeholder {
+        color: $color-gray-45;
+      }
+    }
+    @include dark-theme {
+      background-color: $color-white-alpha-12;
+      color: $color-gray-05;
+
+      &:placeholder {
+        color: $color-gray-25;
+      }
+    }
+
+    &:focus {
+      border: solid 1px $color-ultramarine;
+      outline: none;
+    }
+
+    &--with-text {
+      padding-right: 30px;
+    }
+  }
+
+  &__cancel {
+    height: 18px;
+    position: absolute;
+    right: 8px;
+    top: 5px;
+    width: 18px;
+
+    @include light-theme {
+      @include color-svg('../images/icons/v2/x-24.svg', $color-gray-60);
+    }
+    @include dark-theme {
+      @include color-svg('../images/icons/v2/x-24.svg', $color-gray-25);
     }
   }
 }

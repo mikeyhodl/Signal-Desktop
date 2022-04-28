@@ -1,48 +1,54 @@
-// Copyright 2018-2021 Signal Messenger, LLC
+// Copyright 2018-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { FunctionComponent, ReactChild } from 'react';
+import type { ReactChild, ReactElement } from 'react';
+import React from 'react';
 import classNames from 'classnames';
+import Measure from 'react-measure';
 
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
 import type { DirectionType, MessageStatusType } from './Message';
 import { ExpireTimer } from './ExpireTimer';
-import { Timestamp } from './Timestamp';
+import { MessageTimestamp } from './MessageTimestamp';
 import { Spinner } from '../Spinner';
 
 type PropsType = {
+  deletedForEveryone?: boolean;
   direction: DirectionType;
   expirationLength?: number;
   expirationTimestamp?: number;
   hasText: boolean;
   i18n: LocalizerType;
   id: string;
+  isInline?: boolean;
   isShowingImage: boolean;
   isSticker?: boolean;
   isTapToViewExpired?: boolean;
+  onWidthMeasured?: (width: number) => unknown;
   showMessageDetail: (id: string) => void;
   status?: MessageStatusType;
   textPending?: boolean;
   timestamp: number;
 };
 
-export const MessageMetadata: FunctionComponent<PropsType> = props => {
-  const {
-    direction,
-    expirationLength,
-    expirationTimestamp,
-    hasText,
-    i18n,
-    id,
-    isShowingImage,
-    isSticker,
-    isTapToViewExpired,
-    showMessageDetail,
-    status,
-    textPending,
-    timestamp,
-  } = props;
-
+export const MessageMetadata = ({
+  deletedForEveryone,
+  direction,
+  expirationLength,
+  expirationTimestamp,
+  hasText,
+  i18n,
+  id,
+  isInline,
+  isShowingImage,
+  isSticker,
+  isTapToViewExpired,
+  onWidthMeasured,
+  showMessageDetail,
+  status,
+  textPending,
+  timestamp,
+}: Readonly<PropsType>): ReactElement => {
   const withImageNoCaption = Boolean(!isSticker && !hasText && isShowingImage);
   const metadataDirection = isSticker ? undefined : direction;
 
@@ -56,7 +62,9 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
     if (isError || isPartiallySent || isPaused) {
       let statusInfo: React.ReactChild;
       if (isError) {
-        statusInfo = i18n('sendFailed');
+        statusInfo = deletedForEveryone
+          ? i18n('deleteFailed')
+          : i18n('sendFailed');
       } else if (isPaused) {
         statusInfo = i18n('sendPaused');
       } else {
@@ -71,7 +79,9 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
               showMessageDetail(id);
             }}
           >
-            {i18n('partiallySent')}
+            {deletedForEveryone
+              ? i18n('partiallyDeleted')
+              : i18n('partiallySent')}
           </button>
         );
       }
@@ -81,8 +91,11 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
           className={classNames({
             'module-message__metadata__date': true,
             'module-message__metadata__date--with-sticker': isSticker,
+            'module-message__metadata__date--deleted-for-everyone':
+              deletedForEveryone,
             [`module-message__metadata__date--${direction}`]: !isSticker,
-            'module-message__metadata__date--with-image-no-caption': withImageNoCaption,
+            'module-message__metadata__date--with-image-no-caption':
+              withImageNoCaption,
           })}
         >
           {statusInfo}
@@ -90,11 +103,11 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
       );
     } else {
       timestampNode = (
-        <Timestamp
+        <MessageTimestamp
           i18n={i18n}
           timestamp={timestamp}
-          extended
           direction={metadataDirection}
+          deletedForEveryone={deletedForEveryone}
           withImageNoCaption={withImageNoCaption}
           withSticker={isSticker}
           withTapToViewExpired={isTapToViewExpired}
@@ -104,20 +117,19 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
     }
   }
 
-  return (
-    <div
-      className={classNames(
-        'module-message__metadata',
-        `module-message__metadata--${direction}`,
-        withImageNoCaption
-          ? 'module-message__metadata--with-image-no-caption'
-          : null
-      )}
-    >
+  const className = classNames(
+    'module-message__metadata',
+    isInline && 'module-message__metadata--inline',
+    withImageNoCaption && 'module-message__metadata--with-image-no-caption',
+    deletedForEveryone && 'module-message__metadata--deleted-for-everyone'
+  );
+  const children = (
+    <>
       {timestampNode}
-      {expirationLength && expirationTimestamp ? (
+      {expirationLength ? (
         <ExpireTimer
           direction={metadataDirection}
+          deletedForEveryone={deletedForEveryone}
           expirationLength={expirationLength}
           expirationTimestamp={expirationTimestamp}
           withImageNoCaption={withImageNoCaption}
@@ -130,7 +142,8 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
           <Spinner svgSize="small" size="14px" direction={direction} />
         </div>
       ) : null}
-      {!textPending &&
+      {(!deletedForEveryone || status === 'sending') &&
+      !textPending &&
       direction === 'outgoing' &&
       status !== 'error' &&
       status !== 'partial-sent' ? (
@@ -144,12 +157,34 @@ export const MessageMetadata: FunctionComponent<PropsType> = props => {
             withImageNoCaption
               ? 'module-message__metadata__status-icon--with-image-no-caption'
               : null,
+            deletedForEveryone
+              ? 'module-message__metadata__status-icon--deleted-for-everyone'
+              : null,
             isTapToViewExpired
               ? 'module-message__metadata__status-icon--with-tap-to-view-expired'
               : null
           )}
         />
       ) : null}
-    </div>
+    </>
   );
+
+  if (onWidthMeasured) {
+    return (
+      <Measure
+        bounds
+        onResize={({ bounds }) => {
+          onWidthMeasured(bounds?.width || 0);
+        }}
+      >
+        {({ measureRef }) => (
+          <div className={className} ref={measureRef}>
+            {children}
+          </div>
+        )}
+      </Measure>
+    );
+  }
+
+  return <div className={className}>{children}</div>;
 };

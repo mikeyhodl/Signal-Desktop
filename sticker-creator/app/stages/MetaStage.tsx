@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
-import { FileWithPath } from 'react-dropzone';
+import type { FileWithPath } from 'react-dropzone';
 import { AppStage } from './AppStage';
 import * as styles from './MetaStage.scss';
 import { processStickerImage } from '../../util/preload';
@@ -35,9 +35,8 @@ export const MetaStage: React.ComponentType = () => {
     [actions]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useStickerDropzone(
-    onDrop
-  );
+  const { getRootProps, getInputProps, isDragActive } =
+    useStickerDropzone(onDrop);
 
   const onNext = React.useCallback(() => {
     setConfirming(true);

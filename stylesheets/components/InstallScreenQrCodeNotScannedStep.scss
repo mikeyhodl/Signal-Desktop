@@ -1,0 +1,124 @@
+// Copyright 2021-2022 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+.module-InstallScreenQrCodeNotScannedStep {
+  @include install-screen;
+
+  &__contents {
+    $base-max-width: 760px;
+
+    align-items: center;
+    background: $color-white;
+    border-radius: 8px;
+    color: $color-black;
+    display: flex;
+    flex-direction: row;
+    animation: 500ms module-InstallScreenQrCodeNotScannedStep__slide-in;
+    position: relative;
+
+    @include light-theme {
+      max-width: $base-max-width;
+      padding: 22px;
+    }
+
+    @include dark-theme {
+      max-width: $base-max-width + 44px;
+      padding: 44px;
+      margin-top: 44px; // Avoids overlap with the Signal logo
+    }
+  }
+
+  &__qr-code {
+    $size: 256px;
+
+    align-items: center;
+    border: 2px solid transparent;
+    box-sizing: content-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 8px 38px 8px 8px;
+    min-height: $size;
+    min-width: $size;
+    width: $size;
+
+    &--loaded {
+      background: $color-white;
+    }
+
+    &--load-failed {
+      @include font-subtitle;
+      border-color: $color-gray-05;
+      border-radius: 4px;
+      color: $color-gray-60;
+    }
+
+    &__code {
+      height: $size;
+      width: $size;
+      animation: 1s module-InstallScreenQrCodeNotScannedStep__slide-in;
+      position: relative;
+    }
+
+    &__error-message {
+      text-align: center;
+
+      &::before {
+        @include color-svg(
+          '../images/icons/v2/error-outline-24.svg',
+          $color-accent-red
+        );
+        content: '';
+        display: block;
+        height: 22px;
+        margin: 8px auto 0 auto;
+        width: 22px;
+      }
+
+      a {
+        color: $color-ultramarine;
+        text-decoration: none;
+      }
+    }
+  }
+
+  ol {
+    @include font-body-1;
+    line-height: 26px;
+    list-style-position: inside;
+    padding-inline-start: 0;
+  }
+
+  a {
+    // We want the right link color in dark mode. This is a no-op in light mode.
+    color: $color-ultramarine;
+  }
+
+  &__android-plus {
+    background: $color-gray-25;
+    border-radius: 100%;
+    display: inline-block;
+    padding: 5px;
+    vertical-align: middle;
+
+    &::before {
+      @include color-svg('../images/icons/v2/plus-24.svg', $color-white);
+      content: '';
+      display: block;
+      height: 12px;
+      width: 12px;
+    }
+  }
+}
+
+@keyframes module-InstallScreenQrCodeNotScannedStep__slide-in {
+  from {
+    top: -8px;
+    opacity: 0;
+  }
+
+  to {
+    top: 0;
+    opacity: 1;
+  }
+}

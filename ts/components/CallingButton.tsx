@@ -4,9 +4,10 @@
 import React, { useMemo } from 'react';
 import classNames from 'classnames';
 import { v4 as uuid } from 'uuid';
-import { Tooltip, TooltipPlacement } from './Tooltip';
+import type { TooltipPlacement } from './Tooltip';
+import { Tooltip } from './Tooltip';
 import { Theme } from '../util/theme';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 
 export enum CallingButtonType {
   AUDIO_DISABLED = 'AUDIO_DISABLED',
@@ -29,6 +30,8 @@ export type PropsType = {
   i18n: LocalizerType;
   isVisible?: boolean;
   onClick: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   tooltipDirection?: TooltipPlacement;
 };
 
@@ -37,6 +40,8 @@ export const CallingButton = ({
   i18n,
   isVisible = true,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
   tooltipDirection,
 }: PropsType): JSX.Element => {
   const uniqueButtonId = useMemo(() => uuid(), []);
@@ -106,8 +111,8 @@ export const CallingButton = ({
   }
 
   const className = classNames(
-    'module-calling-button__icon',
-    `module-calling-button__icon--${classNameSuffix}`
+    'CallingButton__icon',
+    `CallingButton__icon--${classNameSuffix}`
   );
 
   return (
@@ -118,8 +123,8 @@ export const CallingButton = ({
     >
       <div
         className={classNames(
-          'module-calling-button__container',
-          !isVisible && 'module-calling-button__container--hidden'
+          'CallingButton__container',
+          !isVisible && 'CallingButton__container--hidden'
         )}
       >
         <button
@@ -128,14 +133,13 @@ export const CallingButton = ({
           disabled={disabled}
           id={uniqueButtonId}
           onClick={onClick}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
           type="button"
         >
           <div />
         </button>
-        <label
-          className="module-calling-button__label"
-          htmlFor={uniqueButtonId}
-        >
+        <label className="CallingButton__label" htmlFor={uniqueButtonId}>
           {label}
         </label>
       </div>

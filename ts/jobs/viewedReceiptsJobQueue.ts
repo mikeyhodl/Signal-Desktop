@@ -1,29 +1,16 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/* eslint-disable class-methods-use-this */
-
 import { z } from 'zod';
-import * as durations from '../util/durations';
-import type { LoggerType } from '../logging/log';
+import type { LoggerType } from '../types/Logging';
 import { exponentialBackoffMaxAttempts } from '../util/exponentialBackoff';
-import { commonShouldJobContinue } from './helpers/commonShouldJobContinue';
-import { sendViewedReceipt } from '../util/sendViewedReceipt';
+import { receiptSchema, ReceiptType } from '../types/Receipt';
+import { MAX_RETRY_TIME, runReceiptJob } from './helpers/receiptHelpers';
 
 import { JobQueue } from './JobQueue';
 import { jobQueueDatabaseStore } from './JobQueueDatabaseStore';
-import { handleCommonJobRequestError } from './helpers/handleCommonJobRequestError';
 
-const MAX_RETRY_TIME = durations.DAY;
-
-const viewedReceiptsJobDataSchema = z.object({
-  viewedReceipt: z.object({
-    messageId: z.string(),
-    senderE164: z.string().optional(),
-    senderUuid: z.string().optional(),
-    timestamp: z.number(),
-  }),
-});
+const viewedReceiptsJobDataSchema = z.object({ viewedReceipt: receiptSchema });
 
 type ViewedReceiptsJobData = z.infer<typeof viewedReceiptsJobDataSchema>;
 
@@ -39,21 +26,13 @@ export class ViewedReceiptsJobQueue extends JobQueue<ViewedReceiptsJobData> {
     }: Readonly<{ data: ViewedReceiptsJobData; timestamp: number }>,
     { attempt, log }: Readonly<{ attempt: number; log: LoggerType }>
   ): Promise<void> {
-    const shouldContinue = await commonShouldJobContinue({
+    await runReceiptJob({
       attempt,
       log,
-      maxRetryTime: MAX_RETRY_TIME,
       timestamp,
+      receipts: [data.viewedReceipt],
+      type: ReceiptType.Viewed,
     });
-    if (!shouldContinue) {
-      return;
-    }
-
-    try {
-      await sendViewedReceipt(data.viewedReceipt);
-    } catch (err: unknown) {
-      handleCommonJobRequestError(err, log);
-    }
   }
 }
 

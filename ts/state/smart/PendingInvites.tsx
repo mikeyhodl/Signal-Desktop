@@ -3,20 +3,23 @@
 
 import { connect } from 'react-redux';
 import { mapDispatchToProps } from '../actions';
-import {
-  PendingInvites,
-  PropsType,
-} from '../../components/conversation/conversation-details/PendingInvites';
-import { StateType } from '../reducer';
+import type { PropsType } from '../../components/conversation/conversation-details/PendingInvites';
+import { PendingInvites } from '../../components/conversation/conversation-details/PendingInvites';
+import type { StateType } from '../reducer';
 
-import { getIntl } from '../selectors/user';
-import { getConversationByIdSelector } from '../selectors/conversations';
+import { getIntl, getTheme } from '../selectors/user';
+import { getPreferredBadgeSelector } from '../selectors/badges';
+import {
+  getConversationByIdSelector,
+  getConversationByUuidSelector,
+} from '../selectors/conversations';
 import { getGroupMemberships } from '../../util/getGroupMemberships';
 import { assert } from '../../util/assert';
+import type { UUIDStringType } from '../../types/UUID';
 
 export type SmartPendingInvitesProps = {
   conversationId: string;
-  ourConversationId?: string;
+  ourUuid: UUIDStringType;
   readonly approvePendingMembership: (conversationid: string) => void;
   readonly revokePendingMemberships: (membershipIds: Array<string>) => void;
 };
@@ -26,6 +29,7 @@ const mapStateToProps = (
   props: SmartPendingInvitesProps
 ): PropsType => {
   const conversationSelector = getConversationByIdSelector(state);
+  const conversationByUuidSelector = getConversationByUuidSelector(state);
 
   const conversation = conversationSelector(props.conversationId);
   assert(
@@ -35,9 +39,11 @@ const mapStateToProps = (
 
   return {
     ...props,
-    ...getGroupMemberships(conversation, conversationSelector),
+    ...getGroupMemberships(conversation, conversationByUuidSelector),
     conversation,
+    getPreferredBadge: getPreferredBadgeSelector(state),
     i18n: getIntl(state),
+    theme: getTheme(state),
   };
 };
 

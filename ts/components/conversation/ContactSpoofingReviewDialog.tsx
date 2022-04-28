@@ -1,16 +1,13 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, {
-  FunctionComponent,
-  ReactChild,
-  ReactNode,
-  useState,
-} from 'react';
+import type { FunctionComponent, ReactChild, ReactNode } from 'react';
+import React, { useState } from 'react';
 import { concat, orderBy } from 'lodash';
 
-import { LocalizerType } from '../../types/Util';
-import { ConversationType } from '../../state/ducks/conversations';
+import type { LocalizerType, ThemeType } from '../../types/Util';
+import type { ConversationType } from '../../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../../state/selectors/badges';
 import {
   MessageRequestActionsConfirmation,
   MessageRequestState,
@@ -27,15 +24,17 @@ import { assert } from '../../util/assert';
 import { missingCaseError } from '../../util/missingCaseError';
 import { isInSystemContacts } from '../../util/isInSystemContacts';
 
-type PropsType = {
+export type PropsType = {
+  getPreferredBadge: PreferredBadgeSelectorType;
   i18n: LocalizerType;
   onBlock: (conversationId: string) => unknown;
   onBlockAndReportSpam: (conversationId: string) => unknown;
   onClose: () => void;
   onDelete: (conversationId: string) => unknown;
-  onShowContactModal: (contactId: string) => unknown;
+  onShowContactModal: (contactId: string, conversationId?: string) => unknown;
   onUnblock: (conversationId: string) => unknown;
   removeMember: (conversationId: string) => unknown;
+  theme: ThemeType;
 } & (
   | {
       type: ContactSpoofingType.DirectConversationWithSameTitle;
@@ -44,7 +43,7 @@ type PropsType = {
     }
   | {
       type: ContactSpoofingType.MultipleGroupMembersWithSameTitle;
-      areWeAdmin: boolean;
+      group: ConversationType;
       collisionInfoByTitle: Record<
         string,
         Array<{
@@ -61,8 +60,11 @@ enum ConfirmationStateType {
   ConfirmingGroupRemoval,
 }
 
-export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props => {
+export const ContactSpoofingReviewDialog: FunctionComponent<
+  PropsType
+> = props => {
   const {
+    getPreferredBadge,
     i18n,
     onBlock,
     onBlockAndReportSpam,
@@ -71,18 +73,26 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
     onShowContactModal,
     onUnblock,
     removeMember,
+    theme,
   } = props;
 
   const [confirmationState, setConfirmationState] = useState<
     | undefined
     | {
-        type: ConfirmationStateType;
+        type: ConfirmationStateType.ConfirmingGroupRemoval;
+        affectedConversation: ConversationType;
+        group: ConversationType;
+      }
+    | {
+        type:
+          | ConfirmationStateType.ConfirmingDelete
+          | ConfirmationStateType.ConfirmingBlock;
         affectedConversation: ConversationType;
       }
   >();
 
   if (confirmationState) {
-    const { affectedConversation, type } = confirmationState;
+    const { type, affectedConversation } = confirmationState;
     switch (type) {
       case ConfirmationStateType.ConfirmingDelete:
       case ConfirmationStateType.ConfirmingBlock:
@@ -101,9 +111,6 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
             onDelete={() => {
               onDelete(affectedConversation.id);
             }}
-            name={affectedConversation.name}
-            profileName={affectedConversation.profileName}
-            phoneNumber={affectedConversation.phoneNumber}
             title={affectedConversation.title}
             conversationType="direct"
             state={
@@ -141,10 +148,12 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
             }}
           />
         );
-      case ConfirmationStateType.ConfirmingGroupRemoval:
+      case ConfirmationStateType.ConfirmingGroupRemoval: {
+        const { group } = confirmationState;
         return (
           <RemoveGroupMemberConfirmationDialog
             conversation={affectedConversation}
+            group={group}
             i18n={i18n}
             onClose={() => {
               setConfirmationState(undefined);
@@ -154,6 +163,7 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
             }}
           />
         );
+      }
       default:
         throw missingCaseError(type);
     }
@@ -181,7 +191,9 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
           <h2>{i18n('ContactSpoofingReviewDialog__possibly-unsafe-title')}</h2>
           <ContactSpoofingReviewDialogPerson
             conversation={possiblyUnsafeConversation}
+            getPreferredBadge={getPreferredBadge}
             i18n={i18n}
+            theme={theme}
           >
             <div className="module-ContactSpoofingReviewDialog__buttons">
               <Button
@@ -212,17 +224,19 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
           <h2>{i18n('ContactSpoofingReviewDialog__safe-title')}</h2>
           <ContactSpoofingReviewDialogPerson
             conversation={safeConversation}
+            getPreferredBadge={getPreferredBadge}
             i18n={i18n}
             onClick={() => {
               onShowContactModal(safeConversation.id);
             }}
+            theme={theme}
           />
         </>
       );
       break;
     }
     case ContactSpoofingType.MultipleGroupMembersWithSameTitle: {
-      const { areWeAdmin, collisionInfoByTitle } = props;
+      const { group, collisionInfoByTitle } = props;
 
       const unsortedConversationInfos = concat(
         // This empty array exists to appease Lodash's type definitions.
@@ -230,8 +244,8 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
         ...Object.values(collisionInfoByTitle)
       );
       const conversationInfos = orderBy(unsortedConversationInfos, [
-        // We normally use an `Intl.Collator` to sort by title. We do this instead, as we
-        //   only really care about stability (not perfect ordering).
+        // We normally use an `Intl.Collator` to sort by title. We do this instead, as
+        //   we only really care about stability (not perfect ordering).
         'title',
         'id',
       ]);
@@ -247,7 +261,7 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
           <h2>{i18n('ContactSpoofingReviewDialog__group__members-header')}</h2>
           {conversationInfos.map((conversationInfo, index) => {
             let button: ReactNode;
-            if (areWeAdmin) {
+            if (group.areWeAdmin) {
               button = (
                 <Button
                   variant={ButtonVariant.SecondaryAffirmative}
@@ -255,6 +269,7 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
                     setConfirmationState({
                       type: ConfirmationStateType.ConfirmingGroupRemoval,
                       affectedConversation: conversationInfo.conversation,
+                      group,
                     });
                   }}
                 >
@@ -299,7 +314,9 @@ export const ContactSpoofingReviewDialog: FunctionComponent<PropsType> = props =
                 <ContactSpoofingReviewDialogPerson
                   key={conversationInfo.conversation.id}
                   conversation={conversationInfo.conversation}
+                  getPreferredBadge={getPreferredBadge}
                   i18n={i18n}
+                  theme={theme}
                 >
                   {Boolean(oldName) && oldName !== newName && (
                     <div className="module-ContactSpoofingReviewDialogPerson__info__property module-ContactSpoofingReviewDialogPerson__info__property--callout">

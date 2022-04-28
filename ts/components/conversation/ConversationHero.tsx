@@ -1,16 +1,18 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Avatar, AvatarBlur, Props as AvatarProps } from '../Avatar';
+import React, { useEffect, useState } from 'react';
+import type { Props as AvatarProps } from '../Avatar';
+import { Avatar, AvatarBlur } from '../Avatar';
 import { ContactName } from './ContactName';
 import { About } from './About';
 import { GroupDescription } from './GroupDescription';
 import { SharedGroupNames } from '../SharedGroupNames';
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType, ThemeType } from '../../types/Util';
 import { ConfirmationDialog } from '../ConfirmationDialog';
 import { Button, ButtonSize, ButtonVariant } from '../Button';
 import { shouldBlurAvatar } from '../../util/shouldBlurAvatar';
+import { openLinkInWebBrowser } from '../../util/openLinkInWebBrowser';
 
 export type Props = {
   about?: string;
@@ -19,12 +21,12 @@ export type Props = {
   i18n: LocalizerType;
   isMe: boolean;
   membersCount?: number;
-  onHeightChange?: () => unknown;
   phoneNumber?: string;
   sharedGroupNames?: Array<string>;
   unblurAvatar: () => void;
   unblurredAvatarPath?: string;
   updateSharedGroups: () => unknown;
+  theme: ThemeType;
 } & Omit<AvatarProps, 'onClick' | 'size' | 'noteToSelf'>;
 
 const renderMembershipRow = ({
@@ -95,6 +97,7 @@ export const ConversationHero = ({
   about,
   acceptedMessageRequest,
   avatarPath,
+  badge,
   color,
   conversationType,
   groupDescription,
@@ -104,18 +107,14 @@ export const ConversationHero = ({
   name,
   phoneNumber,
   profileName,
+  theme,
   title,
-  onHeightChange,
   unblurAvatar,
   unblurredAvatarPath,
   updateSharedGroups,
 }: Props): JSX.Element => {
-  const firstRenderRef = useRef(true);
-
-  const [
-    isShowingMessageRequestWarning,
-    setIsShowingMessageRequestWarning,
-  ] = useState(false);
+  const [isShowingMessageRequestWarning, setIsShowingMessageRequestWarning] =
+    useState(false);
   const closeMessageRequestWarning = () => {
     setIsShowingMessageRequestWarning(false);
   };
@@ -124,30 +123,6 @@ export const ConversationHero = ({
     // Kick off the expensive hydration of the current sharedGroupNames
     updateSharedGroups();
   }, [updateSharedGroups]);
-
-  const sharedGroupNamesStringified = JSON.stringify(sharedGroupNames);
-  useEffect(() => {
-    const isFirstRender = firstRenderRef.current;
-    if (isFirstRender) {
-      firstRenderRef.current = false;
-      return;
-    }
-
-    window.log.info('ConversationHero: calling onHeightChange');
-    onHeightChange?.();
-  }, [
-    about,
-    conversationType,
-    groupDescription,
-    isMe,
-    membersCount,
-    name,
-    onHeightChange,
-    phoneNumber,
-    profileName,
-    title,
-    sharedGroupNamesStringified,
-  ]);
 
   let avatarBlur: AvatarBlur;
   let avatarOnClick: undefined | (() => void);
@@ -177,6 +152,7 @@ export const ConversationHero = ({
         <Avatar
           acceptedMessageRequest={acceptedMessageRequest}
           avatarPath={avatarPath}
+          badge={badge}
           blur={avatarBlur}
           className="module-conversation-hero__avatar"
           color={color}
@@ -189,20 +165,11 @@ export const ConversationHero = ({
           profileName={profileName}
           sharedGroupNames={sharedGroupNames}
           size={112}
+          theme={theme}
           title={title}
         />
         <h1 className="module-conversation-hero__profile-name">
-          {isMe ? (
-            i18n('noteToSelf')
-          ) : (
-            <ContactName
-              title={title}
-              name={name}
-              profileName={profileName}
-              phoneNumber={phoneNumber}
-              i18n={i18n}
-            />
-          )}
+          {isMe ? i18n('noteToSelf') : <ContactName title={title} />}
         </h1>
         {about && !isMe && (
           <div className="module-about__container">
@@ -237,6 +204,9 @@ export const ConversationHero = ({
           phoneNumber,
           sharedGroupNames,
         })}
+        <div className="module-conversation-hero__linkNotification">
+          {i18n('messageHistoryUnsynced')}
+        </div>
       </div>
       {isShowingMessageRequestWarning && (
         <ConfirmationDialog
@@ -246,8 +216,9 @@ export const ConversationHero = ({
             {
               text: i18n('MessageRequestWarning__dialog__learn-even-more'),
               action: () => {
-                window.location.href =
-                  'https://support.signal.org/hc/articles/360007459591';
+                openLinkInWebBrowser(
+                  'https://support.signal.org/hc/articles/360007459591'
+                );
                 closeMessageRequestWarning();
               },
             },

@@ -7,13 +7,17 @@ import { action } from '@storybook/addon-actions';
 import { number } from '@storybook/addon-knobs';
 import { storiesOf } from '@storybook/react';
 
-import { PropsData as MessageDataPropsType } from './Message';
-import { MessageDetail, Props } from './MessageDetail';
+import type { PropsData as MessageDataPropsType } from './Message';
+import { TextDirection } from './Message';
+import type { Props } from './MessageDetail';
+import { MessageDetail } from './MessageDetail';
 import { SendStatus } from '../../messages/MessageSendState';
 import { ReadStatus } from '../../messages/MessageReadStatus';
 import { getDefaultConversation } from '../../test-both/helpers/getDefaultConversation';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
+import { getFakeBadge } from '../../test-both/helpers/getFakeBadge';
+import { ThemeType } from '../../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -24,7 +28,10 @@ const defaultMessage: MessageDataPropsType = {
     id: 'some-id',
     title: 'Max',
   }),
+  canReact: true,
   canReply: true,
+  canRetry: true,
+  canRetryDeleteForEveryone: true,
   canDeleteForEveryone: true,
   canDownload: true,
   conversationColor: 'crimson',
@@ -39,6 +46,7 @@ const defaultMessage: MessageDataPropsType = {
   readStatus: ReadStatus.Read,
   status: 'sent',
   text: 'A message from Max',
+  textDirection: TextDirection.Default,
   timestamp: Date.now(),
 };
 
@@ -58,18 +66,16 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
   receivedAt: number('receivedAt', overrideProps.receivedAt || Date.now()),
   sentAt: number('sentAt', overrideProps.sentAt || Date.now()),
 
+  getPreferredBadge: () => getFakeBadge(),
   i18n,
   interactionMode: 'keyboard',
+  theme: ThemeType.light,
 
-  sendAnyway: action('onSendAnyway'),
-  showSafetyNumber: action('onShowSafetyNumber'),
+  showSafetyNumber: action('showSafetyNumber'),
 
   checkForAccount: action('checkForAccount'),
   clearSelectedMessage: action('clearSelectedMessage'),
-  deleteMessage: action('deleteMessage'),
-  deleteMessageForEveryone: action('deleteMessageForEveryone'),
   displayTapToViewMessage: action('displayTapToViewMessage'),
-  downloadAttachment: action('downloadAttachment'),
   doubleCheckMissingQuoteReference: action('doubleCheckMissingQuoteReference'),
   kickOffAttachmentDownload: action('kickOffAttachmentDownload'),
   markAttachmentAsCorrupted: action('markAttachmentAsCorrupted'),
@@ -79,8 +85,10 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
   reactToMessage: action('reactToMessage'),
   renderAudioAttachment: () => <div>*AudioAttachment*</div>,
   renderEmojiPicker: () => <div />,
+  renderReactionPicker: () => <div />,
   replyToMessage: action('replyToMessage'),
   retrySend: action('retrySend'),
+  retryDeleteForEveryone: action('retryDeleteForEveryone'),
   showContactDetail: action('showContactDetail'),
   showContactModal: action('showContactModal'),
   showExpiredIncomingTapToViewToast: action(
@@ -91,6 +99,7 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
   ),
   showForwardMessageModal: action('showForwardMessageModal'),
   showVisualAttachment: action('showVisualAttachment'),
+  startConversation: action('startConversation'),
 });
 
 story.add('Delivered Incoming', () => {

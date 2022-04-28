@@ -6,6 +6,9 @@ export type MIMEType = string & { _mimeTypeBrand: never };
 export const stringToMIMEType = (value: string): MIMEType => {
   return value as MIMEType;
 };
+export const MIMETypeToString = (value: MIMEType): string => {
+  return value as string;
+};
 
 export const APPLICATION_OCTET_STREAM = stringToMIMEType(
   'application/octet-stream'
@@ -23,8 +26,11 @@ export const VIDEO_MP4 = stringToMIMEType('video/mp4');
 export const VIDEO_QUICKTIME = stringToMIMEType('video/quicktime');
 export const LONG_MESSAGE = stringToMIMEType('text/x-signal-plain');
 
-export const isHeic = (value: string): boolean =>
-  value === 'image/heic' || value === 'image/heif';
+export const isHeic = (value: string, fileName: string): boolean =>
+  value === 'image/heic' ||
+  value === 'image/heif' ||
+  fileName.endsWith('.heic') ||
+  fileName.endsWith('.heif');
 export const isGif = (value: string): value is MIMEType =>
   value === 'image/gif';
 export const isJPEG = (value: string): value is MIMEType =>

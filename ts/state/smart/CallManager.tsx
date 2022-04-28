@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
@@ -7,44 +7,46 @@ import { memoize } from 'lodash';
 import { mapDispatchToProps } from '../actions';
 import { CallManager } from '../../components/CallManager';
 import { calling as callingService } from '../../services/calling';
-import { getUserUuid, getIntl } from '../selectors/user';
+import { getIntl, getTheme } from '../selectors/user';
 import { getMe, getConversationSelector } from '../selectors/conversations';
 import { getActiveCall } from '../ducks/calling';
-import { ConversationType } from '../ducks/conversations';
+import type { ConversationType } from '../ducks/conversations';
 import { getIncomingCall } from '../selectors/calling';
-import { getMaxGroupCallRingSize } from '../../groups/limits';
 import { isGroupCallOutboundRingEnabled } from '../../util/isGroupCallOutboundRingEnabled';
-import {
+import type {
   ActiveCallType,
-  CallMode,
-  CallState,
   GroupCallRemoteParticipantType,
 } from '../../types/Calling';
-import { StateType } from '../reducer';
+import type { UUIDStringType } from '../../types/UUID';
+import { CallMode, CallState } from '../../types/Calling';
+import type { StateType } from '../reducer';
 import { missingCaseError } from '../../util/missingCaseError';
 import { SmartCallingDeviceSelection } from './CallingDeviceSelection';
-import {
-  SmartSafetyNumberViewer,
-  Props as SafetyNumberViewerProps,
-} from './SafetyNumberViewer';
-import { notify } from '../../services/notify';
+import type { SafetyNumberProps } from '../../components/SafetyNumberChangeDialog';
+import { SmartSafetyNumberViewer } from './SafetyNumberViewer';
 import { callingTones } from '../../util/callingTones';
 import {
   bounceAppIconStart,
   bounceAppIconStop,
 } from '../../shims/bounceAppIcon';
+import {
+  FALLBACK_NOTIFICATION_TITLE,
+  NotificationSetting,
+  notificationService,
+} from '../../services/notifications';
+import * as log from '../../logging/log';
+import { getPreferredBadgeSelector } from '../selectors/badges';
 
 function renderDeviceSelection(): JSX.Element {
   return <SmartCallingDeviceSelection />;
 }
 
-function renderSafetyNumberViewer(props: SafetyNumberViewerProps): JSX.Element {
+function renderSafetyNumberViewer(props: SafetyNumberProps): JSX.Element {
   return <SmartSafetyNumberViewer {...props} />;
 }
 
-const getGroupCallVideoFrameSource = callingService.getGroupCallVideoFrameSource.bind(
-  callingService
-);
+const getGroupCallVideoFrameSource =
+  callingService.getGroupCallVideoFrameSource.bind(callingService);
 
 async function notifyForCall(
   title: string,
@@ -55,8 +57,27 @@ async function notifyForCall(
   if (!shouldNotify) {
     return;
   }
-  notify({
-    title,
+
+  let notificationTitle: string;
+
+  const notificationSetting = notificationService.getNotificationSetting();
+  switch (notificationSetting) {
+    case NotificationSetting.Off:
+    case NotificationSetting.NoNameOrMessage:
+      notificationTitle = FALLBACK_NOTIFICATION_TITLE;
+      break;
+    case NotificationSetting.NameOnly:
+    case NotificationSetting.NameAndMessage:
+      notificationTitle = title;
+      break;
+    default:
+      log.error(missingCaseError(notificationSetting));
+      notificationTitle = FALLBACK_NOTIFICATION_TITLE;
+      break;
+  }
+
+  notificationService.notify({
+    title: notificationTitle,
     icon: isVideoCall
       ? 'images/icons/v2/video-solid-24.svg'
       : 'images/icons/v2/phone-right-solid-24.svg',
@@ -85,21 +106,19 @@ const mapStateToActiveCallProp = (
 
   const call = getActiveCall(calling);
   if (!call) {
-    window.log.error(
-      'There was an active call state but no corresponding call'
-    );
+    log.error('There was an active call state but no corresponding call');
     return undefined;
   }
 
   const conversationSelector = getConversationSelector(state);
   const conversation = conversationSelector(activeCallState.conversationId);
   if (!conversation) {
-    window.log.error('The active call has no corresponding conversation');
+    log.error('The active call has no corresponding conversation');
     return undefined;
   }
 
   const conversationSelectorByUuid = memoize<
-    (uuid: string) => undefined | ConversationType
+    (uuid: UUIDStringType) => undefined | ConversationType
   >(uuid => {
     const conversationId = window.ConversationController.ensureContactIds({
       uuid,
@@ -111,6 +130,7 @@ const mapStateToActiveCallProp = (
     conversation,
     hasLocalAudio: activeCallState.hasLocalAudio,
     hasLocalVideo: activeCallState.hasLocalVideo,
+    amISpeaking: activeCallState.amISpeaking,
     isInSpeakerView: activeCallState.isInSpeakerView,
     joinedAt: activeCallState.joinedAt,
     outgoingRing: activeCallState.outgoingRing,
@@ -156,12 +176,23 @@ const mapStateToActiveCallProp = (
       const peekedParticipants: Array<ConversationType> = [];
 
       const { memberships = [] } = conversation;
-      for (let i = 0; i < memberships.length; i += 1) {
-        const { conversationId } = memberships[i];
-        const member = conversationSelectorByUuid(conversationId);
 
+      // Active calls should have peek info, but TypeScript doesn't know that so we have a
+      //   fallback.
+      const {
+        peekInfo = {
+          deviceCount: 0,
+          maxDevices: Infinity,
+          uuids: [],
+        },
+      } = call;
+
+      for (let i = 0; i < memberships.length; i += 1) {
+        const { uuid } = memberships[i];
+
+        const member = conversationSelector(uuid);
         if (!member) {
-          window.log.error('Group member has no corresponding conversation');
+          log.error('Group member has no corresponding conversation');
           continue;
         }
 
@@ -175,9 +206,7 @@ const mapStateToActiveCallProp = (
           remoteParticipant.uuid
         );
         if (!remoteConversation) {
-          window.log.error(
-            'Remote participant has no corresponding conversation'
-          );
+          log.error('Remote participant has no corresponding conversation');
           continue;
         }
 
@@ -202,25 +231,21 @@ const mapStateToActiveCallProp = (
 
         const remoteConversation = conversationSelectorByUuid(uuid);
         if (!remoteConversation) {
-          window.log.error(
-            'Remote participant has no corresponding conversation'
-          );
+          log.error('Remote participant has no corresponding conversation');
           continue;
         }
 
         conversationsWithSafetyNumberChanges.push(remoteConversation);
       }
 
-      for (let i = 0; i < call.peekInfo.uuids.length; i += 1) {
-        const peekedParticipantUuid = call.peekInfo.uuids[i];
+      for (let i = 0; i < peekInfo.uuids.length; i += 1) {
+        const peekedParticipantUuid = peekInfo.uuids[i];
 
         const peekedConversation = conversationSelectorByUuid(
           peekedParticipantUuid
         );
         if (!peekedConversation) {
-          window.log.error(
-            'Remote participant has no corresponding conversation'
-          );
+          log.error('Remote participant has no corresponding conversation');
           continue;
         }
 
@@ -232,12 +257,13 @@ const mapStateToActiveCallProp = (
         callMode: CallMode.Group,
         connectionState: call.connectionState,
         conversationsWithSafetyNumberChanges,
-        deviceCount: call.peekInfo.deviceCount,
+        deviceCount: peekInfo.deviceCount,
         groupMembers,
         joinState: call.joinState,
-        maxDevices: call.peekInfo.maxDevices,
+        maxDevices: peekInfo.maxDevices,
         peekedParticipants,
         remoteParticipants,
+        speakingDemuxIds: call.speakingDemuxIds || new Set<number>(),
       };
     }
     default:
@@ -253,7 +279,7 @@ const mapStateToIncomingCallProp = (state: StateType) => {
 
   const conversation = getConversationSelector(state)(call.conversationId);
   if (!conversation) {
-    window.log.error('The incoming call has no corresponding conversation');
+    log.error('The incoming call has no corresponding conversation');
     return undefined;
   }
 
@@ -266,7 +292,7 @@ const mapStateToIncomingCallProp = (state: StateType) => {
       };
     case CallMode.Group: {
       if (!call.ringerUuid) {
-        window.log.error('The incoming group call has no ring state');
+        log.error('The incoming group call has no ring state');
         return undefined;
       }
 
@@ -294,21 +320,17 @@ const mapStateToProps = (state: StateType) => ({
   bounceAppIconStop,
   availableCameras: state.calling.availableCameras,
   getGroupCallVideoFrameSource,
+  getPreferredBadge: getPreferredBadgeSelector(state),
   i18n: getIntl(state),
   isGroupCallOutboundRingEnabled: isGroupCallOutboundRingEnabled(),
   incomingCall: mapStateToIncomingCallProp(state),
-  maxGroupCallRingSize: getMaxGroupCallRingSize(),
-  me: {
-    ...getMe(state),
-    // `getMe` returns a `ConversationType` which might not have a UUID, at least
-    //   according to the type. This ensures one is set.
-    uuid: getUserUuid(state),
-  },
+  me: getMe(state),
   notifyForCall,
   playRingtone,
   stopRingtone,
   renderDeviceSelection,
   renderSafetyNumberViewer,
+  theme: getTheme(state),
 });
 
 const smart = connect(mapStateToProps, mapDispatchToProps);

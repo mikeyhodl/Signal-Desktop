@@ -5,9 +5,9 @@ import React, { useState } from 'react';
 import classNames from 'classnames';
 import { groupBy } from 'lodash';
 import { Button, ButtonVariant } from './Button';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { Modal } from './Modal';
-import { PresentedSource, PresentableSource } from '../types/Calling';
+import type { PresentedSource, PresentableSource } from '../types/Calling';
 import { Theme } from '../util/theme';
 
 export type PropsType = {
@@ -97,7 +97,7 @@ export const CallingSelectPresentingSourcesModal = ({
         {i18n('calling__SelectPresentingSourcesModal--entireScreen')}
       </div>
       <div className="module-CallingSelectPresentingSourcesModal__sources">
-        {sources.true.map(source => (
+        {(sources.true ?? []).map(source => (
           <Source
             key={source.id}
             onSourceClick={selectedSource => setSourceToPresent(selectedSource)}
@@ -110,7 +110,7 @@ export const CallingSelectPresentingSourcesModal = ({
         {i18n('calling__SelectPresentingSourcesModal--window')}
       </div>
       <div className="module-CallingSelectPresentingSourcesModal__sources">
-        {sources.false.map(source => (
+        {(sources.false ?? []).map(source => (
           <Source
             key={source.id}
             onSourceClick={selectedSource => setSourceToPresent(selectedSource)}

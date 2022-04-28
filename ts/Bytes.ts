@@ -1,7 +1,9 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-const { bytes } = window.SignalContext;
+import { Bytes } from './context/Bytes';
+
+const bytes = window.SignalContext?.bytes || new Bytes();
 
 export function fromBase64(value: string): Uint8Array {
   return bytes.fromBase64(value);
@@ -35,6 +37,10 @@ export function toBinary(data: Uint8Array): string {
 
 export function toString(data: Uint8Array): string {
   return bytes.toString(data);
+}
+
+export function byteLength(value: string): number {
+  return bytes.byteLength(value);
 }
 
 export function concatenate(list: ReadonlyArray<Uint8Array>): Uint8Array {

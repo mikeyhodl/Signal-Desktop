@@ -6,9 +6,13 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { boolean, text, withKnobs } from '@storybook/addon-knobs';
 
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
-import { MessageSearchResult, PropsType } from './MessageSearchResult';
+import { StorybookThemeContext } from '../../../.storybook/StorybookThemeContext';
+import { strictAssert } from '../../util/assert';
+import { getFakeBadge } from '../../test-both/helpers/getFakeBadge';
+import type { PropsType } from './MessageSearchResult';
+import { MessageSearchResult } from './MessageSearchResult';
 import { getDefaultConversation } from '../../test-both/helpers/getDefaultConversation';
 
 const i18n = setupI18n('en', enMessages);
@@ -36,7 +40,7 @@ const group = getDefaultConversation({
   type: 'group',
 });
 
-const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
+const useProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   i18n,
   id: '',
   conversationId: '',
@@ -49,16 +53,18 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
   bodyRanges: overrideProps.bodyRanges || [],
   from: overrideProps.from as PropsType['from'],
   to: overrideProps.to as PropsType['to'],
+  getPreferredBadge: overrideProps.getPreferredBadge || (() => undefined),
   isSelected: boolean('isSelected', overrideProps.isSelected || false),
   openConversationInternal: action('openConversationInternal'),
   isSearchingInConversation: boolean(
     'isSearchingInConversation',
     overrideProps.isSearchingInConversation || false
   ),
+  theme: React.useContext(StorybookThemeContext),
 });
 
 story.add('Default', () => {
-  const props = createProps({
+  const props = useProps({
     from: someone,
     to: me,
   });
@@ -66,8 +72,24 @@ story.add('Default', () => {
   return <MessageSearchResult {...props} />;
 });
 
+story.add('Sender has a badge', () => {
+  const props = useProps({
+    from: { ...someone, badges: [{ id: 'sender badge' }] },
+    to: me,
+    getPreferredBadge: badges => {
+      strictAssert(
+        badges[0]?.id === 'sender badge',
+        'Rendering the wrong badge!'
+      );
+      return getFakeBadge();
+    },
+  });
+
+  return <MessageSearchResult {...props} />;
+});
+
 story.add('Selected', () => {
-  const props = createProps({
+  const props = useProps({
     from: someone,
     to: me,
     isSelected: true,
@@ -77,7 +99,7 @@ story.add('Selected', () => {
 });
 
 story.add('From You', () => {
-  const props = createProps({
+  const props = useProps({
     from: me,
     to: someone,
   });
@@ -86,7 +108,7 @@ story.add('From You', () => {
 });
 
 story.add('Searching in Conversation', () => {
-  const props = createProps({
+  const props = useProps({
     from: me,
     to: someone,
     isSearchingInConversation: true,
@@ -96,7 +118,7 @@ story.add('Searching in Conversation', () => {
 });
 
 story.add('From You to Yourself', () => {
-  const props = createProps({
+  const props = useProps({
     from: me,
     to: me,
   });
@@ -105,7 +127,7 @@ story.add('From You to Yourself', () => {
 });
 
 story.add('From You to Group', () => {
-  const props = createProps({
+  const props = useProps({
     from: me,
     to: group,
   });
@@ -114,7 +136,7 @@ story.add('From You to Group', () => {
 });
 
 story.add('From Someone to Group', () => {
-  const props = createProps({
+  const props = useProps({
     from: someone,
     to: group,
   });
@@ -129,7 +151,7 @@ story.add('Long Search Result', () => {
   ];
 
   return snippets.map(snippet => {
-    const props = createProps({
+    const props = useProps({
       from: someone,
       to: me,
       snippet,
@@ -140,15 +162,14 @@ story.add('Long Search Result', () => {
 });
 
 story.add('Empty (should be invalid)', () => {
-  const props = createProps();
+  const props = useProps();
 
   return <MessageSearchResult {...props} />;
 });
 
 story.add('@mention', () => {
-  const props = createProps({
-    body:
-      'moss banana twine sound lake zoo brain count vacuum work stairs try power forget hair dry diary years no results \uFFFC elephant sorry umbrella potato igloo kangaroo home Georgia bayonet vector orange forge diary zebra turtle rise front \uFFFC',
+  const props = useProps({
+    body: 'moss banana twine sound lake zoo brain count vacuum work stairs try power forget hair dry diary years no results \uFFFC elephant sorry umbrella potato igloo kangaroo home Georgia bayonet vector orange forge diary zebra turtle rise front \uFFFC',
     bodyRanges: [
       {
         length: 1,
@@ -173,9 +194,8 @@ story.add('@mention', () => {
 });
 
 story.add('@mention regexp', () => {
-  const props = createProps({
-    body:
-      '\uFFFC This is a (long) /text/ ^$ that is ... specially **crafted** to (test) our regexp escaping mechanism! Making sure that the code we write works in all sorts of scenarios',
+  const props = useProps({
+    body: '\uFFFC This is a (long) /text/ ^$ that is ... specially **crafted** to (test) our regexp escaping mechanism! Making sure that the code we write works in all sorts of scenarios',
     bodyRanges: [
       {
         length: 1,
@@ -194,7 +214,7 @@ story.add('@mention regexp', () => {
 });
 
 story.add('@mention no-matches', () => {
-  const props = createProps({
+  const props = useProps({
     body: '\uFFFC hello',
     bodyRanges: [
       {
@@ -213,9 +233,8 @@ story.add('@mention no-matches', () => {
 });
 
 story.add('@mention no-matches', () => {
-  const props = createProps({
-    body:
-      'moss banana twine sound lake zoo brain count vacuum work stairs try power forget hair dry diary years no results \uFFFC elephant sorry umbrella potato igloo kangaroo home Georgia bayonet vector orange forge diary zebra turtle rise front \uFFFC',
+  const props = useProps({
+    body: 'moss banana twine sound lake zoo brain count vacuum work stairs try power forget hair dry diary years no results \uFFFC elephant sorry umbrella potato igloo kangaroo home Georgia bayonet vector orange forge diary zebra turtle rise front \uFFFC',
     bodyRanges: [
       {
         length: 1,
@@ -240,7 +259,7 @@ story.add('@mention no-matches', () => {
 });
 
 story.add('Double @mention', () => {
-  const props = createProps({
+  const props = useProps({
     body: 'Hey \uFFFC \uFFFC test',
     bodyRanges: [
       {

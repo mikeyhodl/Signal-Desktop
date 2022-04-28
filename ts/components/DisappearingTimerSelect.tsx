@@ -1,10 +1,11 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useState, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState } from 'react';
 import classNames from 'classnames';
 
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import * as expirationTimer from '../util/expirationTimer';
 import { DisappearingTimeDialog } from './DisappearingTimeDialog';
 
@@ -37,9 +38,8 @@ export const DisappearingTimerSelect: React.FC<Props> = (props: Props) => {
     };
   });
 
-  const isCustomTimeSelected = !expirationTimer.DEFAULT_DURATIONS_SET.has(
-    value
-  );
+  const isCustomTimeSelected =
+    !expirationTimer.DEFAULT_DURATIONS_SET.has(value);
 
   const onSelectChange = (newValue: string) => {
     const intValue = parseInt(newValue, 10);

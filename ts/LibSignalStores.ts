@@ -2,49 +2,62 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /* eslint-disable max-classes-per-file */
-/* eslint-disable class-methods-use-this */
 
 import { isNumber } from 'lodash';
 
-import {
+import type {
   Direction,
-  IdentityKeyStore,
   PreKeyRecord,
+  ProtocolAddress,
+  SenderKeyRecord,
+  SessionRecord,
+  SignedPreKeyRecord,
+  Uuid,
+} from '@signalapp/libsignal-client';
+import {
+  IdentityKeyStore,
   PreKeyStore,
   PrivateKey,
-  ProtocolAddress,
   PublicKey,
-  SenderKeyRecord,
   SenderKeyStore,
-  SessionRecord,
   SessionStore,
-  SignedPreKeyRecord,
   SignedPreKeyStore,
-  Uuid,
-} from '@signalapp/signal-client';
+} from '@signalapp/libsignal-client';
 import { freezePreKey, freezeSignedPreKey } from './SignalProtocolStore';
+import { Address } from './types/Address';
+import { QualifiedAddress } from './types/QualifiedAddress';
+import type { UUID } from './types/UUID';
 
-import { typedArrayToArrayBuffer } from './Crypto';
+import type { Zone } from './util/Zone';
 
-import { Zone } from './util/Zone';
-
-function encodedNameFromAddress(address: ProtocolAddress): string {
+function encodeAddress(address: ProtocolAddress): Address {
   const name = address.name();
   const deviceId = address.deviceId();
-  const encodedName = `${name}.${deviceId}`;
-  return encodedName;
+  return Address.create(name, deviceId);
 }
 
-export type SessionsOptions = {
-  readonly zone?: Zone;
-};
+function toQualifiedAddress(
+  ourUuid: UUID,
+  address: ProtocolAddress
+): QualifiedAddress {
+  return new QualifiedAddress(ourUuid, encodeAddress(address));
+}
+
+export type SessionsOptions = Readonly<{
+  ourUuid: UUID;
+  zone?: Zone;
+}>;
 
 export class Sessions extends SessionStore {
+  private readonly ourUuid: UUID;
+
   private readonly zone: Zone | undefined;
 
-  constructor(options: SessionsOptions = {}) {
+  constructor({ ourUuid, zone }: SessionsOptions) {
     super();
-    this.zone = options.zone;
+
+    this.ourUuid = ourUuid;
+    this.zone = zone;
   }
 
   async saveSession(
@@ -52,16 +65,16 @@ export class Sessions extends SessionStore {
     record: SessionRecord
   ): Promise<void> {
     await window.textsecure.storage.protocol.storeSession(
-      encodedNameFromAddress(address),
+      toQualifiedAddress(this.ourUuid, address),
       record,
       { zone: this.zone }
     );
   }
 
   async getSession(name: ProtocolAddress): Promise<SessionRecord | null> {
-    const encodedName = encodedNameFromAddress(name);
+    const encodedAddress = toQualifiedAddress(this.ourUuid, name);
     const record = await window.textsecure.storage.protocol.loadSession(
-      encodedName,
+      encodedAddress,
       { zone: this.zone }
     );
 
@@ -71,27 +84,36 @@ export class Sessions extends SessionStore {
   async getExistingSessions(
     addresses: Array<ProtocolAddress>
   ): Promise<Array<SessionRecord>> {
-    const encodedAddresses = addresses.map(encodedNameFromAddress);
+    const encodedAddresses = addresses.map(addr =>
+      toQualifiedAddress(this.ourUuid, addr)
+    );
     return window.textsecure.storage.protocol.loadSessions(encodedAddresses, {
       zone: this.zone,
     });
   }
 }
 
-export type IdentityKeysOptions = {
-  readonly zone?: Zone;
-};
+export type IdentityKeysOptions = Readonly<{
+  ourUuid: UUID;
+  zone?: Zone;
+}>;
 
 export class IdentityKeys extends IdentityKeyStore {
+  private readonly ourUuid: UUID;
+
   private readonly zone: Zone | undefined;
 
-  constructor({ zone }: IdentityKeysOptions = {}) {
+  constructor({ ourUuid, zone }: IdentityKeysOptions) {
     super();
+
+    this.ourUuid = ourUuid;
     this.zone = zone;
   }
 
   async getIdentityKey(): Promise<PrivateKey> {
-    const keyPair = await window.textsecure.storage.protocol.getIdentityKeyPair();
+    const keyPair = await window.textsecure.storage.protocol.getIdentityKeyPair(
+      this.ourUuid
+    );
     if (!keyPair) {
       throw new Error('IdentityKeyStore/getIdentityKey: No identity key!');
     }
@@ -99,7 +121,9 @@ export class IdentityKeys extends IdentityKeyStore {
   }
 
   async getLocalRegistrationId(): Promise<number> {
-    const id = await window.textsecure.storage.protocol.getLocalRegistrationId();
+    const id = await window.textsecure.storage.protocol.getLocalRegistrationId(
+      this.ourUuid
+    );
     if (!isNumber(id)) {
       throw new Error(
         'IdentityKeyStore/getLocalRegistrationId: No registration id!'
@@ -109,9 +133,9 @@ export class IdentityKeys extends IdentityKeyStore {
   }
 
   async getIdentity(address: ProtocolAddress): Promise<PublicKey | null> {
-    const encodedName = encodedNameFromAddress(address);
+    const encodedAddress = encodeAddress(address);
     const key = await window.textsecure.storage.protocol.loadIdentityKey(
-      encodedName
+      encodedAddress.uuid
     );
 
     if (!key) {
@@ -122,13 +146,13 @@ export class IdentityKeys extends IdentityKeyStore {
   }
 
   async saveIdentity(name: ProtocolAddress, key: PublicKey): Promise<boolean> {
-    const encodedName = encodedNameFromAddress(name);
-    const publicKey = typedArrayToArrayBuffer(key.serialize());
+    const encodedAddress = encodeAddress(name);
+    const publicKey = key.serialize();
 
     // Pass `zone` to let `saveIdentity` archive sibling sessions when identity
     // key changes.
     return window.textsecure.storage.protocol.saveIdentity(
-      encodedName,
+      encodedAddress,
       publicKey,
       false,
       { zone: this.zone }
@@ -140,27 +164,42 @@ export class IdentityKeys extends IdentityKeyStore {
     key: PublicKey,
     direction: Direction
   ): Promise<boolean> {
-    const encodedName = encodedNameFromAddress(name);
-    const publicKey = typedArrayToArrayBuffer(key.serialize());
+    const encodedAddress = encodeAddress(name);
+    const publicKey = key.serialize();
 
     return window.textsecure.storage.protocol.isTrustedIdentity(
-      encodedName,
+      encodedAddress,
       publicKey,
       direction
     );
   }
 }
 
+export type PreKeysOptions = Readonly<{
+  ourUuid: UUID;
+}>;
+
 export class PreKeys extends PreKeyStore {
+  private readonly ourUuid: UUID;
+
+  constructor({ ourUuid }: PreKeysOptions) {
+    super();
+    this.ourUuid = ourUuid;
+  }
+
   async savePreKey(id: number, record: PreKeyRecord): Promise<void> {
     await window.textsecure.storage.protocol.storePreKey(
+      this.ourUuid,
       id,
       freezePreKey(record)
     );
   }
 
   async getPreKey(id: number): Promise<PreKeyRecord> {
-    const preKey = await window.textsecure.storage.protocol.loadPreKey(id);
+    const preKey = await window.textsecure.storage.protocol.loadPreKey(
+      this.ourUuid,
+      id
+    );
 
     if (preKey === undefined) {
       throw new Error(`getPreKey: PreKey ${id} not found`);
@@ -170,22 +209,38 @@ export class PreKeys extends PreKeyStore {
   }
 
   async removePreKey(id: number): Promise<void> {
-    await window.textsecure.storage.protocol.removePreKey(id);
+    await window.textsecure.storage.protocol.removePreKey(this.ourUuid, id);
   }
 }
 
+export type SenderKeysOptions = Readonly<{
+  readonly ourUuid: UUID;
+  readonly zone: Zone | undefined;
+}>;
+
 export class SenderKeys extends SenderKeyStore {
+  private readonly ourUuid: UUID;
+
+  readonly zone: Zone | undefined;
+
+  constructor({ ourUuid, zone }: SenderKeysOptions) {
+    super();
+    this.ourUuid = ourUuid;
+    this.zone = zone;
+  }
+
   async saveSenderKey(
     sender: ProtocolAddress,
     distributionId: Uuid,
     record: SenderKeyRecord
   ): Promise<void> {
-    const encodedAddress = encodedNameFromAddress(sender);
+    const encodedAddress = toQualifiedAddress(this.ourUuid, sender);
 
     await window.textsecure.storage.protocol.saveSenderKey(
       encodedAddress,
       distributionId,
-      record
+      record,
+      { zone: this.zone }
     );
   }
 
@@ -193,23 +248,36 @@ export class SenderKeys extends SenderKeyStore {
     sender: ProtocolAddress,
     distributionId: Uuid
   ): Promise<SenderKeyRecord | null> {
-    const encodedAddress = encodedNameFromAddress(sender);
+    const encodedAddress = toQualifiedAddress(this.ourUuid, sender);
 
     const senderKey = await window.textsecure.storage.protocol.getSenderKey(
       encodedAddress,
-      distributionId
+      distributionId,
+      { zone: this.zone }
     );
 
     return senderKey || null;
   }
 }
 
+export type SignedPreKeysOptions = Readonly<{
+  ourUuid: UUID;
+}>;
+
 export class SignedPreKeys extends SignedPreKeyStore {
+  private readonly ourUuid: UUID;
+
+  constructor({ ourUuid }: SignedPreKeysOptions) {
+    super();
+    this.ourUuid = ourUuid;
+  }
+
   async saveSignedPreKey(
     id: number,
     record: SignedPreKeyRecord
   ): Promise<void> {
     await window.textsecure.storage.protocol.storeSignedPreKey(
+      this.ourUuid,
       id,
       freezeSignedPreKey(record),
       true
@@ -217,9 +285,11 @@ export class SignedPreKeys extends SignedPreKeyStore {
   }
 
   async getSignedPreKey(id: number): Promise<SignedPreKeyRecord> {
-    const signedPreKey = await window.textsecure.storage.protocol.loadSignedPreKey(
-      id
-    );
+    const signedPreKey =
+      await window.textsecure.storage.protocol.loadSignedPreKey(
+        this.ourUuid,
+        id
+      );
 
     if (!signedPreKey) {
       throw new Error(`getSignedPreKey: SignedPreKey ${id} not found`);

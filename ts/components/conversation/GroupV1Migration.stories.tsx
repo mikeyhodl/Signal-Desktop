@@ -8,9 +8,11 @@ import { isBoolean } from 'lodash';
 import { boolean } from '@storybook/addon-knobs';
 
 import { getDefaultConversation } from '../../test-both/helpers/getDefaultConversation';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
-import { GroupV1Migration, PropsType } from './GroupV1Migration';
+import type { PropsType } from './GroupV1Migration';
+import { GroupV1Migration } from './GroupV1Migration';
+import { ThemeType } from '../../types/Util';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -32,8 +34,10 @@ const createProps = (overrideProps: Partial<PropsType> = {}): PropsType => ({
     isBoolean(overrideProps.areWeInvited) ? overrideProps.areWeInvited : false
   ),
   droppedMembers: overrideProps.droppedMembers || [contact1],
+  getPreferredBadge: () => undefined,
   i18n,
   invitedMembers: overrideProps.invitedMembers || [contact2],
+  theme: ThemeType.light,
 });
 
 const stories = storiesOf('Components/Conversation/GroupV1Migration', module);

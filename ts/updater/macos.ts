@@ -2,170 +2,39 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { createReadStream, statSync } from 'fs';
-import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
-import { AddressInfo } from 'net';
-import { dirname } from 'path';
+import type { IncomingMessage, Server, ServerResponse } from 'http';
+import { createServer } from 'http';
+import type { AddressInfo } from 'net';
 
 import { v4 as getGuid } from 'uuid';
-import { app, autoUpdater, BrowserWindow } from 'electron';
-import { get as getFromConfig } from 'config';
-import { gt } from 'semver';
+import { autoUpdater } from 'electron';
 import got from 'got';
 
-import {
-  checkForUpdates,
-  deleteTempDir,
-  downloadUpdate,
-  getAutoDownloadUpdateSetting,
-  getPrintableError,
-  setUpdateListener,
-  UpdaterInterface,
-} from './common';
-import * as durations from '../util/durations';
-import { LoggerType } from '../types/Logging';
-import { hexToBinary, verifySignature } from './signature';
+import { Updater } from './common';
+import { explodePromise } from '../util/explodePromise';
+import * as Errors from '../types/errors';
 import { markShouldQuit } from '../../app/window_state';
 import { DialogType } from '../types/Dialogs';
 
-const INTERVAL = 30 * durations.MINUTE;
-
-export async function start(
-  getMainWindow: () => BrowserWindow,
-  logger: LoggerType
-): Promise<UpdaterInterface> {
-  logger.info('macos/start: starting checks...');
-
-  loggerForQuitHandler = logger;
-  app.once('quit', quitHandler);
-
-  setInterval(async () => {
-    try {
-      await checkForUpdatesMaybeInstall(getMainWindow, logger);
-    } catch (error) {
-      logger.error(`macos/start: ${getPrintableError(error)}`);
-    }
-  }, INTERVAL);
-
-  await checkForUpdatesMaybeInstall(getMainWindow, logger);
-
-  return {
-    async force(): Promise<void> {
-      return checkForUpdatesMaybeInstall(getMainWindow, logger, true);
-    },
-  };
-}
-
-let fileName: string;
-let version: string;
-let updateFilePath: string;
-let loggerForQuitHandler: LoggerType;
-
-async function checkForUpdatesMaybeInstall(
-  getMainWindow: () => BrowserWindow,
-  logger: LoggerType,
-  force = false
-) {
-  logger.info('checkForUpdatesMaybeInstall: checking for update...');
-  const result = await checkForUpdates(logger, force);
-  if (!result) {
-    return;
+export class MacOSUpdater extends Updater {
+  protected async deletePreviousInstallers(): Promise<void> {
+    // No installers are cache on macOS
   }
 
-  const { fileName: newFileName, version: newVersion } = result;
-
-  if (fileName !== newFileName || !version || gt(newVersion, version)) {
-    const autoDownloadUpdates = await getAutoDownloadUpdateSetting(
-      getMainWindow()
-    );
-    if (!autoDownloadUpdates) {
-      setUpdateListener(async () => {
-        logger.info(
-          'performUpdate: have not downloaded update, going to download'
-        );
-        await downloadAndInstall(
-          newFileName,
-          newVersion,
-          getMainWindow,
-          logger,
-          true
-        );
-      });
-      getMainWindow().webContents.send(
-        'show-update-dialog',
-        DialogType.DownloadReady,
-        {
-          downloadSize: result.size,
-          version: result.version,
-        }
-      );
-      return;
-    }
-    await downloadAndInstall(newFileName, newVersion, getMainWindow, logger);
-  }
-}
-
-async function downloadAndInstall(
-  newFileName: string,
-  newVersion: string,
-  getMainWindow: () => BrowserWindow,
-  logger: LoggerType,
-  updateOnProgress?: boolean
-) {
-  try {
-    const oldFileName = fileName;
-    const oldVersion = version;
-
-    deleteCache(updateFilePath, logger);
-    fileName = newFileName;
-    version = newVersion;
-    try {
-      updateFilePath = await downloadUpdate(
-        fileName,
-        logger,
-        updateOnProgress ? getMainWindow() : undefined
-      );
-    } catch (error) {
-      // Restore state in case of download error
-      fileName = oldFileName;
-      version = oldVersion;
-      throw error;
-    }
-
-    if (!updateFilePath) {
-      logger.info('downloadAndInstall: no update file path. Skipping!');
-      return;
-    }
-
-    const publicKey = hexToBinary(getFromConfig('updatesPublicKey'));
-    const verified = await verifySignature(updateFilePath, version, publicKey);
-    if (!verified) {
-      // Note: We don't delete the cache here, because we don't want to continually
-      //   re-download the broken release. We will download it only once per launch.
-      throw new Error(
-        `downloadAndInstall: Downloaded update did not pass signature verification (version: '${version}'; fileName: '${fileName}')`
-      );
-    }
+  protected async installUpdate(updateFilePath: string): Promise<void> {
+    const { logger } = this;
 
     try {
-      await handToAutoUpdate(updateFilePath, logger);
+      await this.handToAutoUpdate(updateFilePath);
     } catch (error) {
       const readOnly = 'Cannot update while running on a read-only volume';
       const message: string = error.message || '';
-      if (message.includes(readOnly)) {
-        logger.info('downloadAndInstall: showing read-only dialog...');
-        getMainWindow().webContents.send(
-          'show-update-dialog',
-          DialogType.MacOS_Read_Only
-        );
-      } else {
-        logger.info(
-          'downloadAndInstall: showing general update failure dialog...'
-        );
-        getMainWindow().webContents.send(
-          'show-update-dialog',
-          DialogType.Cannot_Update
-        );
-      }
+      this.markCannotUpdate(
+        error,
+        message.includes(readOnly)
+          ? DialogType.MacOS_Read_Only
+          : DialogType.Cannot_Update
+      );
 
       throw error;
     }
@@ -174,47 +43,25 @@ async function downloadAndInstall(
     //   because Squirrel has cached the update file and will do the right thing.
     logger.info('downloadAndInstall: showing update dialog...');
 
-    setUpdateListener(() => {
+    this.setUpdateListener(async () => {
       logger.info('performUpdate: calling quitAndInstall...');
       markShouldQuit();
       autoUpdater.quitAndInstall();
     });
-    getMainWindow().webContents.send('show-update-dialog', DialogType.Update, {
-      version,
-    });
-  } catch (error) {
-    logger.error(`downloadAndInstall: ${getPrintableError(error)}`);
   }
-}
 
-function quitHandler() {
-  deleteCache(updateFilePath, loggerForQuitHandler);
-}
+  private async handToAutoUpdate(filePath: string): Promise<void> {
+    const { logger } = this;
+    const { promise, resolve, reject } = explodePromise<void>();
 
-// Helpers
-
-function deleteCache(filePath: string | null, logger: LoggerType) {
-  if (filePath) {
-    const tempDir = dirname(filePath);
-    deleteTempDir(tempDir).catch(error => {
-      logger.error(`quitHandler: ${getPrintableError(error)}`);
-    });
-  }
-}
-
-async function handToAutoUpdate(
-  filePath: string,
-  logger: LoggerType
-): Promise<void> {
-  return new Promise((resolve, reject) => {
     const token = getGuid();
     const updateFileUrl = generateFileUrl();
     const server = createServer();
     let serverUrl: string;
 
     server.on('error', (error: Error) => {
-      logger.error(`handToAutoUpdate: ${getPrintableError(error)}`);
-      shutdown(server, logger);
+      logger.error(`handToAutoUpdate: ${Errors.toLogFormat(error)}`);
+      this.shutdown(server);
       reject(error);
     });
 
@@ -237,12 +84,15 @@ async function handToAutoUpdate(
         }
 
         if (!url || !url.startsWith(updateFileUrl)) {
-          write404(url, response, logger);
-
+          this.logger.error(
+            `write404: Squirrel requested unexpected url '${url}'`
+          );
+          response.writeHead(404);
+          response.end();
           return;
         }
 
-        pipeUpdateToSquirrel(filePath, server, response, logger, reject);
+        this.pipeUpdateToSquirrel(filePath, server, response, reject);
       }
     );
 
@@ -251,14 +101,14 @@ async function handToAutoUpdate(
         serverUrl = getServerUrl(server);
 
         autoUpdater.on('error', (...args) => {
-          logger.error('autoUpdater: error', ...args.map(getPrintableError));
+          logger.error('autoUpdater: error', ...args.map(Errors.toLogFormat));
 
           const [error] = args;
           reject(error);
         });
         autoUpdater.on('update-downloaded', () => {
           logger.info('autoUpdater: update-downloaded event fired');
-          shutdown(server, logger);
+          this.shutdown(server);
           resolve();
         });
 
@@ -278,46 +128,75 @@ async function handToAutoUpdate(
         reject(error);
       }
     });
-  });
+
+    return promise;
+  }
+
+  private pipeUpdateToSquirrel(
+    filePath: string,
+    server: Server,
+    response: ServerResponse,
+    reject: (error: Error) => void
+  ): void {
+    const { logger } = this;
+
+    const updateFileSize = getFileSize(filePath);
+    const readStream = createReadStream(filePath);
+
+    response.on('error', (error: Error) => {
+      logger.error(
+        `pipeUpdateToSquirrel: update file download request had an error ${Errors.toLogFormat(
+          error
+        )}`
+      );
+      this.shutdown(server);
+      reject(error);
+    });
+
+    readStream.on('error', (error: Error) => {
+      logger.error(
+        `pipeUpdateToSquirrel: read stream error response: ${Errors.toLogFormat(
+          error
+        )}`
+      );
+      this.shutdown(server, response);
+      reject(error);
+    });
+
+    response.writeHead(200, {
+      'Content-Type': 'application/zip',
+      'Content-Length': updateFileSize,
+    });
+
+    readStream.pipe(response);
+  }
+
+  private shutdown(server: Server, response?: ServerResponse): void {
+    const { logger } = this;
+
+    try {
+      if (server) {
+        server.close();
+      }
+    } catch (error) {
+      logger.error(
+        `shutdown: Error closing server ${Errors.toLogFormat(error)}`
+      );
+    }
+
+    try {
+      if (response) {
+        response.end();
+      }
+    } catch (endError) {
+      logger.error(
+        `shutdown: couldn't end response ${Errors.toLogFormat(endError)}`
+      );
+    }
+  }
 }
 
-function pipeUpdateToSquirrel(
-  filePath: string,
-  server: Server,
-  response: ServerResponse,
-  logger: LoggerType,
-  reject: (error: Error) => void
-) {
-  const updateFileSize = getFileSize(filePath);
-  const readStream = createReadStream(filePath);
-
-  response.on('error', (error: Error) => {
-    logger.error(
-      `pipeUpdateToSquirrel: update file download request had an error ${getPrintableError(
-        error
-      )}`
-    );
-    shutdown(server, logger);
-    reject(error);
-  });
-
-  readStream.on('error', (error: Error) => {
-    logger.error(
-      `pipeUpdateToSquirrel: read stream error response: ${getPrintableError(
-        error
-      )}`
-    );
-    shutdown(server, logger, response);
-    reject(error);
-  });
-
-  response.writeHead(200, {
-    'Content-Type': 'application/zip',
-    'Content-Length': updateFileSize,
-  });
-
-  readStream.pipe(response);
-}
+// Helpers
 
 function writeJSONResponse(url: string, response: ServerResponse) {
   const data = Buffer.from(
@@ -345,16 +224,6 @@ function writeTokenResponse(token: string, response: ServerResponse) {
   response.end(data);
 }
 
-function write404(
-  url: string | undefined,
-  response: ServerResponse,
-  logger: LoggerType
-) {
-  logger.error(`write404: Squirrel requested unexpected url '${url}'`);
-  response.writeHead(404);
-  response.end();
-}
-
 function getServerUrl(server: Server) {
   const address = server.address() as AddressInfo;
 
@@ -368,28 +237,4 @@ function getFileSize(targetPath: string): number {
   const { size } = statSync(targetPath);
 
   return size;
-}
-
-function shutdown(
-  server: Server,
-  logger: LoggerType,
-  response?: ServerResponse
-) {
-  try {
-    if (server) {
-      server.close();
-    }
-  } catch (error) {
-    logger.error(`shutdown: Error closing server ${getPrintableError(error)}`);
-  }
-
-  try {
-    if (response) {
-      response.end();
-    }
-  } catch (endError) {
-    logger.error(
-      `shutdown: couldn't end response ${getPrintableError(endError)}`
-    );
-  }
 }

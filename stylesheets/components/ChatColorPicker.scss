@@ -30,7 +30,6 @@
 
   &__bubble {
     align-items: center;
-    background-color: $color-gray-05;
     display: flex;
     justify-content: center;
     @include color-bubble($bubble-size);
@@ -60,6 +59,10 @@
         );
       }
     }
+
+    &--custom {
+      background-color: $color-gray-05;
+    }
   }
 
   &__add-icon {
@@ -69,8 +72,7 @@
     width: 24px;
   }
 
-  // specificity
-  &__modal__body.module-Modal__body {
-    overflow-x: hidden;
+  &__modal__body {
+    overflow-x: hidden !important;
   }
 }

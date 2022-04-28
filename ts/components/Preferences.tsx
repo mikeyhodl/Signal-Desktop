@@ -1,12 +1,14 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { ReactNode, useEffect, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { noop } from 'lodash';
 import classNames from 'classnames';
+import type { AudioDevice } from 'ringrtc';
 
-import { AudioDevice, MediaDeviceSettings } from '../types/Calling';
-import {
+import type { MediaDeviceSettings } from '../types/Calling';
+import type {
   ZoomFactorType,
   ThemeSettingType,
   NotificationSettingType,
@@ -15,14 +17,14 @@ import { Button, ButtonVariant } from './Button';
 import { ChatColorPicker } from './ChatColorPicker';
 import { Checkbox } from './Checkbox';
 import { ConfirmationDialog } from './ConfirmationDialog';
-import { ConversationType } from '../state/ducks/conversations';
-import {
+import type { ConversationType } from '../state/ducks/conversations';
+import type {
   ConversationColorType,
   CustomColorType,
   DefaultConversationColorType,
 } from '../types/Colors';
 import { DisappearingTimeDialog } from './DisappearingTimeDialog';
-import { LocalizerType, ThemeType } from '../types/Util';
+import type { LocalizerType, ThemeType } from '../types/Util';
 import { PhoneNumberDiscoverability } from '../util/phoneNumberDiscoverability';
 import { PhoneNumberSharingMode } from '../util/phoneNumberSharingMode';
 import { Select } from './Select';
@@ -33,6 +35,8 @@ import {
   DEFAULT_DURATIONS_SET,
   format as formatExpirationTimer,
 } from '../util/expirationTimer';
+import { useEscapeHandling } from '../hooks/useEscapeHandling';
+import { useUniqueId } from '../hooks/useUniqueId';
 
 type CheckboxChangeHandlerType = (value: boolean) => unknown;
 type SelectChangeHandlerType<T = string | number> = (value: T) => unknown;
@@ -67,7 +71,6 @@ export type PropsType = {
   selectedCamera?: string;
   selectedMicrophone?: AudioDevice;
   selectedSpeaker?: AudioDevice;
-  theme: ThemeType;
   themeSetting: ThemeSettingType;
   universalExpireTimer: number;
   whoCanFindMe: PhoneNumberDiscoverability;
@@ -78,6 +81,7 @@ export type PropsType = {
   addCustomColor: (color: CustomColorType) => unknown;
   closeSettings: () => unknown;
   doDeleteAllData: () => unknown;
+  doneRendering: () => unknown;
   editCustomColor: (colorId: string, color: CustomColorType) => unknown;
   getConversationsWithCustomColor: (
     colorId: string
@@ -153,6 +157,29 @@ enum Page {
   ChatColor = 'ChatColor',
 }
 
+const DEFAULT_ZOOM_FACTORS = [
+  {
+    text: '75%',
+    value: 0.75,
+  },
+  {
+    text: '100%',
+    value: 1,
+  },
+  {
+    text: '125%',
+    value: 1.25,
+  },
+  {
+    text: '150%',
+    value: 1.5,
+  },
+  {
+    text: '200%',
+    value: 2,
+  },
+];
+
 export const Preferences = ({
   addCustomColor,
   availableCameras,
@@ -164,6 +191,7 @@ export const Preferences = ({
   defaultConversationColor,
   deviceName = '',
   doDeleteAllData,
+  doneRendering,
   editCustomColor,
   getConversationsWithCustomColor,
   hasAudioNotifications,
@@ -230,47 +258,32 @@ export const Preferences = ({
   selectedMicrophone,
   selectedSpeaker,
   setGlobalDefaultConversationColor,
-  theme,
   themeSetting,
   universalExpireTimer = 0,
   whoCanFindMe,
   whoCanSeeMe,
   zoomFactor,
 }: PropsType): JSX.Element => {
+  const themeSelectId = useUniqueId();
+  const zoomSelectId = useUniqueId();
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [page, setPage] = useState<Page>(Page.General);
   const [showSyncFailed, setShowSyncFailed] = useState(false);
   const [nowSyncing, setNowSyncing] = useState(false);
-  const [
-    showDisappearingTimerDialog,
-    setShowDisappearingTimerDialog,
-  ] = useState(false);
+  const [showDisappearingTimerDialog, setShowDisappearingTimerDialog] =
+    useState(false);
 
   useEffect(() => {
-    document.body.classList.toggle('light-theme', theme === ThemeType.light);
-    document.body.classList.toggle('dark-theme', theme === ThemeType.dark);
-  }, [theme]);
+    doneRendering();
+  }, [doneRendering]);
 
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeSettings();
-
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    document.addEventListener('keydown', handler);
-
-    return () => {
-      document.removeEventListener('keydown', handler);
-    };
-  }, [closeSettings]);
+  useEscapeHandling(closeSettings);
 
   const onZoomSelectChange = useCallback(
     (value: string) => {
       const number = parseFloat(value);
-      onZoomFactorChange((number as unknown) as ZoomFactorType);
+      onZoomFactorChange(number as unknown as ZoomFactorType);
     },
     [onZoomFactorChange]
   );
@@ -380,6 +393,18 @@ export const Preferences = ({
       </>
     );
   } else if (page === Page.Appearance) {
+    let zoomFactors = DEFAULT_ZOOM_FACTORS;
+
+    if (!zoomFactors.some(({ value }) => value === zoomFactor)) {
+      zoomFactors = [
+        ...zoomFactors,
+        {
+          text: `${Math.round(zoomFactor * 100)}%`,
+          value: zoomFactor,
+        },
+      ].sort((a, b) => a.value - b.value);
+    }
+
     settings = (
       <>
         <div className="Preferences__title">
@@ -389,9 +414,14 @@ export const Preferences = ({
         </div>
         <SettingsRow>
           <Control
-            left={i18n('Preferences--theme')}
+            left={
+              <label htmlFor={themeSelectId}>
+                {i18n('Preferences--theme')}
+              </label>
+            }
             right={
               <Select
+                id={themeSelectId}
                 onChange={onThemeChange}
                 options={[
                   {
@@ -418,7 +448,7 @@ export const Preferences = ({
             }}
             right={
               <div
-                className={`module-conversation-details__chat-color module-conversation-details__chat-color--${defaultConversationColor.color}`}
+                className={`ConversationDetails__chat-color ConversationDetails__chat-color--${defaultConversationColor.color}`}
                 style={{
                   ...getCustomColorStyle(
                     defaultConversationColor.customColorData?.value
@@ -428,32 +458,14 @@ export const Preferences = ({
             }
           />
           <Control
-            left={i18n('Preferences--zoom')}
+            left={
+              <label htmlFor={zoomSelectId}>{i18n('Preferences--zoom')}</label>
+            }
             right={
               <Select
+                id={zoomSelectId}
                 onChange={onZoomSelectChange}
-                options={[
-                  {
-                    text: '75%',
-                    value: 0.75,
-                  },
-                  {
-                    text: '100%',
-                    value: 1,
-                  },
-                  {
-                    text: '125%',
-                    value: 1.25,
-                  },
-                  {
-                    text: '150%',
-                    value: 1.5,
-                  },
-                  {
-                    text: '200%',
-                    value: 2,
-                  },
-                ]}
+                options={zoomFactors}
                 value={zoomFactor}
               />
             }
@@ -478,7 +490,7 @@ export const Preferences = ({
             {i18n('Preferences__button--chats')}
           </div>
         </div>
-        <SettingsRow title="Chats">
+        <SettingsRow title={i18n('Preferences__button--chats')}>
           <Checkbox
             checked={hasSpellCheck}
             description={spellCheckDirtyText}
@@ -568,7 +580,7 @@ export const Preferences = ({
             onChange={onCallRingtoneNotificationChange}
           />
         </SettingsRow>
-        <SettingsRow title="Devices">
+        <SettingsRow title={i18n('Preferences__devices')}>
           <Control
             left={
               <>
@@ -576,6 +588,7 @@ export const Preferences = ({
                   {i18n('callingDeviceSelection__label--video')}
                 </label>
                 <Select
+                  ariaLabel={i18n('callingDeviceSelection__label--video')}
                   disabled={!availableCameras.length}
                   moduleClassName="Preferences__select"
                   name="video"
@@ -611,6 +624,7 @@ export const Preferences = ({
                   {i18n('callingDeviceSelection__label--audio-input')}
                 </label>
                 <Select
+                  ariaLabel={i18n('callingDeviceSelection__label--audio-input')}
                   disabled={!availableMicrophones.length}
                   moduleClassName="Preferences__select"
                   name="audio-input"
@@ -646,6 +660,9 @@ export const Preferences = ({
                   {i18n('callingDeviceSelection__label--audio-output')}
                 </label>
                 <Select
+                  ariaLabel={i18n(
+                    'callingDeviceSelection__label--audio-output'
+                  )}
                   disabled={!availableSpeakers.length}
                   moduleClassName="Preferences__select"
                   name="audio-output"
@@ -695,7 +712,7 @@ export const Preferences = ({
         <SettingsRow>
           <Checkbox
             checked={hasNotifications}
-            label="Enable notifications"
+            label={i18n('Preferences__enable-notifications')}
             moduleClassName="Preferences__checkbox"
             name="notifications"
             onChange={onNotificationsChange}
@@ -738,6 +755,7 @@ export const Preferences = ({
             left={i18n('Preferences--notification-content')}
             right={
               <Select
+                ariaLabel={i18n('Preferences--notification-content')}
                 disabled={!hasNotifications}
                 onChange={onNotificationContentChange}
                 options={[
@@ -762,9 +780,8 @@ export const Preferences = ({
       </>
     );
   } else if (page === Page.Privacy) {
-    const isCustomDisappearingMessageValue = !DEFAULT_DURATIONS_SET.has(
-      universalExpireTimer
-    );
+    const isCustomDisappearingMessageValue =
+      !DEFAULT_DURATIONS_SET.has(universalExpireTimer);
 
     settings = (
       <>
@@ -793,6 +810,7 @@ export const Preferences = ({
               left={i18n('Preferences--see-me')}
               right={
                 <Select
+                  ariaLabel={i18n('Preferences--see-me')}
                   disabled
                   onChange={noop}
                   options={[
@@ -817,6 +835,7 @@ export const Preferences = ({
               left={i18n('Preferences--find-me')}
               right={
                 <Select
+                  ariaLabel={i18n('Preferences--find-me')}
                   disabled
                   onChange={noop}
                   options={[
@@ -885,6 +904,7 @@ export const Preferences = ({
             }
             right={
               <Select
+                ariaLabel={i18n('settings__DisappearingMessages__timer__label')}
                 onChange={value => {
                   if (
                     value === String(universalExpireTimer) ||

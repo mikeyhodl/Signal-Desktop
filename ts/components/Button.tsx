@@ -1,32 +1,49 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { CSSProperties, MouseEventHandler, ReactNode } from 'react';
+import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
+import React from 'react';
 import classNames from 'classnames';
 
+import type { Theme } from '../util/theme';
 import { assert } from '../util/assert';
+import { themeClassName } from '../util/theme';
 
 export enum ButtonSize {
+  Large,
   Medium,
   Small,
 }
 
 export enum ButtonVariant {
+  Calling = 'Calling',
+  Destructive = 'Destructive',
+  Details = 'Details',
   Primary = 'Primary',
   Secondary = 'Secondary',
   SecondaryAffirmative = 'SecondaryAffirmative',
   SecondaryDestructive = 'SecondaryDestructive',
-  Destructive = 'Destructive',
-  Calling = 'Calling',
   SystemMessage = 'SystemMessage',
+}
+
+export enum ButtonIconType {
+  audio = 'audio',
+  muted = 'muted',
+  photo = 'photo',
+  search = 'search',
+  text = 'text',
+  unmuted = 'unmuted',
+  video = 'video',
 }
 
 type PropsType = {
   className?: string;
   disabled?: boolean;
+  icon?: ButtonIconType;
   size?: ButtonSize;
   style?: CSSProperties;
   tabIndex?: number;
+  theme?: Theme;
   variant?: ButtonVariant;
 } & (
   | {
@@ -52,6 +69,7 @@ type PropsType = {
   );
 
 const SIZE_CLASS_NAMES = new Map<ButtonSize, string>([
+  [ButtonSize.Large, 'module-Button--large'],
   [ButtonSize.Medium, 'module-Button--medium'],
   [ButtonSize.Small, 'module-Button--small'],
 ]);
@@ -70,6 +88,7 @@ const VARIANT_CLASS_NAMES = new Map<ButtonVariant, string>([
   [ButtonVariant.Destructive, 'module-Button--destructive'],
   [ButtonVariant.Calling, 'module-Button--calling'],
   [ButtonVariant.SystemMessage, 'module-Button--system-message'],
+  [ButtonVariant.Details, 'module-Button--details'],
 ]);
 
 export const Button = React.forwardRef<HTMLButtonElement, PropsType>(
@@ -78,10 +97,14 @@ export const Button = React.forwardRef<HTMLButtonElement, PropsType>(
       children,
       className,
       disabled = false,
-      size = ButtonSize.Medium,
+      icon,
       style,
       tabIndex,
+      theme,
       variant = ButtonVariant.Primary,
+      size = variant === ButtonVariant.Details
+        ? ButtonSize.Small
+        : ButtonSize.Medium,
     } = props;
     const ariaLabel = props['aria-label'];
 
@@ -101,13 +124,14 @@ export const Button = React.forwardRef<HTMLButtonElement, PropsType>(
     const variantClassName = VARIANT_CLASS_NAMES.get(variant);
     assert(variantClassName, '<Button> variant not found');
 
-    return (
+    const buttonElement = (
       <button
         aria-label={ariaLabel}
         className={classNames(
           'module-Button',
           sizeClassName,
           variantClassName,
+          icon && `module-Button--icon--${icon}`,
           className
         )}
         disabled={disabled}
@@ -122,5 +146,11 @@ export const Button = React.forwardRef<HTMLButtonElement, PropsType>(
         {children}
       </button>
     );
+
+    if (theme) {
+      return <div className={themeClassName(theme)}>{buttonElement}</div>;
+    }
+
+    return buttonElement;
   }
 );

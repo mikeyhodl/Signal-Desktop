@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 /* eslint-disable max-classes-per-file */
 
-import { PublicKey } from '@signalapp/signal-client';
+import type { PublicKey } from '@signalapp/libsignal-client';
 
-import { SignalService as Proto } from '../protobuf';
-import {
+import type { SignalService as Proto } from '../protobuf';
+import type {
   ProcessedEnvelope,
   ProcessedDataMessage,
   ProcessedSent,
@@ -14,12 +14,6 @@ import type {
   ModifiedContactDetails,
   ModifiedGroupDetails,
 } from './ContactsParser';
-
-export class ReconnectEvent extends Event {
-  constructor() {
-    super('reconnect');
-  }
-}
 
 export class EmptyEvent extends Event {
   constructor() {
@@ -78,39 +72,6 @@ export class ErrorEvent extends Event {
   }
 }
 
-export type DecryptionErrorEventData = Readonly<{
-  cipherTextBytes?: ArrayBuffer;
-  cipherTextType?: number;
-  contentHint?: number;
-  groupId?: string;
-  receivedAtCounter: number;
-  receivedAtDate: number;
-  senderDevice: number;
-  senderUuid: string;
-  timestamp: number;
-}>;
-
-export class DecryptionErrorEvent extends Event {
-  constructor(public readonly decryptionError: DecryptionErrorEventData) {
-    super('decryption-error');
-  }
-}
-
-export type RetryRequestEventData = Readonly<{
-  groupId?: string;
-  ratchetKey?: PublicKey;
-  requesterUuid: string;
-  requesterDevice: number;
-  senderDevice: number;
-  sentAt: number;
-}>;
-
-export class RetryRequestEvent extends Event {
-  constructor(public readonly retryRequest: RetryRequestEventData) {
-    super('retry-request');
-  }
-}
-
 export class ContactEvent extends Event {
   constructor(public readonly contactDetails: ModifiedContactDetails) {
     super('contact');
@@ -160,7 +121,7 @@ export class ConfirmableEvent extends Event {
 
 export type DeliveryEventData = Readonly<{
   timestamp: number;
-  envelopeTimestamp?: number;
+  envelopeTimestamp: number;
   source?: string;
   sourceUuid?: string;
   sourceDevice?: number;
@@ -172,6 +133,45 @@ export class DeliveryEvent extends ConfirmableEvent {
     confirm: ConfirmCallback
   ) {
     super('delivery', confirm);
+  }
+}
+
+export type DecryptionErrorEventData = Readonly<{
+  cipherTextBytes?: Uint8Array;
+  cipherTextType?: number;
+  contentHint?: number;
+  groupId?: string;
+  receivedAtCounter: number;
+  receivedAtDate: number;
+  senderDevice: number;
+  senderUuid: string;
+  timestamp: number;
+}>;
+
+export class DecryptionErrorEvent extends ConfirmableEvent {
+  constructor(
+    public readonly decryptionError: DecryptionErrorEventData,
+    confirm: ConfirmCallback
+  ) {
+    super('decryption-error', confirm);
+  }
+}
+
+export type RetryRequestEventData = Readonly<{
+  groupId?: string;
+  ratchetKey?: PublicKey;
+  requesterUuid: string;
+  requesterDevice: number;
+  senderDevice: number;
+  sentAt: number;
+}>;
+
+export class RetryRequestEvent extends ConfirmableEvent {
+  constructor(
+    public readonly retryRequest: RetryRequestEventData,
+    confirm: ConfirmCallback
+  ) {
+    super('retry-request', confirm);
   }
 }
 
@@ -342,10 +342,24 @@ export class FetchLatestEvent extends ConfirmableEvent {
 
 export class KeysEvent extends ConfirmableEvent {
   constructor(
-    public readonly storageServiceKey: ArrayBuffer,
+    public readonly storageServiceKey: Uint8Array,
     confirm: ConfirmCallback
   ) {
     super('keys', confirm);
+  }
+}
+
+export type PNIIdentityEventData = Readonly<{
+  publicKey: Uint8Array;
+  privateKey: Uint8Array;
+}>;
+
+export class PNIIdentityEvent extends ConfirmableEvent {
+  constructor(
+    public readonly data: PNIIdentityEventData,
+    confirm: ConfirmCallback
+  ) {
+    super('pniIdentity', confirm);
   }
 }
 
@@ -362,25 +376,6 @@ export class StickerPackEvent extends ConfirmableEvent {
     confirm: ConfirmCallback
   ) {
     super('sticker-pack', confirm);
-  }
-}
-
-export type VerifiedEventData = Readonly<{
-  state: Proto.IVerified['state'];
-  destination?: string;
-  destinationUuid?: string;
-  identityKey?: ArrayBuffer;
-
-  // Used in `ts/background.ts`
-  viaContactSync?: boolean;
-}>;
-
-export class VerifiedEvent extends ConfirmableEvent {
-  constructor(
-    public readonly verified: VerifiedEventData,
-    confirm: ConfirmCallback
-  ) {
-    super('verified', confirm);
   }
 }
 

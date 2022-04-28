@@ -1,18 +1,18 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { isEqual, isNumber } from 'lodash';
 import Long from 'long';
 
-import { deriveMasterKeyFromGroupV1, typedArrayToArrayBuffer } from '../Crypto';
+import { deriveMasterKeyFromGroupV1 } from '../Crypto';
 import * as Bytes from '../Bytes';
-import dataInterface from '../sql/Client';
 import {
   deriveGroupFields,
   waitThenMaybeUpdateGroup,
   waitThenRespondToGroupV2Migration,
 } from '../groups';
 import { assert } from '../util/assert';
+import { dropNull } from '../util/dropNull';
 import { normalizeUuid } from '../util/normalizeUuid';
 import { missingCaseError } from '../util/missingCaseError';
 import {
@@ -24,7 +24,7 @@ import {
   parsePhoneNumberDiscoverability,
 } from '../util/phoneNumberDiscoverability';
 import { arePinnedConversationsEqual } from '../util/arePinnedConversationsEqual';
-import { ConversationModel } from '../models/conversations';
+import type { ConversationModel } from '../models/conversations';
 import {
   getSafeLongFromTimestamp,
   getTimestampFromLong,
@@ -35,18 +35,32 @@ import {
 } from '../util/universalExpireTimer';
 import { ourProfileKeyService } from './ourProfileKey';
 import { isGroupV1, isGroupV2 } from '../util/whatTypeOfConversation';
+import { isValidUuid, UUID, UUIDKind } from '../types/UUID';
+import * as preferredReactionEmoji from '../reactions/preferredReactionEmoji';
 import { SignalService as Proto } from '../protobuf';
-
-const { updateConversation } = dataInterface;
-
-// TODO: remove once we move away from ArrayBuffers
-const FIXMEU8 = Uint8Array;
+import * as log from '../logging/log';
 
 type RecordClass =
   | Proto.IAccountRecord
   | Proto.IContactRecord
   | Proto.IGroupV1Record
   | Proto.IGroupV2Record;
+
+export type MergeResultType = Readonly<{
+  hasConflict: boolean;
+  shouldDrop?: boolean;
+  conversation?: ConversationModel;
+  needsProfileFetch?: boolean;
+  updatedConversations?: ReadonlyArray<ConversationModel>;
+  oldStorageID?: string;
+  oldStorageVersion?: number;
+  details: ReadonlyArray<string>;
+}>;
+
+type HasConflictResultType = Readonly<{
+  hasConflict: boolean;
+  details: ReadonlyArray<string>;
+}>;
 
 function toRecordVerified(verified: number): Proto.ContactRecord.IdentityState {
   const VERIFIED_ENUM = window.textsecure.storage.protocol.VerifiedStatus;
@@ -64,13 +78,11 @@ function toRecordVerified(verified: number): Proto.ContactRecord.IdentityState {
 
 function addUnknownFields(
   record: RecordClass,
-  conversation: ConversationModel
+  conversation: ConversationModel,
+  details: Array<string>
 ): void {
   if (record.__unknownFields) {
-    window.log.info(
-      'storageService.addUnknownFields: Unknown fields found for',
-      conversation.idForLogging()
-    );
+    details.push('adding unknown fields');
     conversation.set({
       storageUnknownFields: Bytes.toBase64(
         Bytes.concatenate(record.__unknownFields)
@@ -79,10 +91,7 @@ function addUnknownFields(
   } else if (conversation.get('storageUnknownFields')) {
     // If the record doesn't have unknown fields attached but we have them
     // saved locally then we need to clear it out
-    window.log.info(
-      'storageService.addUnknownFields: Clearing unknown fields for',
-      conversation.idForLogging()
-    );
+    details.push('clearing unknown fields');
     conversation.unset('storageUnknownFields');
   }
 }
@@ -93,9 +102,9 @@ function applyUnknownFields(
 ): void {
   const storageUnknownFields = conversation.get('storageUnknownFields');
   if (storageUnknownFields) {
-    window.log.info(
+    log.info(
       'storageService.applyUnknownFields: Applying unknown fields for',
-      conversation.get('id')
+      conversation.idForLogging()
     );
     // eslint-disable-next-line no-param-reassign
     record.__unknownFields = [Bytes.fromBase64(storageUnknownFields)];
@@ -106,9 +115,9 @@ export async function toContactRecord(
   conversation: ConversationModel
 ): Promise<Proto.ContactRecord> {
   const contactRecord = new Proto.ContactRecord();
-  const uuid = conversation.get('uuid');
+  const uuid = conversation.getUuid();
   if (uuid) {
-    contactRecord.serviceUuid = uuid;
+    contactRecord.serviceUuid = uuid.toString();
   }
   const e164 = conversation.get('e164');
   if (e164) {
@@ -118,11 +127,12 @@ export async function toContactRecord(
   if (profileKey) {
     contactRecord.profileKey = Bytes.fromBase64(String(profileKey));
   }
-  const identityKey = await window.textsecure.storage.protocol.loadIdentityKey(
-    conversation.id
-  );
+
+  const identityKey = uuid
+    ? await window.textsecure.storage.protocol.loadIdentityKey(uuid)
+    : undefined;
   if (identityKey) {
-    contactRecord.identityKey = new FIXMEU8(identityKey);
+    contactRecord.identityKey = identityKey;
   }
   const verified = conversation.get('verified');
   if (verified) {
@@ -143,15 +153,18 @@ export async function toContactRecord(
   contactRecord.mutedUntilTimestamp = getSafeLongFromTimestamp(
     conversation.get('muteExpiresAt')
   );
+  if (conversation.get('hideStory') !== undefined) {
+    contactRecord.hideStory = Boolean(conversation.get('hideStory'));
+  }
 
   applyUnknownFields(contactRecord, conversation);
 
   return contactRecord;
 }
 
-export async function toAccountRecord(
+export function toAccountRecord(
   conversation: ConversationModel
-): Promise<Proto.AccountRecord> {
+): Proto.AccountRecord {
   const accountRecord = new Proto.AccountRecord();
 
   if (conversation.get('profileKey')) {
@@ -165,7 +178,10 @@ export async function toAccountRecord(
   if (conversation.get('profileFamilyName')) {
     accountRecord.familyName = conversation.get('profileFamilyName') || '';
   }
-  accountRecord.avatarUrl = window.storage.get('avatarUrl') || '';
+  const avatarUrl = window.storage.get('avatarUrl');
+  if (avatarUrl !== undefined) {
+    accountRecord.avatarUrl = avatarUrl;
+  }
   accountRecord.noteToSelfArchived = Boolean(conversation.get('isArchived'));
   accountRecord.noteToSelfMarkedUnread = Boolean(
     conversation.get('markedUnread')
@@ -179,6 +195,11 @@ export async function toAccountRecord(
   );
   accountRecord.linkPreviews = Boolean(window.Events.getLinkPreviewSetting());
 
+  const preferContactAvatars = window.storage.get('preferContactAvatars');
+  if (preferContactAvatars !== undefined) {
+    accountRecord.preferContactAvatars = Boolean(preferContactAvatars);
+  }
+
   const primarySendsSms = window.storage.get('primarySendsSms');
   if (primarySendsSms !== undefined) {
     accountRecord.primarySendsSms = Boolean(primarySendsSms);
@@ -187,6 +208,13 @@ export async function toAccountRecord(
   const accountE164 = window.storage.get('accountE164');
   if (accountE164 !== undefined) {
     accountRecord.e164 = accountE164;
+  }
+
+  const rawPreferredReactionEmoji = window.storage.get(
+    'preferredReactionEmoji'
+  );
+  if (preferredReactionEmoji.canBeSynced(rawPreferredReactionEmoji)) {
+    accountRecord.preferredReactionEmoji = rawPreferredReactionEmoji;
   }
 
   const universalExpireTimer = getUniversalExpireTimer();
@@ -236,7 +264,8 @@ export async function toAccountRecord(
       const pinnedConversation = window.ConversationController.get(id);
 
       if (pinnedConversation) {
-        const pinnedConversationRecord = new Proto.AccountRecord.PinnedConversation();
+        const pinnedConversationRecord =
+          new Proto.AccountRecord.PinnedConversation();
 
         if (pinnedConversation.get('type') === 'private') {
           pinnedConversationRecord.identifier = 'contact';
@@ -276,20 +305,28 @@ export async function toAccountRecord(
         pinnedConversationClass !== undefined
     );
 
-  window.log.info(
-    'storageService.toAccountRecord: pinnedConversations',
-    pinnedConversations.length
+  accountRecord.pinnedConversations = pinnedConversations;
+
+  const subscriberId = window.storage.get('subscriberId');
+  if (subscriberId instanceof Uint8Array) {
+    accountRecord.subscriberId = subscriberId;
+  }
+  const subscriberCurrencyCode = window.storage.get('subscriberCurrencyCode');
+  if (typeof subscriberCurrencyCode === 'string') {
+    accountRecord.subscriberCurrencyCode = subscriberCurrencyCode;
+  }
+  accountRecord.displayBadgesOnProfile = Boolean(
+    window.storage.get('displayBadgesOnProfile')
   );
 
-  accountRecord.pinnedConversations = pinnedConversations;
   applyUnknownFields(accountRecord, conversation);
 
   return accountRecord;
 }
 
-export async function toGroupV1Record(
+export function toGroupV1Record(
   conversation: ConversationModel
-): Promise<Proto.GroupV1Record> {
+): Proto.GroupV1Record {
   const groupV1Record = new Proto.GroupV1Record();
 
   groupV1Record.id = Bytes.fromBinary(String(conversation.get('groupId')));
@@ -306,9 +343,9 @@ export async function toGroupV1Record(
   return groupV1Record;
 }
 
-export async function toGroupV2Record(
+export function toGroupV2Record(
   conversation: ConversationModel
-): Promise<Proto.GroupV2Record> {
+): Proto.GroupV2Record {
   const groupV2Record = new Proto.GroupV2Record();
 
   const masterKey = conversation.get('masterKey');
@@ -325,6 +362,7 @@ export async function toGroupV2Record(
   groupV2Record.dontNotifyForMentionsIfMuted = Boolean(
     conversation.get('dontNotifyForMentionsIfMuted')
   );
+  groupV2Record.hideStory = Boolean(conversation.get('hideStory'));
 
   applyUnknownFields(groupV2Record, conversation);
 
@@ -369,61 +407,50 @@ type RecordClassObject = {
 
 function doRecordsConflict(
   localRecord: RecordClassObject,
-  remoteRecord: RecordClassObject,
-  conversation: ConversationModel
-): boolean {
-  const idForLogging = conversation.idForLogging();
+  remoteRecord: RecordClassObject
+): HasConflictResultType {
+  const details = new Array<string>();
 
-  return Object.keys(remoteRecord).some((key: string): boolean => {
+  for (const key of Object.keys(remoteRecord)) {
     const localValue = localRecord[key];
     const remoteValue = remoteRecord[key];
 
-    // Sometimes we have a ByteBuffer and an ArrayBuffer, this ensures that we
+    // Sometimes we have a ByteBuffer and an Uint8Array, this ensures that we
     // are comparing them both equally by converting them into base64 string.
     if (localValue instanceof Uint8Array) {
       const areEqual = Bytes.areEqual(localValue, remoteValue);
       if (!areEqual) {
-        window.log.info(
-          'storageService.doRecordsConflict: Conflict found for ArrayBuffer',
-          key,
-          idForLogging
-        );
+        details.push(`key=${key}: different bytes`);
       }
-      return !areEqual;
+      continue;
     }
 
     // If both types are Long we can use Long's equals to compare them
-    if (localValue instanceof Long || typeof localValue === 'number') {
-      if (!(remoteValue instanceof Long) || typeof remoteValue !== 'number') {
-        return true;
+    if (Long.isLong(localValue) || typeof localValue === 'number') {
+      if (!Long.isLong(remoteValue) && typeof remoteValue !== 'number') {
+        details.push(`key=${key}: type mismatch`);
+        continue;
       }
 
       const areEqual = Long.fromValue(localValue).equals(
         Long.fromValue(remoteValue)
       );
       if (!areEqual) {
-        window.log.info(
-          'storageService.doRecordsConflict: Conflict found for Long',
-          key,
-          idForLogging
-        );
+        details.push(`key=${key}: different integers`);
       }
-      return !areEqual;
+      continue;
     }
 
     if (key === 'pinnedConversations') {
       const areEqual = arePinnedConversationsEqual(localValue, remoteValue);
       if (!areEqual) {
-        window.log.info(
-          'storageService.doRecordsConflict: Conflict found for pinnedConversations',
-          idForLogging
-        );
+        details.push('pinnedConversations');
       }
-      return !areEqual;
+      continue;
     }
 
     if (localValue === remoteValue) {
-      return false;
+      continue;
     }
 
     // Sometimes we get `null` values from Protobuf and they should default to
@@ -436,56 +463,59 @@ function doRecordsConflict(
         localValue === 0 ||
         (Long.isLong(localValue) && localValue.toNumber() === 0))
     ) {
-      return false;
+      continue;
     }
 
     const areEqual = isEqual(localValue, remoteValue);
 
     if (!areEqual) {
-      window.log.info(
-        'storageService.doRecordsConflict: Conflict found for',
-        key,
-        idForLogging
-      );
+      details.push(`key=${key}: different values`);
     }
+  }
 
-    return !areEqual;
-  });
+  return {
+    hasConflict: details.length > 0,
+    details,
+  };
 }
 
 function doesRecordHavePendingChanges(
   mergedRecord: RecordClass,
   serviceRecord: RecordClass,
   conversation: ConversationModel
-): boolean {
+): HasConflictResultType {
   const shouldSync = Boolean(conversation.get('needsStorageServiceSync'));
 
   if (!shouldSync) {
-    return false;
+    return { hasConflict: false, details: [] };
   }
 
-  const hasConflict = doRecordsConflict(
+  const { hasConflict, details } = doRecordsConflict(
     mergedRecord,
-    serviceRecord,
-    conversation
+    serviceRecord
   );
 
   if (!hasConflict) {
     conversation.set({ needsStorageServiceSync: false });
   }
 
-  return hasConflict;
+  return {
+    hasConflict,
+    details,
+  };
 }
 
 export async function mergeGroupV1Record(
   storageID: string,
+  storageVersion: number,
   groupV1Record: Proto.IGroupV1Record
-): Promise<boolean> {
+): Promise<MergeResultType> {
   if (!groupV1Record.id) {
     throw new Error(`No ID for ${storageID}`);
   }
 
   const groupId = Bytes.toBinary(groupV1Record.id);
+  let details = new Array<string>();
 
   // Attempt to fetch an existing group pertaining to the `groupId` or create
   // a new group and populate it with the attributes from the record.
@@ -506,24 +536,17 @@ export async function mergeGroupV1Record(
     // It's possible this group was migrated to a GV2 if so we attempt to
     // retrieve the master key and find the conversation locally. If we
     // are successful then we continue setting and applying state.
-    const masterKeyBuffer = await deriveMasterKeyFromGroupV1(
-      typedArrayToArrayBuffer(groupV1Record.id)
-    );
-    const fields = deriveGroupFields(new FIXMEU8(masterKeyBuffer));
+    const masterKeyBuffer = deriveMasterKeyFromGroupV1(groupV1Record.id);
+    const fields = deriveGroupFields(masterKeyBuffer);
     const derivedGroupV2Id = Bytes.toBase64(fields.id);
 
-    window.log.info(
-      'storageService.mergeGroupV1Record: failed to find group by v1 id ' +
+    details.push(
+      'failed to find group by v1 id ' +
         `attempting lookup by v2 groupv2(${derivedGroupV2Id})`
     );
     conversation = window.ConversationController.get(derivedGroupV2Id);
   }
-  if (conversation) {
-    window.log.info(
-      'storageService.mergeGroupV1Record: found existing group',
-      conversation.idForLogging()
-    );
-  } else {
+  if (!conversation) {
     if (groupV1Record.id.byteLength !== 16) {
       throw new Error('Not a valid gv1');
     }
@@ -532,16 +555,32 @@ export async function mergeGroupV1Record(
       groupId,
       'group'
     );
-    window.log.info(
-      'storageService.mergeGroupV1Record: created a new group locally',
-      conversation.idForLogging()
-    );
+    details.push('created a new group locally');
+  }
+
+  const oldStorageID = conversation.get('storageID');
+  const oldStorageVersion = conversation.get('storageVersion');
+
+  if (!isGroupV1(conversation.attributes)) {
+    details.push('GV1 record for GV2 group, dropping');
+
+    return {
+      // Note: conflicts cause immediate uploads, but we should upload
+      // only in response to user's action.
+      hasConflict: false,
+      shouldDrop: true,
+      conversation,
+      oldStorageID,
+      oldStorageVersion,
+      details,
+    };
   }
 
   conversation.set({
     isArchived: Boolean(groupV1Record.archived),
     markedUnread: Boolean(groupV1Record.markedUnread),
     storageID,
+    storageVersion,
   });
 
   conversation.setMuteExpiration(
@@ -556,35 +595,39 @@ export async function mergeGroupV1Record(
   let hasPendingChanges: boolean;
 
   if (isGroupV1(conversation.attributes)) {
-    addUnknownFields(groupV1Record, conversation);
+    addUnknownFields(groupV1Record, conversation, details);
 
-    hasPendingChanges = doesRecordHavePendingChanges(
-      await toGroupV1Record(conversation),
+    const { hasConflict, details: extraDetails } = doesRecordHavePendingChanges(
+      toGroupV1Record(conversation),
       groupV1Record,
       conversation
     );
+
+    details = details.concat(extraDetails);
+    hasPendingChanges = hasConflict;
   } else {
     // We cannot preserve unknown fields if local group is V2 and the remote is
     // still V1, because the storageItem that we'll put into manifest will have
     // a different record type.
-    window.log.info(
-      'storageService.mergeGroupV1Record marking v1' +
-        ' group for an update to v2',
-      conversation.idForLogging()
-    );
 
     // We want to upgrade group in the storage after merging it.
     hasPendingChanges = true;
+    details.push('marking v1 group for an update to v2');
   }
 
-  updateConversation(conversation.attributes);
-
-  return hasPendingChanges;
+  return {
+    hasConflict: hasPendingChanges,
+    conversation,
+    oldStorageID,
+    oldStorageVersion,
+    details,
+    updatedConversations: [conversation],
+  };
 }
 
-async function getGroupV2Conversation(
+function getGroupV2Conversation(
   masterKeyBuffer: Uint8Array
-): Promise<ConversationModel> {
+): ConversationModel {
   const groupFields = deriveGroupFields(masterKeyBuffer);
 
   const groupId = Bytes.toBase64(groupFields.id);
@@ -595,7 +638,7 @@ async function getGroupV2Conversation(
   // First we check for an existing GroupV2 group
   const groupV2 = window.ConversationController.get(groupId);
   if (groupV2) {
-    await groupV2.maybeRepairGroupV2({
+    groupV2.maybeRepairGroupV2({
       masterKey,
       secretParams,
       publicParams,
@@ -631,27 +674,28 @@ async function getGroupV2Conversation(
 
 export async function mergeGroupV2Record(
   storageID: string,
+  storageVersion: number,
   groupV2Record: Proto.IGroupV2Record
-): Promise<boolean> {
+): Promise<MergeResultType> {
   if (!groupV2Record.masterKey) {
     throw new Error(`No master key for ${storageID}`);
   }
 
   const masterKeyBuffer = groupV2Record.masterKey;
-  const conversation = await getGroupV2Conversation(masterKeyBuffer);
+  const conversation = getGroupV2Conversation(masterKeyBuffer);
 
-  window.log.info(
-    'storageService.mergeGroupV2Record:',
-    conversation.idForLogging()
-  );
+  const oldStorageID = conversation.get('storageID');
+  const oldStorageVersion = conversation.get('storageVersion');
 
   conversation.set({
+    hideStory: Boolean(groupV2Record.hideStory),
     isArchived: Boolean(groupV2Record.archived),
     markedUnread: Boolean(groupV2Record.markedUnread),
     dontNotifyForMentionsIfMuted: Boolean(
       groupV2Record.dontNotifyForMentionsIfMuted
     ),
     storageID,
+    storageVersion,
   });
 
   conversation.setMuteExpiration(
@@ -663,15 +707,17 @@ export async function mergeGroupV2Record(
 
   applyMessageRequestState(groupV2Record, conversation);
 
-  addUnknownFields(groupV2Record, conversation);
+  let details = new Array<string>();
 
-  const hasPendingChanges = doesRecordHavePendingChanges(
-    await toGroupV2Record(conversation),
+  addUnknownFields(groupV2Record, conversation, details);
+
+  const { hasConflict, details: extraDetails } = doesRecordHavePendingChanges(
+    toGroupV2Record(conversation),
     groupV2Record,
     conversation
   );
 
-  updateConversation(conversation.attributes);
+  details = details.concat(extraDetails);
 
   const isGroupNewToUs = !isNumber(conversation.get('revision'));
   const isFirstSync = !window.storage.get('storageFetchComplete');
@@ -702,13 +748,21 @@ export async function mergeGroupV2Record(
     );
   }
 
-  return hasPendingChanges;
+  return {
+    hasConflict,
+    conversation,
+    updatedConversations: [conversation],
+    oldStorageID,
+    oldStorageVersion,
+    details,
+  };
 }
 
 export async function mergeContactRecord(
   storageID: string,
+  storageVersion: number,
   originalContactRecord: Proto.IContactRecord
-): Promise<boolean> {
+): Promise<MergeResultType> {
   const contactRecord = {
     ...originalContactRecord,
 
@@ -720,13 +774,27 @@ export async function mergeContactRecord(
       : undefined,
   };
 
-  const e164 = contactRecord.serviceE164 || undefined;
-  const uuid = contactRecord.serviceUuid || undefined;
+  const e164 = dropNull(contactRecord.serviceE164);
+  const uuid = dropNull(contactRecord.serviceUuid);
+
+  // All contacts must have UUID
+  if (!uuid) {
+    return { hasConflict: false, shouldDrop: true, details: ['no uuid'] };
+  }
+
+  if (!isValidUuid(uuid)) {
+    return { hasConflict: false, shouldDrop: true, details: ['invalid uuid'] };
+  }
+
+  if (window.storage.user.getOurUuidKind(new UUID(uuid)) !== UUIDKind.Unknown) {
+    return { hasConflict: false, shouldDrop: true, details: ['our own uuid'] };
+  }
 
   const id = window.ConversationController.ensureContactIds({
     e164,
     uuid,
     highTrust: true,
+    reason: 'mergeContactRecord',
   });
 
   if (!id) {
@@ -738,48 +806,81 @@ export async function mergeContactRecord(
     'private'
   );
 
-  window.log.info(
-    'storageService.mergeContactRecord:',
-    conversation.idForLogging()
-  );
-
-  if (contactRecord.profileKey) {
-    await conversation.setProfileKey(Bytes.toBase64(contactRecord.profileKey), {
-      viaStorageServiceSync: true,
-    });
+  let needsProfileFetch = false;
+  if (contactRecord.profileKey && contactRecord.profileKey.length > 0) {
+    needsProfileFetch = await conversation.setProfileKey(
+      Bytes.toBase64(contactRecord.profileKey),
+      { viaStorageServiceSync: true }
+    );
   }
 
-  const verified = await conversation.safeGetVerified();
-  const storageServiceVerified = contactRecord.identityState || 0;
-  if (verified !== storageServiceVerified) {
+  let details = new Array<string>();
+  const remoteName = dropNull(contactRecord.givenName);
+  const remoteFamilyName = dropNull(contactRecord.familyName);
+  const localName = conversation.get('profileName');
+  const localFamilyName = conversation.get('profileFamilyName');
+  if (
+    remoteName &&
+    (localName !== remoteName || localFamilyName !== remoteFamilyName)
+  ) {
+    // Local name doesn't match remote name, fetch profile
+    if (localName) {
+      conversation.getProfiles();
+      details.push('refreshing profile');
+    } else {
+      conversation.set({
+        profileName: remoteName,
+        profileFamilyName: remoteFamilyName,
+      });
+      details.push('updated profile name');
+    }
+  }
+
+  if (contactRecord.identityKey) {
+    const verified = await conversation.safeGetVerified();
+    const storageServiceVerified = contactRecord.identityState || 0;
     const verifiedOptions = {
-      key: contactRecord.identityKey
-        ? typedArrayToArrayBuffer(contactRecord.identityKey)
-        : undefined,
+      key: contactRecord.identityKey,
       viaStorageServiceSync: true,
     };
     const STATE_ENUM = Proto.ContactRecord.IdentityState;
 
+    if (verified !== storageServiceVerified) {
+      details.push(`updating verified state to=${verified}`);
+    }
+
+    // Update verified status unconditionally to make sure we will take the
+    // latest identity key from the manifest.
+    let keyChange: boolean;
     switch (storageServiceVerified) {
       case STATE_ENUM.VERIFIED:
-        await conversation.setVerified(verifiedOptions);
+        keyChange = await conversation.setVerified(verifiedOptions);
         break;
       case STATE_ENUM.UNVERIFIED:
-        await conversation.setUnverified(verifiedOptions);
+        keyChange = await conversation.setUnverified(verifiedOptions);
         break;
       default:
-        await conversation.setVerifiedDefault(verifiedOptions);
+        keyChange = await conversation.setVerifiedDefault(verifiedOptions);
+    }
+
+    if (keyChange) {
+      details.push('key changed');
     }
   }
 
   applyMessageRequestState(contactRecord, conversation);
 
-  addUnknownFields(contactRecord, conversation);
+  addUnknownFields(contactRecord, conversation, details);
+
+  const oldStorageID = conversation.get('storageID');
+  const oldStorageVersion = conversation.get('storageVersion');
 
   conversation.set({
+    hideStory: Boolean(contactRecord.hideStory),
     isArchived: Boolean(contactRecord.archived),
     markedUnread: Boolean(contactRecord.markedUnread),
     storageID,
+    storageVersion,
   });
 
   conversation.setMuteExpiration(
@@ -789,23 +890,31 @@ export async function mergeContactRecord(
     }
   );
 
-  const hasPendingChanges = doesRecordHavePendingChanges(
+  const { hasConflict, details: extraDetails } = doesRecordHavePendingChanges(
     await toContactRecord(conversation),
     contactRecord,
     conversation
   );
+  details = details.concat(extraDetails);
 
-  updateConversation(conversation.attributes);
-
-  return hasPendingChanges;
+  return {
+    hasConflict,
+    conversation,
+    updatedConversations: [conversation],
+    needsProfileFetch,
+    oldStorageID,
+    oldStorageVersion,
+    details,
+  };
 }
 
 export async function mergeAccountRecord(
   storageID: string,
+  storageVersion: number,
   accountRecord: Proto.IAccountRecord
-): Promise<boolean> {
+): Promise<MergeResultType> {
+  let details = new Array<string>();
   const {
-    avatarUrl,
     linkPreviews,
     notDiscoverableByPhoneNumber,
     noteToSelfArchived,
@@ -816,10 +925,17 @@ export async function mergeAccountRecord(
     readReceipts,
     sealedSenderIndicators,
     typingIndicators,
+    preferContactAvatars,
     primarySendsSms,
     universalExpireTimer,
     e164: accountE164,
+    preferredReactionEmoji: rawPreferredReactionEmoji,
+    subscriberId,
+    subscriberCurrencyCode,
+    displayBadgesOnProfile,
   } = accountRecord;
+
+  const updatedConversations = new Array<ConversationModel>();
 
   window.storage.put('read-receipt-setting', Boolean(readReceipts));
 
@@ -835,6 +951,15 @@ export async function mergeAccountRecord(
     window.storage.put('linkPreviews', linkPreviews);
   }
 
+  if (typeof preferContactAvatars === 'boolean') {
+    const previous = window.storage.get('preferContactAvatars');
+    window.storage.put('preferContactAvatars', preferContactAvatars);
+
+    if (Boolean(previous) !== Boolean(preferContactAvatars)) {
+      window.ConversationController.forceRerender();
+    }
+  }
+
   if (typeof primarySendsSms === 'boolean') {
     window.storage.put('primarySendsSms', primarySendsSms);
   }
@@ -842,6 +967,19 @@ export async function mergeAccountRecord(
   if (typeof accountE164 === 'string' && accountE164) {
     window.storage.put('accountE164', accountE164);
     window.storage.user.setNumber(accountE164);
+  }
+
+  if (preferredReactionEmoji.canBeSynced(rawPreferredReactionEmoji)) {
+    const localPreferredReactionEmoji =
+      window.storage.get('preferredReactionEmoji') || [];
+    if (!isEqual(localPreferredReactionEmoji, rawPreferredReactionEmoji)) {
+      log.warn(
+        'storageService: remote and local preferredReactionEmoji do not match',
+        localPreferredReactionEmoji.length,
+        rawPreferredReactionEmoji.length
+      );
+    }
+    window.storage.put('preferredReactionEmoji', rawPreferredReactionEmoji);
   }
 
   setUniversalExpireTimer(universalExpireTimer || 0);
@@ -877,7 +1015,7 @@ export async function mergeAccountRecord(
   window.storage.put('phoneNumberDiscoverability', discoverability);
 
   if (profileKey) {
-    ourProfileKeyService.set(typedArrayToArrayBuffer(profileKey));
+    ourProfileKeyService.set(profileKey);
   }
 
   if (pinnedConversations) {
@@ -894,7 +1032,7 @@ export async function mergeAccountRecord(
       .filter(id => !modelPinnedConversationIds.includes(id));
 
     if (missingStoragePinnedConversationIds.length !== 0) {
-      window.log.info(
+      log.warn(
         'mergeAccountRecord: pinnedConversationIds in storage does not match pinned Conversation models'
       );
     }
@@ -910,13 +1048,9 @@ export async function mergeAccountRecord(
         )
     );
 
-    window.log.info(
-      'storageService.mergeAccountRecord: Local pinned',
-      locallyPinnedConversations.length
-    );
-    window.log.info(
-      'storageService.mergeAccountRecord: Remote pinned',
-      pinnedConversations.length
+    details.push(
+      `local pinned=${locallyPinnedConversations.length}`,
+      `remote pinned=${pinnedConversations.length}`
     );
 
     const remotelyPinnedConversationPromises = pinnedConversations.map(
@@ -924,9 +1058,8 @@ export async function mergeAccountRecord(
         let conversationId: string | undefined;
 
         if (contact) {
-          conversationId = window.ConversationController.ensureContactIds(
-            contact
-          );
+          conversationId =
+            window.ConversationController.ensureContactIds(contact);
         } else if (legacyGroupId && legacyGroupId.length) {
           conversationId = Bytes.toBinary(legacyGroupId);
         } else if (groupMasterKey && groupMasterKey.length) {
@@ -935,13 +1068,13 @@ export async function mergeAccountRecord(
 
           conversationId = groupId;
         } else {
-          window.log.error(
+          log.error(
             'storageService.mergeAccountRecord: Invalid identifier received'
           );
         }
 
         if (!conversationId) {
-          window.log.error(
+          log.error(
             'storageService.mergeAccountRecord: missing conversation id.'
           );
           return undefined;
@@ -966,28 +1099,31 @@ export async function mergeAccountRecord(
       ({ id }) => !remotelyPinnedConversationIds.includes(id)
     );
 
-    window.log.info(
-      'storageService.mergeAccountRecord: unpinning',
-      conversationsToUnpin.length
-    );
-
-    window.log.info(
-      'storageService.mergeAccountRecord: pinning',
-      remotelyPinnedConversations.length
+    details.push(
+      `unpinning=${conversationsToUnpin.length}`,
+      `pinning=${remotelyPinnedConversations.length}`
     );
 
     conversationsToUnpin.forEach(conversation => {
       conversation.set({ isPinned: false });
-      updateConversation(conversation.attributes);
+      updatedConversations.push(conversation);
     });
 
     remotelyPinnedConversations.forEach(conversation => {
       conversation.set({ isPinned: true, isArchived: false });
-      updateConversation(conversation.attributes);
+      updatedConversations.push(conversation);
     });
 
     window.storage.put('pinnedConversationIds', remotelyPinnedConversationIds);
   }
+
+  if (subscriberId instanceof Uint8Array) {
+    window.storage.put('subscriberId', subscriberId);
+  }
+  if (typeof subscriberCurrencyCode === 'string') {
+    window.storage.put('subscriberCurrencyCode', subscriberCurrencyCode);
+  }
+  window.storage.put('displayBadgesOnProfile', Boolean(displayBadgesOnProfile));
 
   const ourID = window.ConversationController.getOurConversationId();
 
@@ -1000,30 +1136,47 @@ export async function mergeAccountRecord(
     'private'
   );
 
-  addUnknownFields(accountRecord, conversation);
+  addUnknownFields(accountRecord, conversation, details);
+
+  const oldStorageID = conversation.get('storageID');
+  const oldStorageVersion = conversation.get('storageVersion');
 
   conversation.set({
     isArchived: Boolean(noteToSelfArchived),
     markedUnread: Boolean(noteToSelfMarkedUnread),
     storageID,
+    storageVersion,
   });
 
-  if (accountRecord.profileKey) {
-    await conversation.setProfileKey(Bytes.toBase64(accountRecord.profileKey));
-  }
+  let needsProfileFetch = false;
+  if (profileKey && profileKey.length > 0) {
+    needsProfileFetch = await conversation.setProfileKey(
+      Bytes.toBase64(profileKey),
+      { viaStorageServiceSync: true }
+    );
 
-  if (avatarUrl) {
-    await conversation.setProfileAvatar(avatarUrl);
+    const avatarUrl = dropNull(accountRecord.avatarUrl);
+    await conversation.setProfileAvatar(avatarUrl, profileKey);
     window.storage.put('avatarUrl', avatarUrl);
   }
 
-  const hasPendingChanges = doesRecordHavePendingChanges(
-    await toAccountRecord(conversation),
+  const { hasConflict, details: extraDetails } = doesRecordHavePendingChanges(
+    toAccountRecord(conversation),
     accountRecord,
     conversation
   );
 
-  updateConversation(conversation.attributes);
+  updatedConversations.push(conversation);
 
-  return hasPendingChanges;
+  details = details.concat(extraDetails);
+
+  return {
+    hasConflict,
+    conversation,
+    updatedConversations,
+    needsProfileFetch,
+    oldStorageID,
+    oldStorageVersion,
+    details,
+  };
 }

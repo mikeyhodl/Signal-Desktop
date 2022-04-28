@@ -1,7 +1,8 @@
 // Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useEffect, useRef, ReactChild } from 'react';
+import type { ReactChild } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Avatar } from './Avatar';
 import { Tooltip } from './Tooltip';
 import { Intl } from './Intl';
@@ -9,11 +10,11 @@ import { Theme } from '../util/theme';
 import { getParticipantName } from '../util/callingGetParticipantName';
 import { ContactName } from './conversation/ContactName';
 import { Emojify } from './conversation/Emojify';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { AvatarColors } from '../types/Colors';
 import { CallMode } from '../types/Calling';
-import { ConversationType } from '../state/ducks/conversations';
-import { AcceptCallType, DeclineCallType } from '../state/ducks/calling';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { AcceptCallType, DeclineCallType } from '../state/ducks/calling';
 import { missingCaseError } from '../util/missingCaseError';
 
 export type PropsType = {
@@ -185,15 +186,7 @@ export const IncomingCallBar = (props: PropsType): JSX.Element | null => {
   switch (props.callMode) {
     case CallMode.Direct:
       ({ isVideoCall } = props);
-      headerNode = (
-        <ContactName
-          name={name}
-          phoneNumber={phoneNumber}
-          profileName={profileName}
-          title={title}
-          i18n={i18n}
-        />
-      );
+      headerNode = <ContactName title={title} />;
       messageNode = i18n(
         isVideoCall ? 'incomingVideoCall' : 'incomingAudioCall'
       );
@@ -237,6 +230,7 @@ export const IncomingCallBar = (props: PropsType): JSX.Element | null => {
             <Avatar
               acceptedMessageRequest={acceptedMessageRequest}
               avatarPath={avatarPath}
+              badge={undefined}
               color={color || AvatarColors[0]}
               noteToSelf={false}
               conversationType={conversationType}
@@ -263,16 +257,16 @@ export const IncomingCallBar = (props: PropsType): JSX.Element | null => {
           </div>
         </div>
         <div className="IncomingCallBar__actions">
+          <CallButton
+            classSuffix="decline"
+            onClick={() => {
+              declineCall({ conversationId });
+            }}
+            tabIndex={0}
+            tooltipContent={i18n('declineCall')}
+          />
           {isVideoCall ? (
             <>
-              <CallButton
-                classSuffix="decline"
-                onClick={() => {
-                  declineCall({ conversationId });
-                }}
-                tabIndex={0}
-                tooltipContent={i18n('declineCall')}
-              />
               <CallButton
                 classSuffix="accept-video-as-audio"
                 onClick={() => {
@@ -291,24 +285,14 @@ export const IncomingCallBar = (props: PropsType): JSX.Element | null => {
               />
             </>
           ) : (
-            <>
-              <CallButton
-                classSuffix="decline"
-                onClick={() => {
-                  declineCall({ conversationId });
-                }}
-                tabIndex={0}
-                tooltipContent={i18n('declineCall')}
-              />
-              <CallButton
-                classSuffix="accept-audio"
-                onClick={() => {
-                  acceptCall({ conversationId, asVideoCall: false });
-                }}
-                tabIndex={0}
-                tooltipContent={i18n('acceptCall')}
-              />
-            </>
+            <CallButton
+              classSuffix="accept-audio"
+              onClick={() => {
+                acceptCall({ conversationId, asVideoCall: false });
+              }}
+              tabIndex={0}
+              tooltipContent={i18n('acceptCall')}
+            />
           )}
         </div>
       </div>

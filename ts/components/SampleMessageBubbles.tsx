@@ -1,10 +1,11 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { CSSProperties } from 'react';
-import { ConversationColorType } from '../types/Colors';
-import { LocalizerType } from '../types/Util';
-import { formatRelativeTime } from '../util/formatRelativeTime';
+import type { CSSProperties } from 'react';
+import React from 'react';
+import type { ConversationColorType } from '../types/Colors';
+import type { LocalizerType } from '../types/Util';
+import { formatTime } from '../util/timestamp';
 
 export type PropsType = {
   backgroundStyle?: CSSProperties;
@@ -20,7 +21,7 @@ const SampleMessage = ({
   direction,
   i18n,
   text,
-  timestamp,
+  timestampDeltaFromNow,
   status,
   style,
 }: {
@@ -28,7 +29,7 @@ const SampleMessage = ({
   direction: 'incoming' | 'outgoing';
   i18n: LocalizerType;
   text: string;
-  timestamp: number;
+  timestampDeltaFromNow: number;
   status: 'delivered' | 'read' | 'sent';
   style?: CSSProperties;
 }): JSX.Element => (
@@ -50,7 +51,7 @@ const SampleMessage = ({
           <span
             className={`module-message__metadata__date module-message__metadata__date--${direction}`}
           >
-            {formatRelativeTime(timestamp, { extended: true, i18n })}
+            {formatTime(i18n, Date.now() - timestampDeltaFromNow, Date.now())}
           </span>
           {direction === 'outgoing' && (
             <div
@@ -77,7 +78,7 @@ export const SampleMessageBubbles = ({
         direction={includeAnotherBubble ? 'outgoing' : 'incoming'}
         i18n={i18n}
         text={i18n('ChatColorPicker__sampleBubble1')}
-        timestamp={Date.now() - A_FEW_DAYS_AGO}
+        timestampDeltaFromNow={A_FEW_DAYS_AGO}
         status="read"
         style={firstBubbleStyle}
       />
@@ -90,7 +91,7 @@ export const SampleMessageBubbles = ({
             direction="incoming"
             i18n={i18n}
             text={i18n('ChatColorPicker__sampleBubble2')}
-            timestamp={Date.now() - A_FEW_DAYS_AGO / 2}
+            timestampDeltaFromNow={A_FEW_DAYS_AGO / 2}
             status="read"
           />
           <br />
@@ -102,7 +103,7 @@ export const SampleMessageBubbles = ({
         direction="outgoing"
         i18n={i18n}
         text={i18n('ChatColorPicker__sampleBubble3')}
-        timestamp={Date.now()}
+        timestampDeltaFromNow={0}
         status="delivered"
         style={backgroundStyle}
       />

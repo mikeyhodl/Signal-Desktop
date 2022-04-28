@@ -8,9 +8,10 @@ import { action } from '@storybook/addon-actions';
 import { number } from '@storybook/addon-knobs';
 
 import enMessages from '../../_locales/en/messages.json';
-import { Lightbox, PropsType } from './Lightbox';
-import { MediaItemType } from '../types/MediaItem';
-import { setup as setupI18n } from '../../js/modules/i18n';
+import type { PropsType } from './Lightbox';
+import { Lightbox } from './Lightbox';
+import type { MediaItemType } from '../types/MediaItem';
+import { setupI18n } from '../util/setupI18n';
 import {
   AUDIO_MP3,
   IMAGE_JPEG,
@@ -18,6 +19,8 @@ import {
   VIDEO_QUICKTIME,
   stringToMIMEType,
 } from '../types/MIME';
+
+import { fakeAttachment } from '../test-both/helpers/fakeAttachment';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -29,12 +32,12 @@ function createMediaItem(
   overrideProps: OverridePropsMediaItemType
 ): MediaItemType {
   return {
-    attachment: {
+    attachment: fakeAttachment({
       caption: overrideProps.caption || '',
       contentType: IMAGE_JPEG,
       fileName: overrideProps.objectURL,
       url: overrideProps.objectURL,
-    },
+    }),
     contentType: IMAGE_JPEG,
     index: 0,
     message: {
@@ -63,13 +66,13 @@ story.add('Multimedia', () => {
   const props = createProps({
     media: [
       {
-        attachment: {
+        attachment: fakeAttachment({
           contentType: IMAGE_JPEG,
           fileName: 'tina-rolf-269345-unsplash.jpg',
           url: '/fixtures/tina-rolf-269345-unsplash.jpg',
           caption:
             'Still from The Lighthouse, starring Robert Pattinson and Willem Defoe.',
-        },
+        }),
         contentType: IMAGE_JPEG,
         index: 0,
         message: {
@@ -83,11 +86,11 @@ story.add('Multimedia', () => {
         objectURL: '/fixtures/tina-rolf-269345-unsplash.jpg',
       },
       {
-        attachment: {
+        attachment: fakeAttachment({
           contentType: VIDEO_MP4,
           fileName: 'pixabay-Soap-Bubble-7141.mp4',
           url: '/fixtures/pixabay-Soap-Bubble-7141.mp4',
-        },
+        }),
         contentType: VIDEO_MP4,
         index: 1,
         message: {
@@ -122,11 +125,11 @@ story.add('Missing Media', () => {
   const props = createProps({
     media: [
       {
-        attachment: {
+        attachment: fakeAttachment({
           contentType: IMAGE_JPEG,
           fileName: 'tina-rolf-269345-unsplash.jpg',
           url: '/fixtures/tina-rolf-269345-unsplash.jpg',
-        },
+        }),
         contentType: IMAGE_JPEG,
         index: 0,
         message: {
@@ -277,6 +280,7 @@ story.add('Conversation Header', () => (
     getConversation={() => ({
       acceptedMessageRequest: true,
       avatarPath: '/fixtures/kitten-1-64-64.jpg',
+      badges: [],
       id: '1234',
       isMe: false,
       name: 'Test',

@@ -1,10 +1,10 @@
-// Copyright 2019-2020 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { connect } from 'react-redux';
 import { mapDispatchToProps } from '../actions';
 import { StickerPreviewModal } from '../../components/stickers/StickerPreviewModal';
-import { StateType } from '../reducer';
+import type { StateType } from '../reducer';
 
 import { getIntl, getStickersPath, getTempPath } from '../selectors/user';
 import {
@@ -13,7 +13,7 @@ import {
   translatePackFromDB,
 } from '../selectors/stickers';
 
-type ExternalProps = {
+export type ExternalProps = {
   packId: string;
   readonly onClose: () => unknown;
 };

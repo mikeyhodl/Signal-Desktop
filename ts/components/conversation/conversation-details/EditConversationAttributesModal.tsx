@@ -1,14 +1,10 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, {
-  FormEventHandler,
-  FunctionComponent,
-  useRef,
-  useState,
-} from 'react';
+import type { FormEventHandler, FunctionComponent } from 'react';
+import React, { useRef, useState } from 'react';
 
-import { LocalizerType } from '../../../types/Util';
+import type { LocalizerType } from '../../../types/Util';
 import { Modal } from '../../Modal';
 import { AvatarEditor } from '../../AvatarEditor';
 import { AvatarPreview } from '../../AvatarPreview';
@@ -17,13 +13,13 @@ import { Spinner } from '../../Spinner';
 import { GroupDescriptionInput } from '../../GroupDescriptionInput';
 import { GroupTitleInput } from '../../GroupTitleInput';
 import { RequestState } from './util';
-import {
+import type {
   AvatarDataType,
   DeleteAvatarFromDiskActionType,
   ReplaceAvatarActionType,
   SaveAvatarToDiskActionType,
 } from '../../../types/Avatar';
-import { AvatarColorType } from '../../../types/Colors';
+import type { AvatarColorType } from '../../../types/Colors';
 
 type PropsType = {
   avatarColor?: AvatarColorType;
@@ -34,7 +30,7 @@ type PropsType = {
   initiallyFocusDescription: boolean;
   makeRequest: (
     _: Readonly<{
-      avatar?: undefined | ArrayBuffer;
+      avatar?: undefined | Uint8Array;
       description?: string;
       title?: undefined | string;
     }>
@@ -73,7 +69,7 @@ export const EditConversationAttributesModal: FunctionComponent<PropsType> = ({
   const startingAvatarPathRef = useRef<undefined | string>(externalAvatarPath);
 
   const [editingAvatar, setEditingAvatar] = useState(false);
-  const [avatar, setAvatar] = useState<undefined | ArrayBuffer>();
+  const [avatar, setAvatar] = useState<undefined | Uint8Array>();
   const [rawTitle, setRawTitle] = useState(externalTitle);
   const [rawGroupDescription, setRawGroupDescription] = useState(
     externalGroupDescription
@@ -111,7 +107,7 @@ export const EditConversationAttributesModal: FunctionComponent<PropsType> = ({
     event.preventDefault();
 
     const request: {
-      avatar?: undefined | ArrayBuffer;
+      avatar?: undefined | Uint8Array;
       description?: string;
       title?: string;
     } = {};

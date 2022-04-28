@@ -4,26 +4,22 @@
 /* eslint-disable no-param-reassign */
 
 import { useMemo } from 'react';
-import {
-  createAction,
-  Draft,
-  handleAction,
-  reduceReducers,
-} from 'redux-ts-utils';
+import type { Draft } from 'redux-ts-utils';
+import { createAction, handleAction, reduceReducers } from 'redux-ts-utils';
 import { useDispatch, useSelector } from 'react-redux';
 import { createSelector } from 'reselect';
 import { clamp, find, isNumber, pull, remove, take, uniq } from 'lodash';
-import { SortEnd } from 'react-sortable-hoc';
+import type { SortEnd } from 'react-sortable-hoc';
 import { bindActionCreators } from 'redux';
 import arrayMove from 'array-move';
 // eslint-disable-next-line import/no-cycle
-import { AppState } from '../reducer';
-import {
+import type { AppState } from '../reducer';
+import type {
   PackMetaData,
   StickerImageData,
   StickerData,
 } from '../../util/preload';
-import { EmojiPickDataType } from '../../../ts/components/emoji/EmojiPicker';
+import type { EmojiPickDataType } from '../../../ts/components/emoji/EmojiPicker';
 import { convertShortName } from '../../../ts/components/emoji/lib';
 
 export const initializeStickers = createAction<Array<string>>(
@@ -36,9 +32,8 @@ export const removeSticker = createAction<string>('stickers/removeSticker');
 export const moveSticker = createAction<SortEnd>('stickers/moveSticker');
 export const setCover = createAction<StickerImageData>('stickers/setCover');
 export const resetCover = createAction<StickerImageData>('stickers/resetCover');
-export const setEmoji = createAction<{ id: string; emoji: EmojiPickDataType }>(
-  'stickers/setEmoji'
-);
+export const setEmoji =
+  createAction<{ id: string; emoji: EmojiPickDataType }>('stickers/setEmoji');
 export const setTitle = createAction<string>('stickers/setTitle');
 export const setAuthor = createAction<string>('stickers/setAuthor');
 export const setPackMeta = createAction<PackMetaData>('stickers/setPackMeta');

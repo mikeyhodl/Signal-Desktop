@@ -1,16 +1,18 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
 import * as sinon from 'sinon';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
 import { SendStatus } from '../../messages/MessageSendState';
 import MessageSender from '../../textsecure/SendMessage';
-import { WebAPIType } from '../../textsecure/WebAPI';
-import { CallbackResultType } from '../../textsecure/Types.d';
+import type { WebAPIType } from '../../textsecure/WebAPI';
+import type { CallbackResultType } from '../../textsecure/Types.d';
 import type { StorageAccessType } from '../../types/Storage.d';
+import { UUID } from '../../types/UUID';
 import { SignalService as Proto } from '../../protobuf';
+import { getContact } from '../../messages/helpers';
 
 describe('Message', () => {
   const STORAGE_KEYS_TO_RESTORE: Array<keyof StorageAccessType> = [
@@ -32,7 +34,7 @@ describe('Message', () => {
 
   const source = '+1 415-555-5555';
   const me = '+14155555556';
-  const ourUuid = window.getGuid();
+  const ourUuid = UUID.generate().toString();
 
   function createMessage(attrs: { [key: string]: unknown }) {
     const messages = new window.Whisper.MessageCollection();
@@ -102,15 +104,18 @@ describe('Message', () => {
     it('updates `sendStateByConversationId`', async function test() {
       this.sandbox.useFakeTimers(1234);
 
-      const ourConversationId = window.ConversationController.getOurConversationIdOrThrow();
-      const conversation1 = await window.ConversationController.getOrCreateAndWait(
-        'a072df1d-7cee-43e2-9e6b-109710a2131c',
-        'private'
-      );
-      const conversation2 = await window.ConversationController.getOrCreateAndWait(
-        '62bd8ef1-68da-4cfd-ac1f-3ea85db7473e',
-        'private'
-      );
+      const ourConversationId =
+        window.ConversationController.getOurConversationIdOrThrow();
+      const conversation1 =
+        await window.ConversationController.getOrCreateAndWait(
+          'a072df1d-7cee-43e2-9e6b-109710a2131c',
+          'private'
+        );
+      const conversation2 =
+        await window.ConversationController.getOrCreateAndWait(
+          '62bd8ef1-68da-4cfd-ac1f-3ea85db7473e',
+          'private'
+        );
 
       const message = createMessage({
         type: 'outgoing',
@@ -136,9 +141,9 @@ describe('Message', () => {
         },
       });
 
-      const fakeDataMessage = new ArrayBuffer(0);
+      const fakeDataMessage = new Uint8Array(0);
       const conversation1Uuid = conversation1.get('uuid');
-      const ignoredUuid = window.getGuid();
+      const ignoredUuid = UUID.generate().toString();
 
       if (!conversation1Uuid) {
         throw new Error('Test setup failed: conversation1 should have a UUID');
@@ -200,7 +205,7 @@ describe('Message', () => {
     it('gets outgoing contact', () => {
       const messages = new window.Whisper.MessageCollection();
       const message = messages.add(attributes);
-      message.getContact();
+      assert.exists(getContact(message.attributes));
     });
 
     it('gets incoming contact', () => {
@@ -209,7 +214,7 @@ describe('Message', () => {
         type: 'incoming',
         source,
       });
-      message.getContact();
+      assert.exists(getContact(message.attributes));
     });
   });
 
@@ -394,8 +399,7 @@ describe('Message', () => {
           group_update: { joined: ['Bob', 'Alice', 'Eve'] },
         }).getNotificationData(),
         {
-          text:
-            '+1 415-555-5555 updated the group. Bob, Alice, Eve joined the group.',
+          text: '+1 415-555-5555 updated the group. Bob, Alice, Eve joined the group.',
         }
       );
     });
@@ -408,8 +412,7 @@ describe('Message', () => {
           group_update: { joined: ['Bob', me, 'Alice', 'Eve'] },
         }).getNotificationData(),
         {
-          text:
-            '+1 415-555-5555 updated the group. Bob, Alice, Eve joined the group. You joined the group.',
+          text: '+1 415-555-5555 updated the group. Bob, Alice, Eve joined the group. You joined the group.',
         }
       );
     });
@@ -422,8 +425,7 @@ describe('Message', () => {
           group_update: { joined: ['Bob'], name: 'blerg' },
         }).getNotificationData(),
         {
-          text:
-            "+1 415-555-5555 updated the group. Bob joined the group. Group name is now 'blerg'.",
+          text: "+1 415-555-5555 updated the group. Bob joined the group. Group name is now 'blerg'.",
         }
       );
     });
@@ -578,7 +580,12 @@ describe('Message', () => {
     });
 
     it("shows a notification's emoji on non-Linux", function test() {
-      this.sandbox.stub(window.Signal.OS, 'isLinux').returns(false);
+      this.sandbox.replace(window.Signal, 'OS', {
+        ...window.Signal.OS,
+        isLinux() {
+          return false;
+        },
+      });
 
       assert.strictEqual(
         createMessage({
@@ -595,7 +602,12 @@ describe('Message', () => {
     });
 
     it('hides emoji on Linux', function test() {
-      this.sandbox.stub(window.Signal.OS, 'isLinux').returns(true);
+      this.sandbox.replace(window.Signal, 'OS', {
+        ...window.Signal.OS,
+        isLinux() {
+          return true;
+        },
+      });
 
       assert.strictEqual(
         createMessage({

@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as Backbone from 'backbone';
@@ -22,13 +22,20 @@ import {
 } from './messages/MessageSendState';
 import { GroupNameCollisionsWithIdsByTitle } from './util/groupMemberNameCollisions';
 import { ConversationColorType } from './types/Colors';
-import { AttachmentType, ThumbnailType } from './types/Attachment';
+import {
+  AttachmentDraftType,
+  AttachmentType,
+  ThumbnailType,
+} from './types/Attachment';
 import { EmbeddedContactType } from './types/EmbeddedContact';
 import { SignalService as Proto } from './protobuf';
 import { AvatarDataType } from './types/Avatar';
+import { UUIDStringType } from './types/UUID';
+import { ReactionSource } from './reactions/ReactionSource';
 
 import AccessRequiredEnum = Proto.AccessControl.AccessRequired;
 import MemberRoleEnum = Proto.Member.Role;
+import { SeenStatus } from './MessageSeenStatus';
 
 export type WhatIsThis = any;
 
@@ -44,6 +51,12 @@ export type LastMessageStatus =
 
 type TaskResultType = any;
 
+export type SenderKeyInfoType = {
+  createdAtDate: number;
+  distributionId: string;
+  memberDevices: Array<DeviceType>;
+};
+
 export type CustomError = Error & {
   identifier?: string;
   number?: string;
@@ -57,6 +70,8 @@ export type GroupMigrationType = {
   invitedMembers: Array<GroupV2PendingMemberType>;
 };
 
+export type PreviewMessageType = Array<WhatIsThis>;
+
 export type QuotedMessageType = {
   attachments: Array<typeof window.WhatIsThis>;
   // `author` is an old attribute that holds the author's E164. We shouldn't use it for
@@ -69,6 +84,19 @@ export type QuotedMessageType = {
   isViewOnce: boolean;
   text?: string;
   messageId: string;
+};
+
+type StoryReplyContextType = {
+  attachment?: AttachmentType;
+  authorUuid?: string;
+  messageId: string;
+};
+
+export type StickerMessageType = {
+  packId: string;
+  stickerId: number;
+  packKey: string;
+  data?: AttachmentType;
 };
 
 export type RetryOptions = Readonly<{
@@ -85,12 +113,21 @@ export type GroupV1Update = {
   name?: string;
 };
 
+export type MessageReactionType = {
+  emoji: undefined | string;
+  fromId: string;
+  targetAuthorUuid: string;
+  targetTimestamp: number;
+  timestamp: number;
+  isSentByConversationId?: Record<string, boolean>;
+};
+
 export type MessageAttributesType = {
   bodyPending?: boolean;
   bodyRanges?: BodyRangesType;
   callHistoryDetails?: CallHistoryDetailsFromDiskType;
   changedId?: string;
-  dataMessage?: ArrayBuffer | null;
+  dataMessage?: Uint8Array | null;
   decrypted_at?: number;
   deletedForEveryone?: boolean;
   deletedForEveryoneTimestamp?: number;
@@ -112,16 +149,12 @@ export type MessageAttributesType = {
   messageTimer?: unknown;
   profileChange?: ProfileNameChangeType;
   quote?: QuotedMessageType;
-  reactions?: Array<{
-    emoji: string;
-    fromId: string;
-    targetAuthorUuid: string;
-    targetTimestamp: number;
-    timestamp: number;
-  }>;
+  reactions?: Array<MessageReactionType>;
   requiredProtocolVersion?: number;
   retryOptions?: RetryOptions;
   sourceDevice?: number;
+  storyId?: string;
+  storyReplyContext?: StoryReplyContextType;
   supportedVersionAtReceive?: unknown;
   synced?: boolean;
   unidentifiedDeliveryReceived?: boolean;
@@ -138,22 +171,17 @@ export type MessageAttributesType = {
     | 'group-v2-change'
     | 'incoming'
     | 'keychange'
-    | 'message-history-unsynced'
     | 'outgoing'
     | 'profile-change'
+    | 'story'
     | 'timer-notification'
     | 'universal-timer-notification'
     | 'change-number-notification'
     | 'verified-change';
   body?: string;
   attachments?: Array<AttachmentType>;
-  preview?: Array<WhatIsThis>;
-  sticker?: {
-    packId: string;
-    stickerId: number;
-    packKey: string;
-    data?: AttachmentType;
-  };
+  preview?: PreviewMessageType;
+  sticker?: StickerMessageType;
   sent_at: number;
   unidentifiedDeliveries?: Array<string>;
   contact?: Array<EmbeddedContactType>;
@@ -181,7 +209,7 @@ export type MessageAttributesType = {
   serverGuid?: string;
   serverTimestamp?: number;
   source?: string;
-  sourceUuid?: string;
+  sourceUuid?: UUIDStringType;
 
   timestamp: number;
 
@@ -191,32 +219,48 @@ export type MessageAttributesType = {
 
   sendHQImages?: boolean;
 
-  // Should only be present for incoming messages
+  // Should only be present for incoming messages and errors
   readStatus?: ReadStatus;
+  // Used for all kinds of notifications, as well as incoming messages
+  seenStatus?: SeenStatus;
 
   // Should only be present for outgoing messages
   sendStateByConversationId?: SendStateByConversationId;
+
+  // Should only be present for messages deleted for everyone
+  deletedForEveryoneSendStatus?: Record<string, boolean>;
+  deletedForEveryoneFailed?: boolean;
 };
 
 export type ConversationAttributesTypeType = 'private' | 'group';
 
+export type ConversationLastProfileType = Readonly<{
+  profileKey: string;
+  profileKeyVersion: string;
+}>;
+
 export type ConversationAttributesType = {
   accessKey?: string | null;
   addedBy?: string;
+  badges?: Array<
+    | { id: string }
+    | {
+        id: string;
+        expiresAt: number;
+        isVisible: boolean;
+      }
+  >;
   capabilities?: CapabilitiesType;
   color?: string;
   conversationColor?: ConversationColorType;
   customColor?: CustomColorType;
   customColorId?: string;
   discoveredUnregisteredAt?: number;
-  draftAttachments?: Array<{
-    fileName?: string;
-    path?: string;
-    pending?: boolean;
-    screenshotPath?: string;
-  }>;
+  draftChanged?: boolean;
+  draftAttachments?: Array<AttachmentDraftType>;
   draftBodyRanges?: Array<BodyRangeType>;
   draftTimestamp?: number | null;
+  hideStory?: boolean;
   inbox_position: number;
   isPinned: boolean;
   lastMessageDeletedForEveryone: boolean;
@@ -232,7 +276,7 @@ export type ConversationAttributesType = {
     path: string;
   };
   profileKeyCredential?: string | null;
-  profileKeyVersion?: string | null;
+  lastProfile?: ConversationLastProfileType;
   quotedMessageId?: string | null;
   sealedSender?: unknown;
   sentMessageCount: number;
@@ -245,6 +289,7 @@ export type ConversationAttributesType = {
   // Shared fields
   active_at?: number | null;
   draft?: string | null;
+  hasPostedStory?: boolean;
   isArchived?: boolean;
   lastMessage?: string | null;
   name?: string;
@@ -252,12 +297,13 @@ export type ConversationAttributesType = {
   needsVerification?: boolean;
   profileSharing: boolean;
   storageID?: string;
+  storageVersion?: number;
   storageUnknownFields?: string;
   unreadCount?: number;
   version: number;
 
   // Private core info
-  uuid?: string;
+  uuid?: UUIDStringType;
   e164?: string;
 
   // Private other fields
@@ -269,6 +315,7 @@ export type ConversationAttributesType = {
   verified?: number;
   profileLastFetchedAt?: number;
   pendingUniversalTimer?: string;
+  username?: string;
 
   // Group-only
   groupId?: string;
@@ -287,11 +334,7 @@ export type ConversationAttributesType = {
   secretParams?: string;
   publicParams?: string;
   revision?: number;
-  senderKeyInfo?: {
-    createdAtDate: number;
-    distributionId: string;
-    memberDevices: Array<DeviceType>;
-  };
+  senderKeyInfo?: SenderKeyInfoType;
 
   // GroupV2 other fields
   accessControl?: {
@@ -311,6 +354,7 @@ export type ConversationAttributesType = {
   membersV2?: Array<GroupV2MemberType>;
   pendingMembersV2?: Array<GroupV2PendingMemberType>;
   pendingAdminApprovalV2?: Array<GroupV2PendingAdminApprovalType>;
+  bannedMembersV2?: Array<GroupV2BannedMemberType>;
   groupInviteLinkPassword?: string;
   previousGroupV1Id?: string;
   previousGroupV1Members?: Array<string>;
@@ -331,7 +375,7 @@ export type ConversationAttributesType = {
 };
 
 export type GroupV2MemberType = {
-  conversationId: string;
+  uuid: UUIDStringType;
   role: MemberRoleEnum;
   joinedAtVersion: number;
 
@@ -343,22 +387,25 @@ export type GroupV2MemberType = {
 };
 
 export type GroupV2PendingMemberType = {
-  addedByUserId?: string;
-  conversationId: string;
+  addedByUserId?: UUIDStringType;
+  uuid: UUIDStringType;
   timestamp: number;
   role: MemberRoleEnum;
 };
 
+export type GroupV2BannedMemberType = {
+  uuid: UUIDStringType;
+  timestamp: number;
+};
+
 export type GroupV2PendingAdminApprovalType = {
-  conversationId: string;
+  uuid: UUIDStringType;
   timestamp: number;
 };
 
 export type VerificationOptions = {
-  key?: null | ArrayBuffer;
-  viaContactSync?: boolean;
+  key?: null | Uint8Array;
   viaStorageServiceSync?: boolean;
-  viaSyncMessage?: boolean;
 };
 
 export type ShallowChallengeError = CustomError & {
@@ -377,7 +424,7 @@ export type ReactionAttributesType = {
   remove?: boolean;
   targetAuthorUuid: string;
   targetTimestamp: number;
-  fromId?: string;
+  fromId: string;
   timestamp: number;
-  fromSync?: boolean;
+  source: ReactionSource;
 };

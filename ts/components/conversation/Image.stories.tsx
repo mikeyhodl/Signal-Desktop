@@ -1,4 +1,4 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as React from 'react';
@@ -8,11 +8,15 @@ import { boolean, number, text } from '@storybook/addon-knobs';
 import { storiesOf } from '@storybook/react';
 
 import { pngUrl } from '../../storybook/Fixtures';
-import { Image, Props } from './Image';
+import type { Props } from './Image';
+import { CurveType, Image } from './Image';
 import { IMAGE_PNG } from '../../types/MIME';
-import { ThemeType } from '../../types/Util';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import type { ThemeType } from '../../types/Util';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
+import { StorybookThemeContext } from '../../../.storybook/StorybookThemeContext';
+
+import { fakeAttachment } from '../../test-both/helpers/fakeAttachment';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -20,24 +24,32 @@ const story = storiesOf('Components/Conversation/Image', module);
 
 const createProps = (overrideProps: Partial<Props> = {}): Props => ({
   alt: text('alt', overrideProps.alt || ''),
-  attachment: overrideProps.attachment || {
-    contentType: IMAGE_PNG,
-    fileName: 'sax.png',
-    url: pngUrl,
-  },
+  attachment:
+    overrideProps.attachment ||
+    fakeAttachment({
+      contentType: IMAGE_PNG,
+      fileName: 'sax.png',
+      url: pngUrl,
+    }),
   blurHash: text('blurHash', overrideProps.blurHash || ''),
   bottomOverlay: boolean('bottomOverlay', overrideProps.bottomOverlay || false),
   closeButton: boolean('closeButton', overrideProps.closeButton || false),
-  curveBottomLeft: boolean(
+  curveBottomLeft: number(
     'curveBottomLeft',
-    overrideProps.curveBottomLeft || false
+    overrideProps.curveBottomLeft || CurveType.None
   ),
-  curveBottomRight: boolean(
+  curveBottomRight: number(
     'curveBottomRight',
-    overrideProps.curveBottomRight || false
+    overrideProps.curveBottomRight || CurveType.None
   ),
-  curveTopLeft: boolean('curveTopLeft', overrideProps.curveTopLeft || false),
-  curveTopRight: boolean('curveTopRight', overrideProps.curveTopRight || false),
+  curveTopLeft: number(
+    'curveTopLeft',
+    overrideProps.curveTopLeft || CurveType.None
+  ),
+  curveTopRight: number(
+    'curveTopRight',
+    overrideProps.curveTopRight || CurveType.None
+  ),
   darkOverlay: boolean('darkOverlay', overrideProps.darkOverlay || false),
   height: number('height', overrideProps.height || 100),
   i18n,
@@ -51,14 +63,9 @@ const createProps = (overrideProps: Partial<Props> = {}): Props => ({
     'playIconOverlay',
     overrideProps.playIconOverlay || false
   ),
-  smallCurveTopLeft: boolean(
-    'smallCurveTopLeft',
-    overrideProps.smallCurveTopLeft || false
-  ),
-  softCorners: boolean('softCorners', overrideProps.softCorners || false),
   tabIndex: number('tabIndex', overrideProps.tabIndex || 0),
   theme: text('theme', overrideProps.theme || 'light') as ThemeType,
-  url: text('url', overrideProps.url || pngUrl),
+  url: text('url', 'url' in overrideProps ? overrideProps.url || null : pngUrl),
   width: number('width', overrideProps.width || 100),
 });
 
@@ -99,11 +106,11 @@ story.add('Close Button', () => {
 
 story.add('No Border or Background', () => {
   const props = createProps({
-    attachment: {
+    attachment: fakeAttachment({
       contentType: IMAGE_PNG,
       fileName: 'sax.png',
       url: pngUrl,
-    },
+    }),
     noBackground: true,
     noBorder: true,
     url: pngUrl,
@@ -139,10 +146,10 @@ story.add('Pending w/blurhash', () => {
 
 story.add('Curved Corners', () => {
   const props = createProps({
-    curveBottomLeft: true,
-    curveBottomRight: true,
-    curveTopLeft: true,
-    curveTopRight: true,
+    curveBottomLeft: CurveType.Normal,
+    curveBottomRight: CurveType.Normal,
+    curveTopLeft: CurveType.Normal,
+    curveTopRight: CurveType.Normal,
   });
 
   return <Image {...props} />;
@@ -150,7 +157,7 @@ story.add('Curved Corners', () => {
 
 story.add('Small Curve Top Left', () => {
   const props = createProps({
-    smallCurveTopLeft: true,
+    curveTopLeft: CurveType.Small,
   });
 
   return <Image {...props} />;
@@ -158,7 +165,10 @@ story.add('Small Curve Top Left', () => {
 
 story.add('Soft Corners', () => {
   const props = createProps({
-    softCorners: true,
+    curveBottomLeft: CurveType.Tiny,
+    curveBottomRight: CurveType.Tiny,
+    curveTopLeft: CurveType.Tiny,
+    curveTopRight: CurveType.Tiny,
   });
 
   return <Image {...props} />;
@@ -191,26 +201,19 @@ story.add('Blurhash', () => {
   return <Image {...props} />;
 });
 
-story.add('undefined blurHash (light)', () => {
-  const defaultProps = createProps();
-  const props = {
-    ...defaultProps,
-    blurHash: undefined,
-    theme: ThemeType.light,
+story.add('undefined blurHash', () => {
+  const Wrapper = () => {
+    const theme = React.useContext(StorybookThemeContext);
+    const props = createProps({
+      blurHash: undefined,
+      theme,
+      url: undefined,
+    });
+
+    return <Image {...props} />;
   };
 
-  return <Image {...props} />;
-});
-
-story.add('undefined blurHash (dark)', () => {
-  const defaultProps = createProps();
-  const props = {
-    ...defaultProps,
-    blurHash: undefined,
-    theme: ThemeType.dark,
-  };
-
-  return <Image {...props} />;
+  return <Wrapper />;
 });
 
 story.add('Missing Image', () => {

@@ -1,15 +1,13 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import classNames from 'classnames';
-import {
-  ActiveCallType,
-  CallMode,
-  GroupCallConnectionState,
-} from '../types/Calling';
-import { ConversationType } from '../state/ducks/conversations';
-import { LocalizerType } from '../types/Util';
+import type { ActiveCallType } from '../types/Calling';
+import { CallMode, GroupCallConnectionState } from '../types/Calling';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { LocalizerType } from '../types/Util';
+import { clearTimeoutIfNecessary } from '../util/clearTimeoutIfNecessary';
+import { CallingToast, DEFAULT_LIFETIME } from './CallingToast';
 
 type PropsType = {
   activeCall: ActiveCallType;
@@ -104,8 +102,6 @@ function useScreenSharingToast({ activeCall, i18n }: PropsType): ToastType {
   return result;
 }
 
-const DEFAULT_DELAY = 5000;
-
 // In the future, this component should show toasts when users join or leave. See
 //   DESKTOP-902.
 export const CallingToastManager: React.FC<PropsType> = props => {
@@ -131,33 +127,21 @@ export const CallingToastManager: React.FC<PropsType> = props => {
   useEffect(() => {
     if (toast) {
       if (toast.type === 'dismissable') {
-        if (timeoutRef && timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        timeoutRef.current = setTimeout(dismissToast, DEFAULT_DELAY);
+        clearTimeoutIfNecessary(timeoutRef.current);
+        timeoutRef.current = setTimeout(dismissToast, DEFAULT_LIFETIME);
       }
 
       setToastMessage(toast.message);
     }
 
     return () => {
-      if (timeoutRef && timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeoutIfNecessary(timeoutRef.current);
     };
   }, [dismissToast, setToastMessage, timeoutRef, toast]);
 
-  const isVisible = Boolean(toastMessage);
-
   return (
-    <button
-      className={classNames('module-ongoing-call__toast', {
-        'module-ongoing-call__toast--hidden': !isVisible,
-      })}
-      type="button"
-      onClick={dismissToast}
-    >
+    <CallingToast isVisible={Boolean(toastMessage)} onClick={dismissToast}>
       {toastMessage}
-    </button>
+    </CallingToast>
   );
 };

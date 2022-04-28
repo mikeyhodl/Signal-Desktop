@@ -1,14 +1,14 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import * as Attachment from '../Attachment';
 import * as IndexedDB from '../IndexedDB';
-import { Message, UserMessage } from '../Message';
+import type { Message, UserMessage } from '../Message';
 
-const hasAttachment = (
-  predicate: (value: Attachment.AttachmentType) => boolean
-) => (message: UserMessage): IndexedDB.IndexablePresence =>
-  IndexedDB.toIndexablePresence(message.attachments.some(predicate));
+const hasAttachment =
+  (predicate: (value: Attachment.AttachmentType) => boolean) =>
+  (message: UserMessage): IndexedDB.IndexablePresence =>
+    IndexedDB.toIndexablePresence(message.attachments.some(predicate));
 
 const hasFileAttachment = hasAttachment(Attachment.isFile);
 const hasVisualMediaAttachment = hasAttachment(Attachment.isVisualMedia);
@@ -17,9 +17,6 @@ export const initializeAttachmentMetadata = async (
   message: Message
 ): Promise<Message> => {
   if (message.type === 'verified-change') {
-    return message;
-  }
-  if (message.type === 'message-history-unsynced') {
     return message;
   }
   if (message.type === 'profile-change') {

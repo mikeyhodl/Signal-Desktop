@@ -1,14 +1,22 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useState, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState } from 'react';
 
-import { ConversationType } from '../../../state/ducks/conversations';
+import { Button, ButtonIconType, ButtonVariant } from '../../Button';
+import { Tooltip } from '../../Tooltip';
+import type { ConversationType } from '../../../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../../../state/selectors/badges';
+import type { SmartChooseGroupMembersModalPropsType } from '../../../state/smart/ChooseGroupMembersModal';
+import type { SmartConfirmAdditionsModalPropsType } from '../../../state/smart/ConfirmAdditionsModal';
 import { assert } from '../../../util/assert';
 import { getMutedUntilText } from '../../../util/getMutedUntilText';
 
-import { LocalizerType } from '../../../types/Util';
-import { MediaItemType } from '../../../types/MediaItem';
+import type { LocalizerType, ThemeType } from '../../../types/Util';
+import type { MediaItemType } from '../../../types/MediaItem';
+import type { BadgeType } from '../../../badges/types';
+import { CapabilityError } from '../../../types/errors';
 import { missingCaseError } from '../../../util/missingCaseError';
 
 import { DisappearingTimerSelect } from '../../DisappearingTimerSelect';
@@ -18,13 +26,11 @@ import { PanelSection } from './PanelSection';
 import { AddGroupMembersModal } from './AddGroupMembersModal';
 import { ConversationDetailsActions } from './ConversationDetailsActions';
 import { ConversationDetailsHeader } from './ConversationDetailsHeader';
-import { ConversationDetailsIcon } from './ConversationDetailsIcon';
+import { ConversationDetailsIcon, IconType } from './ConversationDetailsIcon';
 import { ConversationDetailsMediaList } from './ConversationDetailsMediaList';
-import {
-  ConversationDetailsMembershipList,
-  GroupV2Membership,
-} from './ConversationDetailsMembershipList';
-import {
+import type { GroupV2Membership } from './ConversationDetailsMembershipList';
+import { ConversationDetailsMembershipList } from './ConversationDetailsMembershipList';
+import type {
   GroupV2PendingMembership,
   GroupV2RequestingMembership,
 } from './PendingInvites';
@@ -32,36 +38,43 @@ import { EditConversationAttributesModal } from './EditConversationAttributesMod
 import { RequestState } from './util';
 import { getCustomColorStyle } from '../../../util/getCustomColorStyle';
 import { ConfirmationDialog } from '../../ConfirmationDialog';
-import {
+import { ConversationNotificationsModal } from './ConversationNotificationsModal';
+import type {
   AvatarDataType,
   DeleteAvatarFromDiskActionType,
   ReplaceAvatarActionType,
   SaveAvatarToDiskActionType,
 } from '../../../types/Avatar';
+import { isMuted } from '../../../util/isMuted';
 
 enum ModalState {
   NothingOpen,
   EditingGroupDescription,
   EditingGroupTitle,
   AddingGroupMembers,
+  MuteNotifications,
+  UnmuteNotifications,
 }
 
 export type StateProps = {
   addMembers: (conversationIds: ReadonlyArray<string>) => Promise<void>;
+  areWeASubscriber: boolean;
+  badges?: ReadonlyArray<BadgeType>;
   canEditGroupInfo: boolean;
-  candidateContactsToAdd: Array<ConversationType>;
   conversation?: ConversationType;
   hasGroupLink: boolean;
+  getPreferredBadge: PreferredBadgeSelectorType;
+  hasActiveCall: boolean;
   i18n: LocalizerType;
   isAdmin: boolean;
+  isGroup: boolean;
   loadRecentMediaItems: (limit: number) => void;
   memberships: Array<GroupV2Membership>;
   pendingApprovalMemberships: ReadonlyArray<GroupV2RequestingMembership>;
   pendingMemberships: ReadonlyArray<GroupV2PendingMembership>;
   setDisappearingMessages: (seconds: number) => void;
   showAllMedia: () => void;
-  showContactModal: (conversationId: string) => void;
-  showGroupChatColorEditor: () => void;
+  showChatColorEditor: () => void;
   showGroupLinkManagement: () => void;
   showGroupV2Permissions: () => void;
   showPendingInvites: () => void;
@@ -72,67 +85,89 @@ export type StateProps = {
   showConversationNotificationsSettings: () => void;
   updateGroupAttributes: (
     _: Readonly<{
-      avatar?: undefined | ArrayBuffer;
+      avatar?: undefined | Uint8Array;
       description?: string;
       title?: string;
     }>
   ) => Promise<void>;
   onBlock: () => void;
   onLeave: () => void;
+  onUnblock: () => void;
+  theme: ThemeType;
   userAvatarData: Array<AvatarDataType>;
+  setMuteExpiration: (muteExpiresAt: undefined | number) => unknown;
+  onOutgoingAudioCallInConversation: () => unknown;
+  onOutgoingVideoCallInConversation: () => unknown;
+  renderChooseGroupMembersModal: (
+    props: SmartChooseGroupMembersModalPropsType
+  ) => JSX.Element;
+  renderConfirmAdditionsModal: (
+    props: SmartConfirmAdditionsModalPropsType
+  ) => JSX.Element;
 };
 
 type ActionProps = {
   deleteAvatarFromDisk: DeleteAvatarFromDiskActionType;
   replaceAvatar: ReplaceAvatarActionType;
   saveAvatarToDisk: SaveAvatarToDiskActionType;
+  showContactModal: (contactId: string, conversationId?: string) => void;
+  toggleSafetyNumberModal: (conversationId: string) => unknown;
+  searchInConversation: (id: string) => unknown;
 };
 
 export type Props = StateProps & ActionProps;
 
 export const ConversationDetails: React.ComponentType<Props> = ({
   addMembers,
+  areWeASubscriber,
+  badges,
   canEditGroupInfo,
-  candidateContactsToAdd,
   conversation,
+  deleteAvatarFromDisk,
   hasGroupLink,
+  getPreferredBadge,
+  hasActiveCall,
   i18n,
   isAdmin,
+  isGroup,
   loadRecentMediaItems,
   memberships,
-  pendingApprovalMemberships,
-  pendingMemberships,
-  setDisappearingMessages,
-  showAllMedia,
-  showContactModal,
-  showGroupChatColorEditor,
-  showGroupLinkManagement,
-  showGroupV2Permissions,
-  showPendingInvites,
-  showLightboxForMedia,
-  showConversationNotificationsSettings,
-  updateGroupAttributes,
   onBlock,
   onLeave,
-  deleteAvatarFromDisk,
+  onOutgoingAudioCallInConversation,
+  onOutgoingVideoCallInConversation,
+  onUnblock,
+  pendingApprovalMemberships,
+  pendingMemberships,
+  renderChooseGroupMembersModal,
+  renderConfirmAdditionsModal,
   replaceAvatar,
   saveAvatarToDisk,
+  searchInConversation,
+  setDisappearingMessages,
+  setMuteExpiration,
+  showAllMedia,
+  showChatColorEditor,
+  showContactModal,
+  showConversationNotificationsSettings,
+  showGroupLinkManagement,
+  showGroupV2Permissions,
+  showLightboxForMedia,
+  showPendingInvites,
+  theme,
+  toggleSafetyNumberModal,
+  updateGroupAttributes,
   userAvatarData,
 }) => {
   const [modalState, setModalState] = useState<ModalState>(
     ModalState.NothingOpen
   );
-  const [
-    editGroupAttributesRequestState,
-    setEditGroupAttributesRequestState,
-  ] = useState<RequestState>(RequestState.Inactive);
-  const [
-    addGroupMembersRequestState,
-    setAddGroupMembersRequestState,
-  ] = useState<RequestState>(RequestState.Inactive);
-  const [membersMissingCapability, setMembersMissingCapability] = useState(
-    false
-  );
+  const [editGroupAttributesRequestState, setEditGroupAttributesRequestState] =
+    useState<RequestState>(RequestState.Inactive);
+  const [addGroupMembersRequestState, setAddGroupMembersRequestState] =
+    useState<RequestState>(RequestState.Inactive);
+  const [membersMissingCapability, setMembersMissingCapability] =
+    useState(false);
 
   if (conversation === undefined) {
     throw new Error('ConversationDetails rendered without a conversation');
@@ -168,7 +203,7 @@ export const ConversationDetails: React.ComponentType<Props> = ({
           }
           makeRequest={async (
             options: Readonly<{
-              avatar?: undefined | ArrayBuffer;
+              avatar?: undefined | Uint8Array;
               description?: string;
               title?: string;
             }>
@@ -201,7 +236,8 @@ export const ConversationDetails: React.ComponentType<Props> = ({
     case ModalState.AddingGroupMembers:
       modalNode = (
         <AddGroupMembersModal
-          candidateContacts={candidateContactsToAdd}
+          renderChooseGroupMembersModal={renderChooseGroupMembersModal}
+          renderConfirmAdditionsModal={renderConfirmAdditionsModal}
           clearRequestError={() => {
             setAddGroupMembersRequestState(oldRequestState => {
               assert(
@@ -224,7 +260,7 @@ export const ConversationDetails: React.ComponentType<Props> = ({
               setModalState(ModalState.NothingOpen);
               setAddGroupMembersRequestState(RequestState.Inactive);
             } catch (err) {
-              if (err.code === 'E_NO_CAPABILITY') {
+              if (err instanceof CapabilityError) {
                 setMembersMissingCapability(true);
                 setAddGroupMembersRequestState(RequestState.InactiveWithError);
               } else {
@@ -240,9 +276,44 @@ export const ConversationDetails: React.ComponentType<Props> = ({
         />
       );
       break;
+    case ModalState.MuteNotifications:
+      modalNode = (
+        <ConversationNotificationsModal
+          i18n={i18n}
+          muteExpiresAt={conversation.muteExpiresAt}
+          onClose={() => {
+            setModalState(ModalState.NothingOpen);
+          }}
+          setMuteExpiration={setMuteExpiration}
+        />
+      );
+      break;
+    case ModalState.UnmuteNotifications:
+      modalNode = (
+        <ConfirmationDialog
+          actions={[
+            {
+              action: () => setMuteExpiration(0),
+              style: 'affirmative',
+              text: i18n('unmute'),
+            },
+          ]}
+          hasXButton
+          i18n={i18n}
+          title={i18n('ConversationDetails__unmute--title')}
+          onClose={() => {
+            setModalState(ModalState.NothingOpen);
+          }}
+        >
+          {getMutedUntilText(Number(conversation.muteExpiresAt), i18n)}
+        </ConfirmationDialog>
+      );
+      break;
     default:
       throw missingCaseError(modalState);
   }
+
+  const isConversationMuted = isMuted(conversation.muteExpiresAt);
 
   return (
     <div className="conversation-details-panel">
@@ -257,9 +328,13 @@ export const ConversationDetails: React.ComponentType<Props> = ({
       )}
 
       <ConversationDetailsHeader
+        areWeASubscriber={areWeASubscriber}
+        badges={badges}
         canEdit={canEditGroupInfo}
         conversation={conversation}
         i18n={i18n}
+        isMe={conversation.isMe}
+        isGroup={isGroup}
         memberships={memberships}
         startEditing={(isGroupTitle: boolean) => {
           setModalState(
@@ -268,20 +343,70 @@ export const ConversationDetails: React.ComponentType<Props> = ({
               : ModalState.EditingGroupDescription
           );
         }}
+        theme={theme}
       />
 
+      <div className="ConversationDetails__header-buttons">
+        {!conversation.isMe && (
+          <>
+            <ConversationDetailsCallButton
+              disabled={hasActiveCall}
+              i18n={i18n}
+              onClick={onOutgoingVideoCallInConversation}
+              type="video"
+            />
+            {!isGroup && (
+              <ConversationDetailsCallButton
+                disabled={hasActiveCall}
+                i18n={i18n}
+                onClick={onOutgoingAudioCallInConversation}
+                type="audio"
+              />
+            )}
+          </>
+        )}
+        <Button
+          icon={
+            isConversationMuted ? ButtonIconType.muted : ButtonIconType.unmuted
+          }
+          onClick={() => {
+            if (isConversationMuted) {
+              setModalState(ModalState.UnmuteNotifications);
+            } else {
+              setModalState(ModalState.MuteNotifications);
+            }
+          }}
+          variant={ButtonVariant.Details}
+        >
+          {isConversationMuted ? i18n('unmute') : i18n('mute')}
+        </Button>
+        <Button
+          icon={ButtonIconType.search}
+          onClick={() => {
+            searchInConversation(conversation.id);
+          }}
+          variant={ButtonVariant.Details}
+        >
+          {i18n('search')}
+        </Button>
+      </div>
+
       <PanelSection>
-        {canEditGroupInfo ? (
+        {!isGroup || canEditGroupInfo ? (
           <PanelRow
             icon={
               <ConversationDetailsIcon
                 ariaLabel={i18n(
                   'ConversationDetails--disappearing-messages-label'
                 )}
-                icon="timer"
+                icon={IconType.timer}
               />
             }
-            info={i18n('ConversationDetails--disappearing-messages-info')}
+            info={i18n(
+              isGroup
+                ? 'ConversationDetails--disappearing-messages-info--group'
+                : 'ConversationDetails--disappearing-messages-info--direct'
+            )}
             label={i18n('ConversationDetails--disappearing-messages-label')}
             right={
               <DisappearingTimerSelect
@@ -296,85 +421,112 @@ export const ConversationDetails: React.ComponentType<Props> = ({
           icon={
             <ConversationDetailsIcon
               ariaLabel={i18n('showChatColorEditor')}
-              icon="color"
+              icon={IconType.color}
             />
           }
           label={i18n('showChatColorEditor')}
-          onClick={showGroupChatColorEditor}
+          onClick={showChatColorEditor}
           right={
             <div
-              className={`module-conversation-details__chat-color module-conversation-details__chat-color--${conversation.conversationColor}`}
+              className={`ConversationDetails__chat-color ConversationDetails__chat-color--${conversation.conversationColor}`}
               style={{
                 ...getCustomColorStyle(conversation.customColor),
               }}
             />
           }
         />
-        <PanelRow
-          icon={
-            <ConversationDetailsIcon
-              ariaLabel={i18n('ConversationDetails--notifications')}
-              icon="notifications"
-            />
-          }
-          label={i18n('ConversationDetails--notifications')}
-          onClick={showConversationNotificationsSettings}
-          right={
-            conversation.muteExpiresAt
-              ? getMutedUntilText(conversation.muteExpiresAt, i18n)
-              : undefined
-          }
-        />
-      </PanelSection>
-
-      <ConversationDetailsMembershipList
-        canAddNewMembers={canEditGroupInfo}
-        i18n={i18n}
-        memberships={memberships}
-        showContactModal={showContactModal}
-        startAddingNewMembers={() => {
-          setModalState(ModalState.AddingGroupMembers);
-        }}
-      />
-
-      <PanelSection>
-        {isAdmin || hasGroupLink ? (
+        {isGroup && (
           <PanelRow
             icon={
               <ConversationDetailsIcon
-                ariaLabel={i18n('ConversationDetails--group-link')}
-                icon="link"
+                ariaLabel={i18n('ConversationDetails--notifications')}
+                icon={IconType.notifications}
               />
             }
-            label={i18n('ConversationDetails--group-link')}
-            onClick={showGroupLinkManagement}
-            right={hasGroupLink ? i18n('on') : i18n('off')}
+            label={i18n('ConversationDetails--notifications')}
+            onClick={showConversationNotificationsSettings}
+            right={
+              conversation.muteExpiresAt
+                ? getMutedUntilText(conversation.muteExpiresAt, i18n)
+                : undefined
+            }
           />
-        ) : null}
-        <PanelRow
-          icon={
-            <ConversationDetailsIcon
-              ariaLabel={i18n('ConversationDetails--requests-and-invites')}
-              icon="invites"
+        )}
+        {!isGroup && !conversation.isMe && (
+          <>
+            <PanelRow
+              onClick={() => toggleSafetyNumberModal(conversation.id)}
+              icon={
+                <ConversationDetailsIcon
+                  ariaLabel={i18n('verifyNewNumber')}
+                  icon={IconType.verify}
+                />
+              }
+              label={
+                <div className="ConversationDetails__safety-number">
+                  {i18n('verifyNewNumber')}
+                </div>
+              }
             />
-          }
-          label={i18n('ConversationDetails--requests-and-invites')}
-          onClick={showPendingInvites}
-          right={invitesCount}
+          </>
+        )}
+      </PanelSection>
+
+      {isGroup && (
+        <ConversationDetailsMembershipList
+          canAddNewMembers={canEditGroupInfo}
+          conversationId={conversation.id}
+          getPreferredBadge={getPreferredBadge}
+          i18n={i18n}
+          memberships={memberships}
+          showContactModal={showContactModal}
+          startAddingNewMembers={() => {
+            setModalState(ModalState.AddingGroupMembers);
+          }}
+          theme={theme}
         />
-        {isAdmin ? (
+      )}
+
+      {isGroup && (
+        <PanelSection>
+          {isAdmin || hasGroupLink ? (
+            <PanelRow
+              icon={
+                <ConversationDetailsIcon
+                  ariaLabel={i18n('ConversationDetails--group-link')}
+                  icon={IconType.link}
+                />
+              }
+              label={i18n('ConversationDetails--group-link')}
+              onClick={showGroupLinkManagement}
+              right={hasGroupLink ? i18n('on') : i18n('off')}
+            />
+          ) : null}
           <PanelRow
             icon={
               <ConversationDetailsIcon
-                ariaLabel={i18n('permissions')}
-                icon="lock"
+                ariaLabel={i18n('ConversationDetails--requests-and-invites')}
+                icon={IconType.invites}
               />
             }
-            label={i18n('permissions')}
-            onClick={showGroupV2Permissions}
+            label={i18n('ConversationDetails--requests-and-invites')}
+            onClick={showPendingInvites}
+            right={invitesCount}
           />
-        ) : null}
-      </PanelSection>
+          {isAdmin ? (
+            <PanelRow
+              icon={
+                <ConversationDetailsIcon
+                  ariaLabel={i18n('permissions')}
+                  icon={IconType.lock}
+                />
+              }
+              label={i18n('permissions')}
+              onClick={showGroupV2Permissions}
+            />
+          ) : null}
+        </PanelSection>
+      )}
 
       <ConversationDetailsMediaList
         conversation={conversation}
@@ -384,15 +536,54 @@ export const ConversationDetails: React.ComponentType<Props> = ({
         showLightboxForMedia={showLightboxForMedia}
       />
 
-      <ConversationDetailsActions
-        i18n={i18n}
-        cannotLeaveBecauseYouAreLastAdmin={cannotLeaveBecauseYouAreLastAdmin}
-        conversationTitle={conversation.title}
-        onLeave={onLeave}
-        onBlock={onBlock}
-      />
+      {!conversation.isMe && (
+        <ConversationDetailsActions
+          cannotLeaveBecauseYouAreLastAdmin={cannotLeaveBecauseYouAreLastAdmin}
+          conversationTitle={conversation.title}
+          i18n={i18n}
+          isBlocked={Boolean(conversation.isBlocked)}
+          isGroup={isGroup}
+          left={Boolean(conversation.left)}
+          onBlock={onBlock}
+          onLeave={onLeave}
+          onUnblock={onUnblock}
+        />
+      )}
 
       {modalNode}
     </div>
   );
 };
+
+function ConversationDetailsCallButton({
+  disabled,
+  i18n,
+  onClick,
+  type,
+}: Readonly<{
+  disabled: boolean;
+  i18n: LocalizerType;
+  onClick: () => unknown;
+  type: 'audio' | 'video';
+}>) {
+  const button = (
+    <Button
+      disabled={disabled}
+      icon={ButtonIconType[type]}
+      onClick={onClick}
+      variant={ButtonVariant.Details}
+    >
+      {i18n(type)}
+    </Button>
+  );
+
+  if (disabled) {
+    return (
+      <Tooltip content={i18n('calling__in-another-call-tooltip')}>
+        {button}
+      </Tooltip>
+    );
+  }
+
+  return button;
+}

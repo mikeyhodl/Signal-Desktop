@@ -1,14 +1,15 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
 
 import classNames from 'classnames';
 
-import { RenderTextCallbackType } from '../../types/Util';
+import type { RenderTextCallbackType } from '../../types/Util';
 import { splitByEmoji } from '../../util/emoji';
 import { missingCaseError } from '../../util/missingCaseError';
-import { emojiToImage, SizeClassType } from '../emoji/lib';
+import type { SizeClassType } from '../emoji/lib';
+import { emojiToImage } from '../emoji/lib';
 
 // Some of this logic taken from emoji-js/replacement
 // the DOM structure for this getImageTag should match the other emoji implementations:
@@ -53,7 +54,7 @@ export class Emojify extends React.Component<Props> {
     renderNonEmoji: ({ text }) => text,
   };
 
-  public render(): null | Array<JSX.Element | string | null> {
+  public override render(): null | Array<JSX.Element | string | null> {
     const { text, sizeClass, renderNonEmoji } = this.props;
 
     // We have to do this, because renderNonEmoji is not required in our Props object,

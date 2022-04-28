@@ -1,73 +1,51 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /* global window */
-const { ipcRenderer: ipc, remote } = require('electron');
+const { ipcRenderer: ipc } = require('electron');
 const sharp = require('sharp');
 const pify = require('pify');
 const { readFile } = require('fs');
 const config = require('url').parse(window.location.toString(), true).query;
 const { noop, uniqBy } = require('lodash');
 const pMap = require('p-map');
-const client = require('@signalapp/signal-client');
 
 // It is important to call this as early as possible
-require('../ts/windows/context');
+const { SignalContext } = require('../ts/windows/context');
 
-const { deriveStickerPackKey } = require('../ts/Crypto');
-const { SignalService: Proto } = require('../ts/protobuf');
+window.i18n = SignalContext.i18n;
+
 const {
-  getEnvironment,
-  setEnvironment,
-  parseEnvironment,
-} = require('../ts/environment');
+  deriveStickerPackKey,
+  encryptAttachment,
+  getRandomBytes,
+} = require('../ts/Crypto');
+const Bytes = require('../ts/Bytes');
+const { SignalService: Proto } = require('../ts/protobuf');
+const { getEnvironment } = require('../ts/environment');
 const { createSetting } = require('../ts/util/preload');
-
-const { dialog } = remote;
 
 const STICKER_SIZE = 512;
 const MIN_STICKER_DIMENSION = 10;
 const MAX_STICKER_DIMENSION = STICKER_SIZE;
-const MAX_WEBP_STICKER_BYTE_LENGTH = 100 * 1024;
-const MAX_ANIMATED_STICKER_BYTE_LENGTH = 300 * 1024;
-
-setEnvironment(parseEnvironment(config.environment));
-
-window.sqlInitializer = require('../ts/sql/initialize');
+const MAX_STICKER_BYTE_LENGTH = 300 * 1024;
 
 window.ROOT_PATH = window.location.href.startsWith('file') ? '../../' : '/';
 window.getEnvironment = getEnvironment;
 window.getVersion = () => config.version;
-window.getGuid = require('uuid/v4');
 window.PQueue = require('p-queue').default;
 window.Backbone = require('backbone');
 
 window.localeMessages = ipc.sendSync('locale-data');
 
-require('../ts/logging/set_up_renderer_logging').initialize();
-
 require('../ts/SignalProtocolStore');
 
-window.log.info('sticker-creator starting up...');
+SignalContext.log.info('sticker-creator starting up...');
 
 const Signal = require('../js/modules/signal');
 
 window.Signal = Signal.setup({});
 window.textsecure = require('../ts/textsecure').default;
-
-window.libsignal = window.libsignal || {};
-window.libsignal.HKDF = {};
-window.libsignal.HKDF.deriveSecrets = (input, salt, info) => {
-  const hkdf = client.HKDF.new(3);
-  const output = hkdf.deriveSecrets(
-    3 * 32,
-    Buffer.from(input),
-    Buffer.from(info),
-    Buffer.from(salt)
-  );
-  return [output.slice(0, 32), output.slice(32, 64), output.slice(64, 96)];
-};
-window.synchronousCrypto = require('../ts/util/synchronousCrypto');
 
 const { initialize: initializeWebAPI } = require('../ts/textsecure/WebAPI');
 const {
@@ -77,9 +55,14 @@ const {
 const WebAPI = initializeWebAPI({
   url: config.serverUrl,
   storageUrl: config.storageUrl,
+  updatesUrl: config.updatesUrl,
+  directoryVersion: parseInt(config.directoryVersion, 10),
   directoryUrl: config.directoryUrl,
   directoryEnclaveId: config.directoryEnclaveId,
   directoryTrustAnchor: config.directoryTrustAnchor,
+  directoryV2Url: config.directoryV2Url,
+  directoryV2PublicKey: config.directoryV2PublicKey,
+  directoryV2CodeHashes: (config.directoryV2CodeHashes || '').split(','),
   cdnUrlObject: {
     0: config.cdnUrl0,
     2: config.cdnUrl2,
@@ -118,7 +101,7 @@ window.processStickerImage = async path => {
   // [0]: https://github.com/lovell/sharp/issues/2375
   const animatedPngDataIfExists = getAnimatedPngDataIfExists(imgBuffer);
   if (animatedPngDataIfExists) {
-    if (imgBuffer.byteLength > MAX_ANIMATED_STICKER_BYTE_LENGTH) {
+    if (imgBuffer.byteLength > MAX_STICKER_BYTE_LENGTH) {
       throw processStickerError(
         'Sticker file was too large',
         'StickerCreator--Toasts--tooLarge'
@@ -161,7 +144,7 @@ window.processStickerImage = async path => {
       })
       .webp()
       .toBuffer();
-    if (processedBuffer.byteLength > MAX_WEBP_STICKER_BYTE_LENGTH) {
+    if (processedBuffer.byteLength > MAX_STICKER_BYTE_LENGTH) {
       throw processStickerError(
         'Sticker file was too large',
         'StickerCreator--Toasts--tooLarge'
@@ -183,17 +166,15 @@ window.encryptAndUpload = async (
   cover,
   onProgress = noop
 ) => {
-  await window.sqlInitializer.goBackToMainProcess();
   const usernameItem = await window.Signal.Data.getItemById('uuid_id');
   const oldUsernameItem = await window.Signal.Data.getItemById('number_id');
   const passwordItem = await window.Signal.Data.getItemById('password');
 
   if (!oldUsernameItem || !passwordItem) {
-    const { message } = window.localeMessages[
-      'StickerCreator--Authentication--error'
-    ];
+    const { message } =
+      window.localeMessages['StickerCreator--Authentication--error'];
 
-    dialog.showMessageBox({
+    ipc.send('show-message-box', {
       type: 'warning',
       message,
     });
@@ -205,14 +186,14 @@ window.encryptAndUpload = async (
   const { value: oldUsername } = oldUsernameItem;
   const { value: password } = passwordItem;
 
-  const packKey = window.Signal.Crypto.getRandomBytes(32);
-  const encryptionKey = await deriveStickerPackKey(packKey);
-  const iv = window.Signal.Crypto.getRandomBytes(16);
+  const packKey = getRandomBytes(32);
+  const encryptionKey = deriveStickerPackKey(packKey);
+  const iv = getRandomBytes(16);
 
   const server = WebAPI.connect({
     username: username || oldUsername,
     password,
-    disableWebSockets: true,
+    useWebSocket: false,
   });
 
   const uniqueStickers = uniqBy(
@@ -256,7 +237,7 @@ window.encryptAndUpload = async (
     onProgress
   );
 
-  const hexKey = window.Signal.Crypto.hexFromBytes(packKey);
+  const hexKey = Bytes.toHex(packKey);
 
   ipc.send('install-sticker-pack', packId, hexKey);
 
@@ -264,24 +245,17 @@ window.encryptAndUpload = async (
 };
 
 async function encrypt(data, key, iv) {
-  const { ciphertext } = await window.textsecure.crypto.encryptAttachment(
-    data instanceof ArrayBuffer
-      ? data
-      : window.Signal.Crypto.typedArrayToArrayBuffer(data),
-    key,
-    iv
-  );
+  const { ciphertext } = await encryptAttachment(data, key, iv);
 
   return ciphertext;
 }
 
-const getThemeSetting = createSetting('theme-setting');
+const getThemeSetting = createSetting('themeSetting');
 
 async function resolveTheme() {
   const theme = (await getThemeSetting.getValue()) || 'system';
   if (process.platform === 'darwin' && theme === 'system') {
-    const { theme: nativeTheme } = window.SignalContext.nativeThemeListener;
-    return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+    return SignalContext.nativeThemeListener.getSystemTheme();
   }
   return theme;
 }
@@ -294,6 +268,6 @@ async function applyTheme() {
 
 window.addEventListener('DOMContentLoaded', applyTheme);
 
-window.SignalContext.nativeThemeListener.subscribe(() => applyTheme());
+SignalContext.nativeThemeListener.subscribe(() => applyTheme());
 
-window.log.info('sticker-creator preload complete...');
+SignalContext.log.info('sticker-creator preload complete...');

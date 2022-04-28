@@ -1,9 +1,8 @@
 // Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { UnidentifiedSenderMessageContent } from '@signalapp/signal-client';
+import { UnidentifiedSenderMessageContent } from '@signalapp/libsignal-client';
 
-import Crypto from './textsecure/Crypto';
 import MessageSender from './textsecure/SendMessage';
 import SyncRequest from './textsecure/SyncRequest';
 import EventTarget from './textsecure/EventTarget';
@@ -24,12 +23,14 @@ export type UnprocessedType = {
   decrypted?: string;
   envelope?: string;
   id: string;
+  receivedAtCounter: number | null;
   timestamp: number;
   serverGuid?: string;
   serverTimestamp?: number;
   source?: string;
   sourceDevice?: number;
   sourceUuid?: string;
+  destinationUuid?: string;
   messageAgeSec?: number;
   version: number;
 };
@@ -37,7 +38,6 @@ export type UnprocessedType = {
 export { StorageServiceCallOptionsType, StorageServiceCredentials };
 
 export type TextSecureType = {
-  crypto: typeof Crypto;
   storage: Storage;
   server: WebAPIType;
   messageSender: MessageSender;

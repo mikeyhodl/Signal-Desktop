@@ -9,31 +9,36 @@ import { ConfirmationDialog } from './ConfirmationDialog';
 import { InContactsIcon } from './InContactsIcon';
 import { Modal } from './Modal';
 
-import { ConversationType } from '../state/ducks/conversations';
-import { LocalizerType } from '../types/Util';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
+import type { LocalizerType, ThemeType } from '../types/Util';
 import { isInSystemContacts } from '../util/isInSystemContacts';
 
 export type SafetyNumberProps = {
   contactID: string;
-  onClose?: () => void;
+  onClose: () => void;
 };
 
 export type Props = {
   readonly confirmText?: string;
   readonly contacts: Array<ConversationType>;
+  readonly getPreferredBadge: PreferredBadgeSelectorType;
   readonly i18n: LocalizerType;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
   readonly renderSafetyNumber: (props: SafetyNumberProps) => JSX.Element;
+  readonly theme: ThemeType;
 };
 
 export const SafetyNumberChangeDialog = ({
   confirmText,
   contacts,
+  getPreferredBadge,
   i18n,
   onCancel,
   onConfirm,
   renderSafetyNumber,
+  theme,
 }: Props): JSX.Element => {
   const [selectedContact, setSelectedContact] = React.useState<
     ConversationType | undefined
@@ -54,7 +59,7 @@ export const SafetyNumberChangeDialog = ({
 
   if (selectedContact) {
     return (
-      <Modal i18n={i18n} onClose={onClose}>
+      <Modal hasXButton i18n={i18n} onClose={onClose}>
         {renderSafetyNumber({ contactID: selectedContact.id, onClose })}
       </Modal>
     );
@@ -89,6 +94,7 @@ export const SafetyNumberChangeDialog = ({
               <Avatar
                 acceptedMessageRequest={contact.acceptedMessageRequest}
                 avatarPath={contact.avatarPath}
+                badge={getPreferredBadge(contact.badges)}
                 color={contact.color}
                 conversationType="direct"
                 i18n={i18n}
@@ -96,6 +102,7 @@ export const SafetyNumberChangeDialog = ({
                 name={contact.name}
                 phoneNumber={contact.phoneNumber}
                 profileName={contact.profileName}
+                theme={theme}
                 title={contact.title}
                 sharedGroupNames={contact.sharedGroupNames}
                 size={52}

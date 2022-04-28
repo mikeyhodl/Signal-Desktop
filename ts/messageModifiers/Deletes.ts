@@ -4,9 +4,11 @@
 /* eslint-disable max-classes-per-file */
 
 import { Collection, Model } from 'backbone';
-import { MessageModel } from '../models/messages';
+import type { MessageModel } from '../models/messages';
+import { getContactId } from '../messages/helpers';
+import * as log from '../logging/log';
 
-type DeleteAttributesType = {
+export type DeleteAttributesType = {
   targetSentTimestamp: number;
   serverTimestamp: number;
   fromId: string;
@@ -29,12 +31,12 @@ export class Deletes extends Collection<DeleteModel> {
     const matchingDeletes = this.filter(item => {
       return (
         item.get('targetSentTimestamp') === message.get('sent_at') &&
-        item.get('fromId') === message.getContactId()
+        item.get('fromId') === getContactId(message.attributes)
       );
     });
 
     if (matchingDeletes.length > 0) {
-      window.log.info('Found early DOE for message');
+      log.info('Found early DOE for message');
       this.remove(matchingDeletes);
       return matchingDeletes;
     }
@@ -46,13 +48,14 @@ export class Deletes extends Collection<DeleteModel> {
     try {
       // The conversation the deleted message was in; we have to find it in the database
       //   to to figure that out.
-      const targetConversation = await window.ConversationController.getConversationForTargetMessage(
-        del.get('fromId'),
-        del.get('targetSentTimestamp')
-      );
+      const targetConversation =
+        await window.ConversationController.getConversationForTargetMessage(
+          del.get('fromId'),
+          del.get('targetSentTimestamp')
+        );
 
       if (!targetConversation) {
-        window.log.info(
+        log.info(
           'No target conversation for DOE',
           del.get('fromId'),
           del.get('targetSentTimestamp')
@@ -63,21 +66,18 @@ export class Deletes extends Collection<DeleteModel> {
 
       // Do not await, since this can deadlock the queue
       targetConversation.queueJob('Deletes.onDelete', async () => {
-        window.log.info('Handling DOE for', del.get('targetSentTimestamp'));
+        log.info('Handling DOE for', del.get('targetSentTimestamp'));
 
         const messages = await window.Signal.Data.getMessagesBySentAt(
-          del.get('targetSentTimestamp'),
-          {
-            MessageCollection: window.Whisper.MessageCollection,
-          }
+          del.get('targetSentTimestamp')
         );
 
         const targetMessage = messages.find(
-          m => del.get('fromId') === m.getContactId()
+          m => del.get('fromId') === getContactId(m)
         );
 
         if (!targetMessage) {
-          window.log.info(
+          log.info(
             'No message for DOE',
             del.get('fromId'),
             del.get('targetSentTimestamp')
@@ -96,7 +96,7 @@ export class Deletes extends Collection<DeleteModel> {
         this.remove(del);
       });
     } catch (error) {
-      window.log.error(
+      log.error(
         'Deletes.onDelete error:',
         error && error.stack ? error.stack : error
       );

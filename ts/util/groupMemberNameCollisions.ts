@@ -4,7 +4,7 @@
 import { mapValues, pickBy } from 'lodash';
 import { groupBy, map, filter } from './iterables';
 import { getOwn } from './getOwn';
-import { ConversationType } from '../state/ducks/conversations';
+import type { ConversationType } from '../state/ducks/conversations';
 import { isConversationNameKnown } from './isConversationNameKnown';
 import { isInSystemContacts } from './isInSystemContacts';
 
@@ -36,11 +36,11 @@ export function getCollisionsFromMemberships(
   // Alternatively, we could filter undefined keys or something like that.
   //
   // [0]: https://www.typescriptlang.org/play?#code/C4TwDgpgBAYg9nKBeKAFAhgJ2AS3QGwB4AlCAYzkwBNCBnYTHAOwHMAaKJgVwFsAjCJgB8QgNwAoCk3pQAZgC5YCZFADeUABY5FAVigBfCeNCQoAISwrSFanQbN2nXgOESpMvoouYVs0UA
-  return (pickBy(
+  return pickBy(
     groupedByTitle,
     group =>
       group.length >= 2 && !group.every(person => isInSystemContacts(person))
-  ) as unknown) as GroupNameCollisionsWithConversationsByTitle;
+  ) as unknown as GroupNameCollisionsWithConversationsByTitle;
 }
 
 /**

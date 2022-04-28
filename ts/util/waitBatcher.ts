@@ -1,9 +1,12 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import PQueue from 'p-queue';
 
 import { sleep } from './sleep';
+import * as log from '../logging/log';
+import * as Errors from '../types/errors';
+import { clearTimeoutIfNecessary } from './clearTimeoutIfNecessary';
 
 declare global {
   // We want to extend `window`'s properties, so we need an interface.
@@ -19,13 +22,27 @@ declare global {
 window.waitBatchers = [];
 
 window.flushAllWaitBatchers = async () => {
-  window.log.info('waitBatcher#flushAllWaitBatchers');
-  await Promise.all(window.waitBatchers.map(item => item.flushAndWait()));
+  log.info('waitBatcher#flushAllWaitBatchers');
+  try {
+    await Promise.all(window.waitBatchers.map(item => item.flushAndWait()));
+  } catch (error) {
+    log.error(
+      'flushAllWaitBatchers: Error flushing all',
+      Errors.toLogFormat(error)
+    );
+  }
 };
 
 window.waitForAllWaitBatchers = async () => {
-  window.log.info('waitBatcher#waitForAllWaitBatchers');
-  await Promise.all(window.waitBatchers.map(item => item.onIdle()));
+  log.info('waitBatcher#waitForAllWaitBatchers');
+  try {
+    await Promise.all(window.waitBatchers.map(item => item.onIdle()));
+  } catch (error) {
+    log.error(
+      'waitForAllWaitBatchers: Error waiting for all',
+      Errors.toLogFormat(error)
+    );
+  }
 };
 
 type ItemHolderType<ItemType> = {
@@ -61,7 +78,11 @@ export function createWaitBatcher<ItemType>(
   let waitBatcher: BatcherType<ItemType>;
   let timeout: NodeJS.Timeout | null;
   let items: Array<ItemHolderType<ItemType>> = [];
-  const queue = new PQueue({ concurrency: 1, timeout: 1000 * 60 * 2 });
+  const queue = new PQueue({
+    concurrency: 1,
+    timeout: 1000 * 60 * 2,
+    throwOnTimeout: true,
+  });
 
   async function _kickBatchOff() {
     const itemsRef = items;
@@ -114,10 +135,8 @@ export function createWaitBatcher<ItemType>(
       }, options.wait);
     }
     if (items.length >= options.maxSize) {
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
+      clearTimeoutIfNecessary(timeout);
+      timeout = null;
 
       _kickBatchOff();
     }
@@ -150,14 +169,12 @@ export function createWaitBatcher<ItemType>(
   }
 
   async function flushAndWait() {
-    window.log.info(
+    log.info(
       `Flushing start ${options.name} for waitBatcher ` +
         `items.length=${items.length}`
     );
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
+    clearTimeoutIfNecessary(timeout);
+    timeout = null;
 
     while (anyPending()) {
       // eslint-disable-next-line no-await-in-loop
@@ -169,7 +186,7 @@ export function createWaitBatcher<ItemType>(
       }
     }
 
-    window.log.info(`Flushing complete ${options.name} for waitBatcher`);
+    log.info(`Flushing complete ${options.name} for waitBatcher`);
   }
 
   waitBatcher = {

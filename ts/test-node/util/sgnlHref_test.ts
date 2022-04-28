@@ -1,9 +1,9 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
 import Sinon from 'sinon';
-import { LoggerType } from '../../types/Logging';
+import type { LoggerType } from '../../types/Logging';
 
 import {
   isSgnlHref,
@@ -11,7 +11,9 @@ import {
   isSignalHttpsLink,
   parseSgnlHref,
   parseCaptchaHref,
+  parseE164FromSignalDotMeHash,
   parseSignalHttpsLink,
+  rewriteSignalHrefsIfNecessary,
 } from '../../util/sgnlHref';
 
 function shouldNeverBeCalled() {
@@ -131,10 +133,16 @@ describe('sgnlHref', () => {
       );
     });
 
+    it('returns false if the URL is not a valid Signal URL', () => {
+      assert.isFalse(isSignalHttpsLink('https://signal.org', explodingLogger));
+      assert.isFalse(isSignalHttpsLink('https://example.com', explodingLogger));
+    });
+
     it('returns true if the protocol is "https:"', () => {
       assert.isTrue(isSignalHttpsLink('https://signal.group', explodingLogger));
       assert.isTrue(isSignalHttpsLink('https://signal.art', explodingLogger));
       assert.isTrue(isSignalHttpsLink('HTTPS://signal.art', explodingLogger));
+      assert.isTrue(isSignalHttpsLink('https://signal.me', explodingLogger));
     });
 
     it('returns false if username or password are set', () => {
@@ -163,6 +171,7 @@ describe('sgnlHref', () => {
         assert.deepEqual(parseSgnlHref(href, explodingLogger), {
           command: null,
           args: new Map<never, never>(),
+          hash: undefined,
         });
       });
     });
@@ -288,12 +297,41 @@ describe('sgnlHref', () => {
     });
   });
 
+  describe('parseE164FromSignalDotMeHash', () => {
+    it('returns undefined for invalid inputs', () => {
+      [
+        '',
+        ' p/+18885551234',
+        'p/+18885551234 ',
+        'x/+18885551234',
+        'p/+notanumber',
+        'p/7c7e87a0-3b74-4efd-9a00-6eb8b1dd5be8',
+        'p/+08885551234',
+        'p/18885551234',
+      ].forEach(hash => {
+        assert.isUndefined(parseE164FromSignalDotMeHash(hash));
+      });
+    });
+
+    it('returns the E164 for valid inputs', () => {
+      assert.strictEqual(
+        parseE164FromSignalDotMeHash('p/+18885551234'),
+        '+18885551234'
+      );
+      assert.strictEqual(
+        parseE164FromSignalDotMeHash('p/+441632960104'),
+        '+441632960104'
+      );
+    });
+  });
+
   describe('parseSignalHttpsLink', () => {
     it('returns a null command for invalid URLs', () => {
       ['', 'https', 'https://example/?foo=bar'].forEach(href => {
         assert.deepEqual(parseSignalHttpsLink(href, explodingLogger), {
           command: null,
           args: new Map<never, never>(),
+          hash: undefined,
         });
       });
     });
@@ -313,8 +351,7 @@ describe('sgnlHref', () => {
             ['empty', ''],
             ['encoded', 'hello world'],
           ]),
-          hash:
-            'pack_id=baz&pack_key=Quux&num=123&empty=&encoded=hello%20world',
+          hash: 'pack_id=baz&pack_key=Quux&num=123&empty=&encoded=hello%20world',
         }
       );
     });
@@ -328,6 +365,78 @@ describe('sgnlHref', () => {
           hash: 'data',
         }
       );
+    });
+
+    it('handles signal.me links', () => {
+      assert.deepEqual(
+        parseSignalHttpsLink(
+          'https://signal.me/#p/+18885551234',
+          explodingLogger
+        ),
+        {
+          command: 'signal.me',
+          args: new Map<never, never>(),
+          hash: 'p/+18885551234',
+        }
+      );
+    });
+  });
+
+  describe('rewriteSignalHrefsIfNecessary', () => {
+    it('rewrites http://signal.group hrefs, making them use HTTPS', () => {
+      assert.strictEqual(
+        rewriteSignalHrefsIfNecessary('http://signal.group/#abc123'),
+        'https://signal.group/#abc123'
+      );
+    });
+
+    it('rewrites http://signal.art hrefs, making them use HTTPS', () => {
+      assert.strictEqual(
+        rewriteSignalHrefsIfNecessary(
+          'http://signal.art/addstickers/#pack_id=abc123'
+        ),
+        'https://signal.art/addstickers/#pack_id=abc123'
+      );
+    });
+
+    it('rewrites http://signal.me hrefs, making them use HTTPS', () => {
+      assert.strictEqual(
+        rewriteSignalHrefsIfNecessary('http://signal.me/#p/+18885551234'),
+        'https://signal.me/#p/+18885551234'
+      );
+    });
+
+    it('removes auth if present', () => {
+      assert.strictEqual(
+        rewriteSignalHrefsIfNecessary(
+          'http://user:pass@signal.group/ab?c=d#ef'
+        ),
+        'https://signal.group/ab?c=d#ef'
+      );
+      assert.strictEqual(
+        rewriteSignalHrefsIfNecessary(
+          'https://user:pass@signal.group/ab?c=d#ef'
+        ),
+        'https://signal.group/ab?c=d#ef'
+      );
+    });
+
+    it('does nothing to other hrefs', () => {
+      [
+        // Normal URLs
+        'http://example.com',
+        // Already HTTPS
+        'https://signal.art/addstickers/#pack_id=abc123',
+        // Different port
+        'http://signal.group:1234/abc?d=e#fg',
+        // Different subdomain
+        'http://subdomain.signal.group/#abcdef',
+        // Different protocol
+        'ftp://signal.group/#abc123',
+        'ftp://user:pass@signal.group/#abc123',
+      ].forEach(href => {
+        assert.strictEqual(rewriteSignalHrefsIfNecessary(href), href);
+      });
     });
   });
 });

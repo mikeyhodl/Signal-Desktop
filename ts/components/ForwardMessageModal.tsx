@@ -1,35 +1,42 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { FunctionComponent } from 'react';
 import React, {
-  FunctionComponent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import Measure, { MeasuredComponentProps } from 'react-measure';
+import type { MeasuredComponentProps } from 'react-measure';
+import Measure from 'react-measure';
 import { noop } from 'lodash';
+import { animated } from '@react-spring/web';
 
 import classNames from 'classnames';
 import { AttachmentList } from './conversation/AttachmentList';
-import { AttachmentType } from '../types/Attachment';
+import type { AttachmentType } from '../types/Attachment';
 import { Button } from './Button';
-import { CompositionInput, InputApi } from './CompositionInput';
+import type { InputApi } from './CompositionInput';
+import { CompositionInput } from './CompositionInput';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { ContactCheckboxDisabledReason } from './conversationList/ContactCheckbox';
-import { ConversationList, Row, RowType } from './ConversationList';
-import { ConversationType } from '../state/ducks/conversations';
-import { EmojiButton, Props as EmojiButtonProps } from './emoji/EmojiButton';
-import { EmojiPickDataType } from './emoji/EmojiPicker';
-import { LinkPreviewType } from '../types/message/LinkPreviews';
-import { BodyRangeType, LocalizerType } from '../types/Util';
+import type { Row } from './ConversationList';
+import { ConversationList, RowType } from './ConversationList';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../state/selectors/badges';
+import type { Props as EmojiButtonProps } from './emoji/EmojiButton';
+import { EmojiButton } from './emoji/EmojiButton';
+import type { EmojiPickDataType } from './emoji/EmojiPicker';
+import type { LinkPreviewType } from '../types/message/LinkPreviews';
+import type { BodyRangeType, LocalizerType, ThemeType } from '../types/Util';
 import { ModalHost } from './ModalHost';
 import { SearchInput } from './SearchInput';
 import { StagedLinkPreview } from './conversation/StagedLinkPreview';
 import { assert } from '../util/assert';
 import { filterAndSortConversationsByRecent } from '../util/filterAndSortConversations';
+import { useAnimated } from '../hooks/useAnimated';
 
 export type DataPropsType = {
   attachments?: Array<AttachmentType>;
@@ -40,6 +47,8 @@ export type DataPropsType = {
     attachments?: Array<AttachmentType>,
     linkPreview?: LinkPreviewType
   ) => void;
+  getPreferredBadge: PreferredBadgeSelectorType;
+  hasContact: boolean;
   i18n: LocalizerType;
   isSticker: boolean;
   linkPreview?: LinkPreviewType;
@@ -51,6 +60,8 @@ export type DataPropsType = {
     caretLocation?: number
   ) => unknown;
   onTextTooLong: () => void;
+  theme: ThemeType;
+  regionCode: string | undefined;
 } & Pick<EmojiButtonProps, 'recentEmojis' | 'skinTone'>;
 
 type ActionPropsType = Pick<
@@ -68,6 +79,8 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
   attachments,
   candidateConversations,
   doForwardMessage,
+  getPreferredBadge,
+  hasContact,
   i18n,
   isSticker,
   linkPreview,
@@ -80,6 +93,8 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
   recentEmojis,
   removeLinkPreview,
   skinTone,
+  theme,
+  regionCode,
 }) => {
   const inputRef = useRef<null | HTMLInputElement>(null);
   const inputApiRef = React.useRef<InputApi | undefined>();
@@ -88,14 +103,16 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
   >([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredConversations, setFilteredConversations] = useState(
-    filterAndSortConversationsByRecent(candidateConversations, '')
+    filterAndSortConversationsByRecent(candidateConversations, '', regionCode)
   );
-  const [attachmentsToForward, setAttachmentsToForward] = useState(attachments);
+  const [attachmentsToForward, setAttachmentsToForward] = useState<
+    Array<AttachmentType>
+  >(attachments || []);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [messageBodyText, setMessageBodyText] = useState(messageBody || '');
   const [cannotMessage, setCannotMessage] = useState(false);
 
-  const isMessageEditable = !isSticker;
+  const isMessageEditable = !isSticker && !hasContact;
 
   const hasSelectedMaximumNumberOfContacts =
     selectedContacts.length >= MAX_FORWARD;
@@ -127,6 +144,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
     hasContactsSelected &&
     (Boolean(messageBodyText) ||
       isSticker ||
+      hasContact ||
       (attachmentsToForward && attachmentsToForward.length));
 
   const forwardMessage = React.useCallback(() => {
@@ -155,14 +173,20 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
       setFilteredConversations(
         filterAndSortConversationsByRecent(
           candidateConversations,
-          normalizedSearchTerm
+          normalizedSearchTerm,
+          regionCode
         )
       );
     }, 200);
     return () => {
       clearTimeout(timeout);
     };
-  }, [candidateConversations, normalizedSearchTerm, setFilteredConversations]);
+  }, [
+    candidateConversations,
+    normalizedSearchTerm,
+    setFilteredConversations,
+    regionCode,
+  ]);
 
   const contactLookup = useMemo(() => {
     const map = new Map();
@@ -198,13 +222,24 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
     [contactLookup, selectedContacts, setSelectedContacts]
   );
 
+  const { close, modalStyles, overlayStyles } = useAnimated(onClose, {
+    getFrom: () => ({ opacity: 0, transform: 'translateY(48px)' }),
+    getTo: isOpen =>
+      isOpen
+        ? { opacity: 1, transform: 'translateY(0px)' }
+        : {
+            opacity: 0,
+            transform: 'translateY(48px)',
+          },
+  });
+
   const handleBackOrClose = useCallback(() => {
     if (isEditingMessage) {
       setIsEditingMessage(false);
     } else {
-      onClose();
+      close();
     }
-  }, [isEditingMessage, onClose, setIsEditingMessage]);
+  }, [isEditingMessage, close, setIsEditingMessage]);
 
   const rowCount = filteredConversations.length;
   const getRow = (index: number): undefined | Row => {
@@ -249,8 +284,15 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
           {i18n('GroupV2--cannot-send')}
         </ConfirmationDialog>
       )}
-      <ModalHost onEscape={handleBackOrClose} onClose={onClose}>
-        <div className="module-ForwardMessageModal">
+      <ModalHost
+        onEscape={handleBackOrClose}
+        onClose={close}
+        overlayStyles={overlayStyles}
+      >
+        <animated.div
+          className="module-ForwardMessageModal"
+          style={modalStyles}
+        >
           <div
             className={classNames('module-ForwardMessageModal__header', {
               'module-ForwardMessageModal__header--edit': isEditingMessage,
@@ -269,7 +311,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
               <button
                 aria-label={i18n('close')}
                 className="module-ForwardMessageModal__header--close"
-                onClick={onClose}
+                onClick={close}
                 type="button"
               />
             )}
@@ -306,6 +348,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
                 <CompositionInput
                   clearQuotedMessage={shouldNeverBeCalled}
                   draftText={messageBodyText}
+                  getPreferredBadge={getPreferredBadge}
                   getQuotedMessage={noop}
                   i18n={i18n}
                   inputApi={inputApiRef}
@@ -322,6 +365,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
                   onPickEmoji={onPickEmoji}
                   onSubmit={forwardMessage}
                   onTextTooLong={onTextTooLong}
+                  theme={theme}
                 />
                 <div className="module-ForwardMessageModal__emoji">
                   <EmojiButton
@@ -339,6 +383,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
             <div className="module-ForwardMessageModal__main-body">
               <SearchInput
                 disabled={candidateConversations.length === 0}
+                i18n={i18n}
                 placeholder={i18n('contactSearchPlaceholder')}
                 onChange={event => {
                   setSearchTerm(event.target.value);
@@ -361,6 +406,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
                       >
                         <ConversationList
                           dimensions={contentRect.bounds}
+                          getPreferredBadge={getPreferredBadge}
                           getRow={getRow}
                           i18n={i18n}
                           onClickArchiveButton={shouldNeverBeCalled}
@@ -377,6 +423,12 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
                               toggleSelectedConversation(conversationId);
                             }
                           }}
+                          lookupConversationWithoutUuid={
+                            asyncShouldNeverBeCalled
+                          }
+                          showConversation={shouldNeverBeCalled}
+                          showUserNotFoundModal={shouldNeverBeCalled}
+                          setIsFetchingUUID={shouldNeverBeCalled}
                           onSelectConversation={shouldNeverBeCalled}
                           renderMessageSearchResult={() => {
                             shouldNeverBeCalled();
@@ -385,9 +437,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
                           rowCount={rowCount}
                           shouldRecomputeRowHeights={false}
                           showChooseGroupMembers={shouldNeverBeCalled}
-                          startNewConversationFromPhoneNumber={
-                            shouldNeverBeCalled
-                          }
+                          theme={theme}
                         />
                       </div>
                     );
@@ -424,7 +474,7 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
               )}
             </div>
           </div>
-        </div>
+        </animated.div>
       </ModalHost>
     </>
   );
@@ -432,4 +482,12 @@ export const ForwardMessageModal: FunctionComponent<PropsType> = ({
 
 function shouldNeverBeCalled(..._args: ReadonlyArray<unknown>): void {
   assert(false, 'This should never be called. Doing nothing');
+}
+
+async function asyncShouldNeverBeCalled(
+  ..._args: ReadonlyArray<unknown>
+): Promise<undefined> {
+  shouldNeverBeCalled();
+
+  return undefined;
 }

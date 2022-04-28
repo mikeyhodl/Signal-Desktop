@@ -1,10 +1,12 @@
-// Copyright 2019-2020 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { trigger } from '../../shims/events';
 
-import { NoopActionType } from './noop';
-import { LocalizerType, ThemeType } from '../../types/Util';
+import type { NoopActionType } from './noop';
+import type { LocalizerType } from '../../types/Util';
+import { ThemeType } from '../../types/Util';
+import type { UUIDStringType } from '../../types/UUID';
 
 // State
 
@@ -12,15 +14,16 @@ export type UserStateType = {
   attachmentsPath: string;
   stickersPath: string;
   tempPath: string;
-  ourConversationId: string;
-  ourDeviceId: number;
-  ourUuid: string;
-  ourNumber: string;
+  ourConversationId: string | undefined;
+  ourDeviceId: number | undefined;
+  ourUuid: UUIDStringType | undefined;
+  ourNumber: string | undefined;
   platform: string;
-  regionCode: string;
+  regionCode: string | undefined;
   i18n: LocalizerType;
   interactionMode: 'mouse' | 'keyboard';
   theme: ThemeType;
+  version: string;
 };
 
 // Actions
@@ -30,7 +33,7 @@ type UserChangedActionType = {
   payload: {
     ourConversationId?: string;
     ourDeviceId?: number;
-    ourUuid?: string;
+    ourUuid?: UUIDStringType;
     ourNumber?: string;
     regionCode?: string;
     interactionMode?: 'mouse' | 'keyboard';
@@ -52,7 +55,7 @@ function userChanged(attributes: {
   ourConversationId?: string;
   ourDeviceId?: number;
   ourNumber?: string;
-  ourUuid?: string;
+  ourUuid?: UUIDStringType;
   regionCode?: string;
   theme?: ThemeType;
 }): UserChangedActionType {
@@ -80,7 +83,7 @@ export function getEmptyState(): UserStateType {
     tempPath: 'missing',
     ourConversationId: 'missing',
     ourDeviceId: 0,
-    ourUuid: 'missing',
+    ourUuid: '00000000-0000-4000-8000-000000000000',
     ourNumber: 'missing',
     regionCode: 'missing',
     platform: 'missing',
@@ -96,6 +99,7 @@ export function getEmptyState(): UserStateType {
         },
       }
     ),
+    version: '0.0.0',
   };
 }
 

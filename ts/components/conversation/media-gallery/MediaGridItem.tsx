@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Signal Messenger, LLC
+// Copyright 2018-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
@@ -8,8 +8,9 @@ import {
   isImageTypeSupported,
   isVideoTypeSupported,
 } from '../../../util/GoogleChrome';
-import { LocalizerType } from '../../../types/Util';
-import { MediaItemType } from '../../../types/MediaItem';
+import type { LocalizerType } from '../../../types/Util';
+import type { MediaItemType } from '../../../types/MediaItem';
+import * as log from '../../../logging/log';
 
 export type Props = {
   mediaItem: MediaItemType;
@@ -35,7 +36,7 @@ export class MediaGridItem extends React.Component<Props, State> {
   }
 
   public onImageError(): void {
-    window.log.info(
+    log.info(
       'MediaGridItem: Image failed to load; failing over to placeholder'
     );
     this.setState({
@@ -110,7 +111,7 @@ export class MediaGridItem extends React.Component<Props, State> {
     );
   }
 
-  public render(): JSX.Element {
+  public override render(): JSX.Element {
     const { onClick } = this.props;
 
     return (

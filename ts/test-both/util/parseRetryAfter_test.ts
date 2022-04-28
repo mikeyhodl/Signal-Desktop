@@ -1,22 +1,28 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { assert } from 'chai';
+import { MINUTE } from '../../util/durations';
 
-import { parseRetryAfter } from '../../util/parseRetryAfter';
+import { parseRetryAfterWithDefault } from '../../util/parseRetryAfter';
 
 describe('parseRetryAfter', () => {
-  it('should return 0 on invalid input', () => {
-    assert.equal(parseRetryAfter('nope'), 1000);
-    assert.equal(parseRetryAfter('1ff'), 1000);
+  it('should return 1 minute when passed non-strings', () => {
+    assert.equal(parseRetryAfterWithDefault(undefined), MINUTE);
+    assert.equal(parseRetryAfterWithDefault(1234), MINUTE);
   });
 
-  it('should return milleseconds on valid input', () => {
-    assert.equal(parseRetryAfter('100'), 100000);
+  it('should return 1 minute with invalid strings', () => {
+    assert.equal(parseRetryAfterWithDefault('nope'), MINUTE);
+    assert.equal(parseRetryAfterWithDefault('1ff'), MINUTE);
   });
 
-  it('should return apply minimum value', () => {
-    assert.equal(parseRetryAfter('0'), 1000);
-    assert.equal(parseRetryAfter('-1'), 1000);
+  it('should return milliseconds on valid input', () => {
+    assert.equal(parseRetryAfterWithDefault('100'), 100000);
+  });
+
+  it('should return 1 second at minimum', () => {
+    assert.equal(parseRetryAfterWithDefault('0'), 1000);
+    assert.equal(parseRetryAfterWithDefault('-1'), 1000);
   });
 });

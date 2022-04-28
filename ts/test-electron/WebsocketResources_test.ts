@@ -1,7 +1,7 @@
 // Copyright 2015-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
+
 /* eslint-disable
-     class-methods-use-this,
      no-new,
      @typescript-eslint/no-empty-function,
      @typescript-eslint/no-explicit-any
@@ -10,7 +10,7 @@
 import { assert } from 'chai';
 import * as sinon from 'sinon';
 import EventEmitter from 'events';
-import { connection as WebSocket } from 'websocket';
+import type { connection as WebSocket } from 'websocket';
 import Long from 'long';
 
 import { dropNull } from '../util/dropNull';
@@ -32,6 +32,12 @@ describe('WebSocket-Resource', () => {
     this.clock = this.sandbox.useFakeTimers({
       now: NOW,
     });
+    this.sandbox
+      .stub(window.SignalContext.timers, 'setTimeout')
+      .callsFake(setTimeout);
+    this.sandbox
+      .stub(window.SignalContext.timers, 'clearTimeout')
+      .callsFake(clearTimeout);
   });
 
   afterEach(function afterEach() {
@@ -51,7 +57,7 @@ describe('WebSocket-Resource', () => {
         assert.strictEqual(message.response?.status, 200);
         const id = message.response?.id;
 
-        if (id instanceof Long) {
+        if (Long.isLong(id)) {
           assert(id.equals(requestId));
         } else {
           assert(false, `id should be Long, got ${id}`);
@@ -87,7 +93,7 @@ describe('WebSocket-Resource', () => {
 
     it('sends requests and receives responses', async () => {
       // mock socket and request handler
-      let requestId: number | Long | undefined;
+      let requestId: Long | undefined;
       const socket = new FakeSocket();
 
       sinon.stub(socket, 'sendBytes').callsFake((data: Uint8Array) => {

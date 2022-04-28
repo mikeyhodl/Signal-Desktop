@@ -1,6 +1,6 @@
 {
     "softwareAcknowledgments": {
-        "message": "Þakkir vegna hugbúnaðar",
+        "message": "Þakkir vegna hugbúnaðarins",
         "description": "Shown in the about box for the link to software acknowledgments"
     },
     "privacyPolicy": {
@@ -177,15 +177,15 @@
     },
     "avatarMenuViewArchive": {
         "message": "Skoða geymslu",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuChatColors": {
         "message": "Litur spjalls",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuUpdateAvailable": {
         "message": "Uppfæra Signal",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "loading": {
         "message": "Hleð inn...",
@@ -214,12 +214,16 @@
         "description": "Shown as a header for pinned conversations in the left pane"
     },
     "LeftPane--chats": {
-        "message": "Spjöll",
+        "message": "Spjall",
         "description": "Shown as a header for non-pinned conversations in the left pane"
     },
     "archiveHelperText": {
         "message": "Þessi samtöl eru í geymslu og munu aðeins birtast í innhólfinu ef ný skilaboð berast.",
         "description": "Shown at the top of the archived conversations list in the left pane"
+    },
+    "noArchivedConversations": {
+        "message": "No archived conversations.",
+        "description": "Shown at the top of the archived conversations list in the left pane if there is no any archived conversation"
     },
     "archiveConversation": {
         "message": "Geymsla",
@@ -243,7 +247,7 @@
     },
     "pinnedConversationsFull": {
         "message": "Aðeins hægt að festa allt að 4 samtöl",
-        "description": ""
+        "description": "Shown in a toast when a user attempts to pin more than the maximum number of chats"
     },
     "chooseDirectory": {
         "message": "Veldu möppu",
@@ -415,6 +419,10 @@
         "message": "Eftirfarandi einstaklingar hafa sett Signal upp aftur eða skipt um tæki. Sannreyndu öryggisnúmer þín með þeim til að tryggja öryggi.",
         "description": "Shown on confirmation dialog when user attempts to send a message"
     },
+    "safetyNumberChangeDialog__pending-messages": {
+        "message": "Senda skilaboð í bið",
+        "description": "Shown on confirmation dialog when user attempts to send a message in the outbox"
+    },
     "identityKeyErrorOnSend": {
         "message": "Öryggisnúmer þitt með $name1$ hefur breyst. Þetta gæti þýtt að einhver sé að reyna að komast inn í samskiptin þín, eða einfaldlega að $name2$ hefur sett Signal upp aftur. Þú gætir viljað sannreyna nýja öryggisnúmerið hér fyrir neðan.",
         "description": "Shown when user clicks on a failed recipient in the message detail view after an identity key change",
@@ -456,27 +464,39 @@
         "description": "Shown in conversation banner when more than one group member's safety number has changed, but they were previously verified."
     },
     "debugLogExplanation": {
-        "message": "Þessi villumeldingaskrá verður birt opinberlega á netinu svoforritarar og fleiri geti skoðað hana. Þú ættir að yfirfara hana og breyta ef þörf þykir áður en hún er send.",
-        "description": ""
+        "message": "Eftir að þú hefur smellt á að senda inn, er atvikaskráin þín birt í 30 daga á óskráðri slóð. Þú gætir viljað vista hana fyrst.",
+        "description": "Description of what will happen with your debug log"
     },
     "debugLogError": {
-        "message": "Eitthvað fór úrskeiðis við finnsendinguna! Íhugaðu að bæta villumeldingaskránni handvirkt við verkbeiðnina sem þú sendir.",
-        "description": ""
+        "message": "Eitthvað fór úrskeiðis við innsendinguna! Hafðu samband við support@signal.org og bættu villumeldingaskránni við sem textaskrá.",
+        "description": "Error message a recommendations if debug log upload fails"
     },
-    "debugLogCopy": {
-        "message": "Afrita",
+    "debugLogSuccess": {
+        "message": "Atvikaskrá send inn",
+        "description": "Title of the success page for submitting a debug log"
+    },
+    "debugLogSuccessNextSteps": {
+        "message": "Atvikaskrá send inn. Þegar þú hefur samband við aðstoðarteymið, skaltu afrita slóðina hér fyrir neðan og láta hana fylgja með lýsingu á vandamálinu og því hvaða skref þurfi að framkvæma svo það endurtaki sig.",
+        "description": "Explanation of next steps to take when submitting debug log"
+    },
+    "debugLogLogIsIncomplete": {
+        "message": "... til að sjá alla atvikaskrána, smelltu á 'Vista'",
         "description": "Shown as the text for the copy button on the debug log screen"
     },
-    "debugLogCopyAlt": {
-        "message": "Afrita tengil á klippispjaldið þitt",
-        "description": "Shown as the alt text for the copy button on the debug log screen"
+    "debugLogCopy": {
+        "message": "Afrita tengil",
+        "description": "Shown as the text for the copy button on the debug log screen"
+    },
+    "debugLogSave": {
+        "message": "Vista",
+        "description": "Shown as the text for the download button on the debug log screen"
     },
     "debugLogLinkCopied": {
         "message": "Tengill afritaður á klippispjald",
         "description": "Shown in a toast to let the user know that the link to the debug log has been copied to their clipboard"
     },
     "reportIssue": {
-        "message": "Tilkynna um vandamál",
+        "message": "Hafa samband við hjálparteymi",
         "description": "Link to open the issue tracker"
     },
     "gotIt": {
@@ -536,15 +556,15 @@
         "description": ""
     },
     "media": {
-        "message": "Myndefni",
+        "message": "Margmiðlunarefni",
         "description": "Header of the default pane in the media gallery, showing images and videos"
     },
     "mediaEmptyState": {
-        "message": "Þú átt ekkert myndefni í þessu samtali",
+        "message": "Þú átt ekkert margmiðlunarefni í þessu samtali",
         "description": "Message shown to user in the media gallery when there are no messages with media attachments (images or video)"
     },
     "allMedia": {
-        "message": "Allt myndefni",
+        "message": "Allt margmiðlunarefni",
         "description": "Header for the media gallery"
     },
     "documents": {
@@ -557,11 +577,11 @@
     },
     "today": {
         "message": "Í dag",
-        "description": "Section header in the media gallery"
+        "description": "The string \"today\""
     },
     "yesterday": {
         "message": "Í gær",
-        "description": "Section header in the media gallery"
+        "description": "The string \"yesterday\""
     },
     "thisWeek": {
         "message": "Í þessari viku",
@@ -609,7 +629,7 @@
         "message": "Smámynd forskoðunar tengils fyrir $domain$",
         "description": "Shown while Signal Desktop is fetching metadata for a url in composition area",
         "placeholders": {
-            "path": {
+            "domain": {
                 "content": "$1",
                 "example": "instagram.com"
             }
@@ -626,8 +646,22 @@
         }
     },
     "decryptionErrorToast": {
-        "message": "Skjáborðsforritið lenti á villu í afkóðun. Smelltu til að senda villuskýrslu.",
-        "description": "An error popup when we haven't added an error for decryption error."
+        "message": "Forritið rakst á villu í afkóðun frá $name$, tæki $deviceId$",
+        "description": "An error popup when we haven't added an in-timeline error for decryption error, only for beta/internal users.",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            },
+            "deviceId": {
+                "content": "$1",
+                "example": "2"
+            }
+        }
+    },
+    "decryptionErrorToastAction": {
+        "message": "Senda inn atvikaskrá",
+        "description": "Label for the decryption error toast button"
     },
     "oneNonImageAtATimeToast": {
         "message": "Þegar viðhengi er ekki mynd er fjöldi takmarkaður við eitt stk. per skilaboð.",
@@ -654,15 +688,15 @@
         "description": "Displayed when the desktop client cannot connect to the server."
     },
     "connecting": {
-        "message": "Connecting...",
+        "message": "Tengist…",
         "description": "Displayed when the desktop client is currently connecting to the server."
     },
     "connect": {
-        "message": "Click to reconnect.",
+        "message": "Smelltu til að endurtengjast.",
         "description": "Shown to allow the user to manually attempt a reconnect."
     },
     "connectingHangOn": {
-        "message": "Shouldn't be long",
+        "message": "Ætti ekki að taka langan tíma",
         "description": "Subtext description for when the client is connecting to the server."
     },
     "offline": {
@@ -754,14 +788,8 @@
         "description": "Aria label for clear search button"
     },
     "searchIn": {
-        "message": "Leita í $conversationName$",
-        "description": "Shown in the search box before text is entered when searching in a specific conversation",
-        "placeholders": {
-            "conversationName": {
-                "content": "$1",
-                "example": "Friends"
-            }
-        }
+        "message": "Leita í spjalli",
+        "description": "Shown in the search box before text is entered when searching in a specific conversation"
     },
     "noSearchResults": {
         "message": "Engin niðurstaða fyrir \"$searchTerm$\"",
@@ -807,12 +835,30 @@
         "message": "Skilaboð",
         "description": "Shown to separate the types of search results"
     },
+    "findByUsernameHeader": {
+        "message": "Finna eftir notandanafni",
+        "description": "Shown when search could be a valid username, with one sub-item that will kick off the search"
+    },
+    "findByPhoneNumberHeader": {
+        "message": "Finna eftir símanúmeri",
+        "description": "Shown when search could be a valid phone number, with one sub-item that will kick off the search"
+    },
+    "at-username": {
+        "message": "@$username$",
+        "description": "@ added to username to signify it as a username. Should it be on the right in your language?",
+        "placeholders": {
+            "username": {
+                "content": "$1",
+                "example": "sammy45"
+            }
+        }
+    },
     "welcomeToSignal": {
         "message": "Velkomin í Signal",
         "description": ""
     },
     "whatsNew": {
-        "message": "See $whatsNew$ in this update",
+        "message": "Skoðaðu $whatsNew$ í þessari uppfærslu",
         "description": "Shown in the main window",
         "placeholders": {
             "name": {
@@ -822,7 +868,7 @@
         }
     },
     "viewReleaseNotes": {
-        "message": "what's new",
+        "message": "hvað er nýtt",
         "description": "Clickable link that displays the latest release notes"
     },
     "selectAContact": {
@@ -861,7 +907,7 @@
     },
     "mobile": {
         "message": "farsími",
-        "description": "Shown on contact detail screen as a label for aa phone or email"
+        "description": "Shown on contact detail screen as a label for a phone or email"
     },
     "email": {
         "message": "tölvupóstur",
@@ -907,6 +953,18 @@
         "message": "Upphafleg skilaboð fundin, en ekki hlaðin. Flettu upp til að hlaða þeim.",
         "description": "Shown in toast if user clicks on quote references messages not loaded in view, but in database"
     },
+    "voiceRecording--start": {
+        "message": "Hefja upptöku talskilaboða",
+        "description": "Tooltip for microphone button to start voice message"
+    },
+    "voiceRecording--complete": {
+        "message": "Ljúka talskilaboðum og senda",
+        "description": "Tooltip for green complete voice message and send"
+    },
+    "voiceRecording--cancel": {
+        "message": "Hætta við talskilaboð",
+        "description": "Tooltip for red button to cancel voice message"
+    },
     "voiceRecordingInterruptedMax": {
         "message": "Upptöku hljóðskilaboða hætt þar sem hámarks tíma var náð.",
         "description": "Confirmation dialog message for when the voice recording is interrupted due to max time limit"
@@ -916,22 +974,24 @@
         "description": "Confirmation dialog message for when the voice recording is interrupted due to app losing focus"
     },
     "voiceNoteLimit": {
-        "message": "Tími hljóðskilaboða er takmarkaður við fimm mínútur. Upptöku verður hætt ef þú skiptir yfir í annað forrit.",
+        "message": "Tími talskilaboða er takmarkaður við fimm mínútur. Upptöku verður hætt ef þú skiptir yfir í annað forrit.",
         "description": "Shown in toast to warn user about limited time and that window must be in focus"
     },
     "voiceNoteMustBeOnlyAttachment": {
         "message": "Hljóðskilaboð geta aðeins haft eitt viðhengi.",
         "description": "Shown in toast if tries to record a voice note with any staged attachments"
     },
+    "voiceNoteError": {
+        "message": "Það kom upp villa í upptöku talskilaboða.",
+        "description": "Shown in a dialog to inform user that we experienced an unrecoverable error"
+    },
     "attachmentSaved": {
-        "message": "Viðhengi vistað. Smelltu til að skoða í möppu.",
-        "description": "Shown after user selects to save to downloads",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "proof.jpg"
-            }
-        }
+        "message": "Viðhengi vistað.",
+        "description": "Shown after user selects to save to downloads"
+    },
+    "attachmentSavedShow": {
+        "message": "Birta í möppu",
+        "description": "Button label for showing the attachment in your file system"
     },
     "you": {
         "message": "Þú",
@@ -987,13 +1047,43 @@
         "message": "Get ekki uppfært",
         "description": "Shown as the title of our update error dialogs on windows"
     },
+    "muted": {
+        "message": "Þaggað niður",
+        "description": "Shown in a button when a conversation is muted"
+    },
+    "mute": {
+        "message": "Hljóð af",
+        "description": "Shown in a button when a conversation is unmuted and can be muted"
+    },
     "cannotUpdateDetail": {
-        "message": "Signal Desktop uppfærðist ekki, en það er ný útgáfa til taks. Farðu á $url$ og settu nýju útgáfuna upp handvirkt, síðan skaltu annað hvort hafa samband við aðstoðarteymið eða senda inn verkbeiðni vegna þessa vandamáls.",
+        "message": "Signal gat ekki uppfærst. $retry$ eða skoðaðu $url$ til að setja það upp handvirkt. Síðan ættirðu að $support$ varðandi þetta vandamál",
         "description": "Shown if a general error happened while trying to install update package",
         "placeholders": {
+            "retry": {
+                "content": "$2",
+                "example": "retry update"
+            },
             "url": {
-                "content": "$1",
+                "content": "$2",
                 "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
+            }
+        }
+    },
+    "cannotUpdateRequireManualDetail": {
+        "message": "Signal gat ekki uppfærst. Skoðaðu $url$ til að setja það upp handvirkt. Síðan ættirðu að $support$ varðandi þetta vandamál",
+        "description": "Shown if a general error happened while trying to install update package and manual update is required",
+        "placeholders": {
+            "url": {
+                "content": "$2",
+                "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
             }
         }
     },
@@ -1041,6 +1131,10 @@
     },
     "accept": {
         "message": "Samþykkja",
+        "description": ""
+    },
+    "forward": {
+        "message": "Áfram",
         "description": ""
     },
     "done": {
@@ -1095,10 +1189,6 @@
         "message": "Sýna meðlimi",
         "description": ""
     },
-    "resetSession": {
-        "message": "Frumstilla setu",
-        "description": "This is a menu item for resetting the session, using the imperative case, as in a command."
-    },
     "showSafetyNumber": {
         "message": "Skoða öryggisnúmer",
         "description": ""
@@ -1108,7 +1198,7 @@
         "description": "This is a menu item for viewing all media (images + video) in a conversation, using the imperative case, as in a command."
     },
     "verifyHelp": {
-        "message": "Ef þú vilt sannreyna öryggi enda-í-enda dulritunarinnar þinnar með $name$, skaltu bera tölurnar hér fyrir ofan saman við tölurnar á viðkomandi tækjum.",
+        "message": "Til að sannreyna öryggi enda-í-enda dulritunarinnar þinnar með $name$, skaltu bera tölurnar hér fyrir ofan saman við tölurnar á viðkomandi tækjum.",
         "description": "",
         "placeholders": {
             "name": {
@@ -1136,6 +1226,10 @@
     "retrySend": {
         "message": "Reyna aftur að senda",
         "description": "Shown on the drop-down menu for an individual message, but only if it is an outgoing message that failed to send"
+    },
+    "retryDeleteForEveryone": {
+        "message": "Prófa aftur að eyða fyrir alla",
+        "description": "Shown on the drop-down menu for an individual message, but only if a previous delete for everyone failed to send"
     },
     "forwardMessage": {
         "message": "Áframsenda skilaboð",
@@ -1220,7 +1314,7 @@
         }
     },
     "ChangeNumber--notification": {
-        "message": "$sender$ skipti yfir í nýtt símanúmer",
+        "message": "$sender$ skipti um símanúmer",
         "description": "Shown in timeline when a member of a conversation changes their phone number",
         "placeholders": {
             "sender": {
@@ -1249,13 +1343,13 @@
         "message": "Tákn sem sýnir að þessi mynd er með skýringatexta",
         "description": "Used for the icon layered on top of an image in message bubbles"
     },
-    "addACaption": {
-        "message": "Bættu við skýringatexta...",
-        "description": "Used as the placeholder text in the caption editor text field"
-    },
     "save": {
         "message": "Vista",
-        "description": "Used as a 'commit changes' button in the Caption Editor for outgoing image attachments"
+        "description": "Used on save buttons"
+    },
+    "reset": {
+        "message": "Endurstilla",
+        "description": "Used on reset buttons"
     },
     "fileIconAlt": {
         "message": "Skráartákn",
@@ -1269,25 +1363,79 @@
         "message": "Gagnaleynd er möguleg. Signal gerir hana auðvelda.",
         "description": "Tagline displayed under 'installWelcome' string on the install page"
     },
-    "linkYourPhone": {
-        "message": "Tengja símann þinn við Signal Desktop",
-        "description": "Shown on the front page when the application first starts, above the QR code"
-    },
-    "signalSettings": {
-        "message": "Signal stillingar",
-        "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
-    },
     "linkedDevices": {
         "message": "Tengd tæki",
         "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
     },
-    "plusButton": {
-        "message": "'+' hnappur",
-        "description": "The button used in Signal Android to add a new linked device"
-    },
     "linkNewDevice": {
         "message": "Tengjast nýju tæki",
         "description": "The menu option shown in Signal iOS to add a new linked device"
+    },
+    "Install__scan-this-code": {
+        "message": "Skannaðu þennan kóða með Signal-forritinu á símanum þínum",
+        "description": "Title of the device link screen. Also used as alt text for the QR code on the device link screen"
+    },
+    "Install__instructions__1": {
+        "message": "Opnaðu Signal á símanum þínum",
+        "description": "Instructions on the device link screen"
+    },
+    "Install__instructions__2": {
+        "message": "Ýttu inn í $settings$, ýttu síðan á $linkedDevices$",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "settings": {
+                "content": "$1",
+                "example": "<strong>Settings</strong>"
+            },
+            "linkedDevices": {
+                "content": "$2",
+                "example": "<strong>Linked Devices</strong>"
+            }
+        }
+    },
+    "Install__instructions__2__settings": {
+        "message": "Stillingar",
+        "description": "Part of the 2nd instruction on the device link screen"
+    },
+    "Install__instructions__3": {
+        "message": "Ýttu á $plusButton$ (Android) eða $linkNewDevice$ (iPhone)",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "plusButton": {
+                "content": "$1",
+                "example": "<PlusButton />"
+            },
+            "linkNewDevice": {
+                "content": "$2",
+                "example": "<strong>Link New Device</strong>"
+            }
+        }
+    },
+    "Install__qr-failed": {
+        "message": "Ekki var hægt að hlaða inn QR-kóðanum. Athugaðu nettenginguna þína og prófaðu svo aftur. $learnMore$",
+        "description": "Shown on the install screen if the QR code fails to load",
+        "placeholders": {
+            "learnMore": {
+                "content": "$1",
+                "example": "<a>Learn more</a>"
+            }
+        }
+    },
+    "Install__qr-failed__learn-more": {
+        "message": "Kanna nánar",
+        "description": "Shown on the install screen if the QR code fails to load"
+    },
+    "Install__support-link": {
+        "message": "Þarftu hjálp?",
+        "description": "Shown on the install screen. Link takes users to a support page"
+    },
+    "Install__choose-device-name__description": {
+        "message": "Þú munt sjá þetta heiti undir \"Tengd tæki\" á símanum þínum.",
+        "description": "The subheader shown on the 'choose device name' screen in the device linking process"
+    },
+    "Install__choose-device-name__placeholder": {
+        "message": "Tölvan mín",
+        "description": "The placeholder for the 'choose device name' input"
     },
     "Preferences--device-name": {
         "message": "Heiti tækis",
@@ -1303,6 +1451,10 @@
     },
     "initialSync": {
         "message": "Samstilla tengiliði og hópa",
+        "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
+    },
+    "initialSync__subtitle": {
+        "message": "Athugaðu: Spjallferillinn þinn verður ekki samstilltur við þetta tæki",
         "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
     },
     "installConnectionFailed": {
@@ -1321,6 +1473,10 @@
         "message": "Eitthvað fór úrskeiðis!",
         "description": ""
     },
+    "installUnknownError": {
+        "message": "Óvænt villa kom upp. Prófaðu aftur.",
+        "description": ""
+    },
     "installTryAgain": {
         "message": "Reyndu aftur",
         "description": ""
@@ -1333,6 +1489,14 @@
         "message": "Hringi",
         "description": "Header for calling options on the settings screen"
     },
+    "calling__call-back": {
+        "message": "Hringja til baka",
+        "description": "Button to call someone back"
+    },
+    "calling__call-again": {
+        "message": "Hringja aftur",
+        "description": "Button to call someone again"
+    },
     "calling__start": {
         "message": "Byrja símtal",
         "description": "Button label in the call lobby for starting a call"
@@ -1344,6 +1508,10 @@
     "calling__return": {
         "message": "Snúa aftur í símtal",
         "description": "Button label in the call lobby for returning to a call"
+    },
+    "calling__lobby-automatically-muted-because-there-are-a-lot-of-people": {
+        "message": "Þaggað niður í hljóðnema vegna fjölda aðila í samtalinu",
+        "description": "Shown in a call lobby toast if there are a lot of people already on the call"
     },
     "calling__call-is-full": {
         "message": "Símtal er fullt",
@@ -1396,6 +1564,22 @@
     "calling__button--presenting-off": {
         "message": "Stöðva kynningu",
         "description": "Button tooltip label for stopping screen sharing"
+    },
+    "calling__button--ring__label": {
+        "message": "Hringja",
+        "description": "Label under the ring button"
+    },
+    "calling__button--ring__disabled-because-group-is-too-large": {
+        "message": "Hópurinn er of stór til að hægt sé að hringja í þátttakendurna.",
+        "description": "Button tooltip label when you can't ring because the group is too large"
+    },
+    "calling__button--ring__off": {
+        "message": "Senda tilkynningu, ekki hringja",
+        "description": "Button tooltip label for turning ringing off"
+    },
+    "calling__button--ring__on": {
+        "message": "Virkja hringingu",
+        "description": "Button tooltip label for turning ringing on"
     },
     "calling__your-video-is-off": {
         "message": "Það er slökkt á myndavél",
@@ -1470,7 +1654,7 @@
         }
     },
     "calling__pre-call-info--will-ring-1": {
-        "message": "Signal will ring $person$",
+        "message": "Signal mun hringja í $person$",
         "description": "Shown in the calling lobby to describe who will be rung",
         "placeholders": {
             "person": {
@@ -1479,8 +1663,58 @@
             }
         }
     },
+    "calling__pre-call-info--will-ring-2": {
+        "message": "Signal mun hringja í $first$ og $second$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-3": {
+        "message": "Signal mun hringja í $first$, $second$ og $third$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "third": {
+                "content": "$3",
+                "example": "April"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-many": {
+        "message": "Signal mun hringja í $first$, $second$ og $others$ til viðbótar",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "person": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "others": {
+                "content": "$3",
+                "example": "5"
+            }
+        }
+    },
     "calling__pre-call-info--will-notify-1": {
-        "message": "$person$ will be notified",
+        "message": "$person$ verður látinn vita",
         "description": "Shown in the calling lobby to describe who will be notified",
         "placeholders": {
             "person": {
@@ -1490,7 +1724,7 @@
         }
     },
     "calling__pre-call-info--will-notify-2": {
-        "message": "$first$ and $second$ will be notified",
+        "message": "$first$ og $second$ verða látnir vita",
         "description": "Shown in the calling lobby to describe who will be notified",
         "placeholders": {
             "first": {
@@ -1504,7 +1738,7 @@
         }
     },
     "calling__pre-call-info--will-notify-3": {
-        "message": "$first$, $second$, and $third$ will be notified",
+        "message": "$first$, $second$ og $third$ verða látnir vita",
         "description": "Shown in the calling lobby to describe who will be notified",
         "placeholders": {
             "first": {
@@ -1522,7 +1756,7 @@
         }
     },
     "calling__pre-call-info--will-notify-many": {
-        "message": "$first$, $second$, and $others$ others will be notified",
+        "message": "$first$, $second$ og $others$ til viðbótar verða látnir vita",
         "description": "Shown in the calling lobby to describe who will be notified",
         "placeholders": {
             "person": {
@@ -1569,7 +1803,7 @@
     },
     "calling__block-info": {
         "message": "Þú munt hvorki fá hljóð né video frá þeim né þeir frá þér",
-        "description": "Shown in the modal dialog to describe how blocking works in a gorup call"
+        "description": "Shown in the modal dialog to describe how blocking works in a group call"
     },
     "calling__overflow__scroll-up": {
         "message": "Skruna upp",
@@ -1658,10 +1892,10 @@
         "description": "Description of the always relay calls setting"
     },
     "alwaysRelayCallsDetail": {
-        "message": "Senda símtöl áfram í gegnum netþjóna Signal til að minnka líkur á að þínir tengiliðu geti komist að þinni ip addressu. Að virkja þennan möguleika mun minnka gæði símtals.",
+        "message": "Senda símtöl áfram í gegnum netþjóna Signal til að minnka líkur á að tengiliðirnir þínir geti komist að IP-vistfanginu þínu. Að virkja þennan möguleika mun minnka gæði símtala.",
         "description": "Details describing the always relay calls setting"
     },
-    "Preferences--permissions": {
+    "permissions": {
         "message": "Heimildir",
         "description": "Header for permissions section of settings"
     },
@@ -1678,7 +1912,7 @@
         "description": "Header for general options on the settings screen"
     },
     "spellCheckDescription": {
-        "message": "Spell check text entered in message composition box",
+        "message": "Láta villupúka að laga texta sem er skrifaður",
         "description": "Description of the spell check setting"
     },
     "spellCheckWillBeEnabled": {
@@ -1702,7 +1936,7 @@
         "description": "Description for the automatic launch setting"
     },
     "clearDataHeader": {
-        "message": "Clear application data",
+        "message": "Hreinsa gögn forritsins",
         "description": "Header in the settings dialog for the section dealing with data deletion"
     },
     "clearDataExplanation": {
@@ -1815,6 +2049,10 @@
         "message": "Sending mistókst",
         "description": "Shown on outgoing message if it fails to send"
     },
+    "deleteFailed": {
+        "message": "Eyðing mistókst",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to anyone"
+    },
     "sendPaused": {
         "message": "Sending í bið",
         "description": "Shown on outgoing message if it cannot be sent immediately"
@@ -1822,6 +2060,10 @@
     "partiallySent": {
         "message": "Sent að hluta, smelltu fyrir nánari upplýsingar",
         "description": "Shown on outgoing message if it is partially sent"
+    },
+    "partiallyDeleted": {
+        "message": "Eytt að hluta, smelltu til að reyna aftur",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to everyone"
     },
     "showMore": {
         "message": "Nánar",
@@ -1840,7 +2082,7 @@
         "description": "Warning notification that this version of the app has expired"
     },
     "upgrade": {
-        "message": "Click to go to signal.org/download",
+        "message": "Smelltu til að fara á signal.org/download",
         "description": "Label text for button to upgrade the app to the latest version"
     },
     "mediaMessage": {
@@ -1852,7 +2094,7 @@
         "description": "Error message displayed when sending to an unregistered user."
     },
     "sync": {
-        "message": "Import contacts",
+        "message": "Flytja inn tengiliði",
         "description": "Label for contact and group sync settings"
     },
     "syncExplanation": {
@@ -1908,12 +2150,20 @@
         }
     },
     "justNow": {
-        "message": "núna",
+        "message": "Núna",
         "description": "Shown if a message is very recent, less than 60 seconds old"
     },
     "timestampFormat_M": {
         "message": "D. MMM",
         "description": "Timestamp format string for displaying month and day (but not the year) of a date within the current year, ex: use 'MMM D' for 'Aug 8', or 'D MMM' for '8 Aug'."
+    },
+    "timestampFormat__long__today": {
+        "message": "[Today] LT",
+        "description": "Timestamp format string for displaying \"Today\" and the time"
+    },
+    "timestampFormat__long__yesterday": {
+        "message": "[Yesterday] LT",
+        "description": "Timestamp format string for displaying \"Yesterday\" and the time"
     },
     "messageBodyTooLong": {
         "message": "Texti skilaboðanna er of langur.",
@@ -2012,7 +2262,7 @@
         }
     },
     "audioNotificationDescription": {
-        "message": "Play notification sounds",
+        "message": "Spila hljóð með tilkynningum",
         "description": "Description for audio notification setting"
     },
     "callRingtoneNotificationDescription": {
@@ -2058,6 +2308,10 @@
                 "example": "Bob Smith"
             }
         }
+    },
+    "SafetyNumberModal__title": {
+        "message": "Sannreyna öryggisnúmer",
+        "description": "Title for the modal for safety number verification"
     },
     "safetyNumberChanged": {
         "message": "Öryggisnúmer hefur breyst",
@@ -2131,6 +2385,10 @@
         "message": "Nýtt samtal",
         "description": "Label for header when starting a new conversation"
     },
+    "stories": {
+        "message": "Sögur",
+        "description": "Label for header to go to stories view"
+    },
     "contactSearchPlaceholder": {
         "message": "Leita eftir nafni eða símanúmeri",
         "description": "Placeholder to use when searching for contacts in the composer"
@@ -2142,6 +2400,44 @@
     "noConversationsFound": {
         "message": "Engin samtöl fundust",
         "description": "Label shown when there are no conversations to compose to"
+    },
+    "Toast--failed-to-fetch-username": {
+        "message": "Mistókst að sækja notandanafn. Athugaðu nettenginguna þína og prófaðu svo aftur.",
+        "description": "Shown if request to Signal servers to find username fails"
+    },
+    "Toast--failed-to-fetch-phone-number": {
+        "message": "Mistókst að sækja símanúmer. Athugaðu nettenginguna þína og prófaðu svo aftur.",
+        "description": "Shown if request to Signal servers to find phone number fails"
+    },
+    "startConversation--username-not-found": {
+        "message": "Notandi fannst ekki. $atUsername$ er ekki Signal-notandi. Gakktu úr skugga um að þú hafir sett inn allt notandanafnið.",
+        "description": "Shown in dialog if username is not found. Note that 'username' will be the output of at-username",
+        "placeholders": {
+            "atUsername": {
+                "content": "$1",
+                "example": "@alex"
+            }
+        }
+    },
+    "startConversation--phone-number-not-found": {
+        "message": "Notandi fannst ekki. \"$phoneNumber$\" er ekki Signal-notandi.",
+        "description": "Shown in dialog if phone number is not found.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
+    },
+    "startConversation--phone-number-not-valid": {
+        "message": "Notandi fannst ekki. \"$phoneNumber$\" er ekki gilt símanúmer.",
+        "description": "Shown in dialog if phone number is not valid.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
     },
     "chooseGroupMembers__title": {
         "message": "Veldu meðlimi",
@@ -2184,20 +2480,6 @@
             "max": {
                 "content": "$1",
                 "example": "150"
-            }
-        }
-    },
-    "chooseGroupMembers__cant-add-member__title": {
-        "message": "Get ekki bætt við meðlimi",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group"
-    },
-    "chooseGroupMembers__cant-add-member__body": {
-        "message": "Ekki er hægt að bæta \"$name$\" í þennan hóp þar sem þeir eru að nota gamla útgáfu af Signal. Þú getur bætt þeim í hópinn eftir að þeir hafa uppfært Signal.",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group",
-        "placeholders": {
-            "max": {
-                "content": "$1",
-                "example": "Jane Doe"
             }
         }
     },
@@ -2250,7 +2532,7 @@
         "description": "When a person inputs a number that is invalid"
     },
     "unlinkedWarning": {
-        "message": "Endurtengdu Signal Desktop við farsímann þinn til að halda áfram samskiptum.",
+        "message": "Smelltu til að endurtengja Signal Desktop við farsímann þinn svo hægt sé að halda áfram samskiptum.",
         "description": ""
     },
     "unlinked": {
@@ -2262,16 +2544,28 @@
         "description": ""
     },
     "autoUpdateNewVersionTitle": {
-        "message": "Update available",
+        "message": "Uppfærsla er tiltæk",
+        "description": ""
+    },
+    "autoUpdateRetry": {
+        "message": "Prófaðu að uppfæra",
+        "description": ""
+    },
+    "autoUpdateContactSupport": {
+        "message": "hafðu samband",
         "description": ""
     },
     "autoUpdateNewVersionMessage": {
-        "message": "Click to restart Signal",
+        "message": "Smelltu til að endurræsa Signal",
         "description": ""
     },
     "downloadNewVersionMessage": {
-        "message": "Click to download update",
+        "message": "Smelltu til að sækja uppfærslu",
         "description": ""
+    },
+    "downloadFullNewVersionMessage": {
+        "message": "Signal gat ekki uppfærst. Smelltu til að reyna aftur.",
+        "description": "Shown in update dialog when partial update fails and we have to ask user to download full update"
     },
     "autoUpdateNewVersionInstructions": {
         "message": "Ýttu á 'Endurræsa Signal' til að setja inn uppfærslurnar.",
@@ -2283,6 +2577,10 @@
     },
     "autoUpdateLaterButtonLabel": {
         "message": "Seinna",
+        "description": ""
+    },
+    "autoUpdateIgnoreButtonLabel": {
+        "message": "Hunsa uppfærslu",
         "description": ""
     },
     "leftTheGroup": {
@@ -2354,6 +2652,38 @@
             "names": {
                 "content": "$1",
                 "example": "Alice, Bob"
+            }
+        }
+    },
+    "ConversationList__aria-label": {
+        "message": "Samtal við $title$, $unreadCount$ ný skilaboð, síðustu skilaboð: $lastMessage$.",
+        "description": "Aria label for the conversation list item",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "unreadCount": {
+                "content": "$2",
+                "example": "23"
+            },
+            "lastMessage": {
+                "content": "$3",
+                "example": "How about Friday?"
+            }
+        }
+    },
+    "ConversationList__last-message-undefined": {
+        "message": "Síðustu skilaboðum gæti hafa verið eytt.",
+        "description": "For aria-label within conversation list. Describes if last message is not defined."
+    },
+    "BaseConversationListItem__aria-label": {
+        "message": "Fara í samtal við $title$",
+        "description": "Aria label for the conversation list item button",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
             }
         }
     },
@@ -2589,6 +2919,10 @@
         "message": "Hætta við",
         "description": "Appears on the cancel button in confirmation dialogs."
     },
+    "MessageBody--read-more": {
+        "message": "Lesa meira",
+        "description": "When a message is too long this is the affordance to expand the message"
+    },
     "Message--unsupported-message": {
         "message": "$contact$ sendi þér skilaboð sem ekki er hægt að meðhöndla eða birta því það styðst við nýja eiginleika í Signal.",
         "description": "",
@@ -2626,7 +2960,7 @@
         "description": "Text shown on messages with with individual timers, after user has viewed it"
     },
     "Message--tap-to-view--outgoing": {
-        "message": "Myndefni",
+        "message": "Margmiðlunarefni",
         "description": "Text shown on outgoing messages with with individual timers (inaccessible)"
     },
     "Message--tap-to-view--incoming--expired-toast": {
@@ -2710,7 +3044,7 @@
         "description": "Shown in the shortcuts guide"
     },
     "Keyboard--open-all-media-view": {
-        "message": "Opna sýn á allt myndefni",
+        "message": "Opna sýn á allt margmiðlunarefni",
         "description": "Shown in the shortcuts guide"
     },
     "Keyboard--open-emoji-chooser": {
@@ -2865,6 +3199,10 @@
         "message": "Samtal í geymslu",
         "description": "A toast that shows up when user archives a conversation"
     },
+    "conversationArchivedUndo": {
+        "message": "Afturkalla",
+        "description": "Undo button for archiving a conversation"
+    },
     "conversationReturnedToInbox": {
         "message": "Samtal sett aftur í innhólf",
         "description": "A toast that shows up when the user unarchives a conversation"
@@ -2924,6 +3262,14 @@
     "StickerCreator--DropStage--title": {
         "message": "Bæta við límmerkjunum þínum",
         "description": "Title for the drop stage of the sticker creator"
+    },
+    "StickerCreator--DropStage--removeSticker": {
+        "message": "Fjarlægja límmerki",
+        "description": "Label for the X button used to remove a staged sticker"
+    },
+    "StickerCreator--DropStage--dragDrop": {
+        "message": "Smella eða draga/sleppa til að bæta við límmerki",
+        "description": "Shown on the + section of the file addition stage of sticker pack creation"
     },
     "StickerCreator--DropStage--help": {
         "message": "Límmerki verða að vera á PNG, APNG eða WebP sniði með gegnsæum bakgrunni og í 512x512 mynddíla stærð. Mælt er með 16px spássíu.",
@@ -3099,11 +3445,15 @@
         "message": "Setttu upp Signal á símanum þínum og tölvu ttil að nota Sticker Pack Creator límmerkjahönnunarforritið",
         "description": "The error message which appears when the user has not linked their account and attempts to use the Sticker Creator"
     },
+    "Reactions--remove": {
+        "message": "Fjarlægja viðbrögð",
+        "description": ""
+    },
     "Reactions--error": {
         "message": "Mistókst að senda viðbrögð. Prófaðu aftur síðar",
         "description": "Shown when a reaction fails to send"
     },
-    "ReactionsViewer--more": {
+    "Reactions--more": {
         "message": "Meira",
         "description": "Use in the reaction picker as the alt text for the 'more' button"
     },
@@ -3133,13 +3483,7 @@
     },
     "MessageRequests--message-group": {
         "message": "Viltu ganga í þennan hóp og deila nafninu þínu og mynd með meðlimum hans? Þeir munu ekki vita hvort þú hafir séð skilaboðin þeirra fyrr en þú samþykkir þetta.",
-        "description": "Shown as the message for a message request in a group",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the message for a message request in a group"
     },
     "MessageRequests--message-group-blocked": {
         "message": "Viltu opna á þennan hóp og deila nafninu þínu og mynd með meðlimum hans? Þú munt ekki fá nein skilaboð fyrr en þú aflæsir þessu.",
@@ -3153,7 +3497,7 @@
         "message": "Opna á",
         "description": "Shown as a button to let the user unblock a message request"
     },
-    "MessageRequests--unblock-confirm-title": {
+    "MessageRequests--unblock-direct-confirm-title": {
         "message": "Aflétta útilokun af $name$?",
         "description": "Shown as a button to let the user unblock a message request",
         "placeholders": {
@@ -3165,23 +3509,11 @@
     },
     "MessageRequests--unblock-direct-confirm-body": {
         "message": "Þið munuð geta sent hverju öðru skilaboð og hringt.",
-        "description": "Shown as the body in the confirmation modal for unblocking a private message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a private message request"
     },
     "MessageRequests--unblock-group-confirm-body": {
         "message": "Hópmeðlimir geta bætt þér í þennan hóp aftur.",
-        "description": "Shown as the body in the confirmation modal for unblocking a group message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a group message request"
     },
     "MessageRequests--block-and-report-spam": {
         "message": "Tilkynna ruslpóst og útiloka",
@@ -3321,7 +3653,7 @@
     },
     "member-of-2-groups": {
         "message": "Meðlimur í $group1$ og $group2$",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least two mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of two mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3335,7 +3667,7 @@
     },
     "member-of-3-groups": {
         "message": "Meðlimur í $group1$, $group2$ og $group3$",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of three mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3351,9 +3683,27 @@
             }
         }
     },
-    "member-of-more-than-3-groups": {
+    "member-of-more-than-3-groups--one-more": {
+        "message": "Meðlimur í $group1$, $group2$, $group3$ og einum til viðbótar",
+        "description": "Shown in the conversation hero to indicate this user is a member of four mutual groups",
+        "placeholders": {
+            "group1": {
+                "content": "$1",
+                "example": "NYC Rock Climbers"
+            },
+            "group2": {
+                "content": "$2",
+                "example": "Dinner Party"
+            },
+            "group3": {
+                "content": "$3",
+                "example": "Friends 🌿"
+            }
+        }
+    },
+    "member-of-more-than-3-groups--multiple-more": {
         "message": "Meðlimur í $group1$, $group2$, $group3$ og $remainingCount$ til viðbótar",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of 5+ mutual groups.",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3451,9 +3801,87 @@
         "message": "Innhringing myndsamtals...",
         "description": "Shown in both the incoming call bar and notification for an incoming video call"
     },
-    "outgoingCallPrering": {
-        "message": "Hringi...",
-        "description": "Shown in the call screen when placing an outgoing call that isn't ringing yet"
+    "incomingGroupCall__ringing-you": {
+        "message": "$ringer$ er að hringja í þig",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-1-other": {
+        "message": "$ringer$ er að hringja í þig og $otherMember$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "otherMember": {
+                "content": "$2",
+                "example": "Bob"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-2-others": {
+        "message": "$ringer$ er að hringja í þig, $first$ og $second$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-3-others": {
+        "message": "$ringer$ er að hringja í þig, $first$, $second$ og 1 til viðbótar",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-many": {
+        "message": "$ringer$ er að hringja í þig, $first$, $second$ og $remaining$ til viðbótar",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            },
+            "remaining": {
+                "content": "$4",
+                "example": "5"
+            }
+        }
     },
     "outgoingCallRinging": {
         "message": "Hringing...",
@@ -3531,7 +3959,7 @@
             }
         }
     },
-    "calling__call-notification__button__in-another-call-tooltip": {
+    "calling__in-another-call-tooltip": {
         "message": "Þú ert nú þegar í samtali",
         "description": "Tooltip in disabled notification button when you're on another call"
     },
@@ -3570,7 +3998,7 @@
         "description": "Title for the select your screen sharing sources modal"
     },
     "calling__SelectPresentingSourcesModal--confirm": {
-        "message": "Deila skjá",
+        "message": "Hefja deilingu",
         "description": "Confirm button for sharing screen modal"
     },
     "calling__SelectPresentingSourcesModal--entireScreen": {
@@ -3663,15 +4091,15 @@
     },
     "ErrorModal--title": {
         "message": "Eitthvað fór úrskeiðis!",
-        "description": "Title of pop-up dialog when user-initiated task has gone wrong"
+        "description": "Title of popup dialog when user-initiated task has gone wrong"
     },
     "ErrorModal--description": {
         "message": "Prófaðu aftur eða hafðu samband við aðstoðarteymi.",
-        "description": "Description text in pop-up dialog when user-initiated task has gone wrong"
+        "description": "Description text in popup dialog when user-initiated task has gone wrong"
     },
     "Confirmation--confirm": {
         "message": "Í lagi",
-        "description": "Button to dismiss pop-up dialog when user-initiated task has gone wrong"
+        "description": "Button to dismiss popup dialog when user-initiated task has gone wrong"
     },
     "unknown-sgnl-link": {
         "message": "Því miður, ekkert vit var í þessum sgnl:// tengli!",
@@ -3724,6 +4152,14 @@
     "GroupV2--join--link-revoked": {
         "message": "Þessi hóptengill er ekki lengur gildur.",
         "description": "Shown if you click a group link and we can't get information about it"
+    },
+    "GroupV2--join--link-forbidden--title": {
+        "message": "Get ekki gengið í hóp",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
+    },
+    "GroupV2--join--link-forbidden": {
+        "message": "Þú getur ekki gengið í þennan hóp með hóptenglinum þar sem stjórnandi hefur fjarlægt þig.",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
     },
     "GroupV2--join--prompt-with-approval": {
         "message": "Stjórnandi í hópnum verður að samþykkja beiðnina þína áður en þú getur gengið í hópinn. Ef hún er samþykkt, verður nafninu þínu og mynd deilt með meðlimum hópsins.",
@@ -4351,7 +4787,13 @@
     },
     "GroupV2--member-privilege--demote--other--unknown": {
         "message": "Stjórnandi tók stjórnunarréttindi af $memberName$.",
-        "description": "Shown in timeline or conversation preview when v2 group changes"
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "memberName": {
+                "content": "$1",
+                "example": "Bob"
+            }
+        }
     },
     "GroupV2--member-privilege--demote--you--other": {
         "message": "$adminName$ tók stjórnunarréttindi af þér.",
@@ -4753,6 +5195,30 @@
             }
         }
     },
+    "GroupV2--admin-approval-bounce--one": {
+        "message": "$joinerName$ sendi inn beiðni og hætti við beiðni um að fá að ganga í hópinn með hóptenglinum.",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "GroupV2--admin-approval-bounce": {
+        "message": "$joinerName$ sendi inn beiðni og hætti við $numberOfRequests$ beiðnir um að fá að ganga í hópinn með hóptenglinum.",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "numberOfRequests": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
     "GroupV2--group-link-add--disabled--you": {
         "message": "Þú kveiktir á hóptenglinum með samþykki stjórnanda óvirku.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
@@ -4932,11 +5398,11 @@
         "description": "Shown on Learn More popup after or Migration popup before GV1 migration"
     },
     "GroupV1--Migration--info--keep-history": {
-        "message": "Allur ferill skilaboða og myndefnis hefur verið geymdur frá því fyrir uppfærsluna.",
+        "message": "Allur ferill skilaboða og margmiðlunarefnis hefur verið geymdur frá því fyrir uppfærsluna.",
         "description": "Shown on Learn More popup after GV1 migration"
     },
     "GroupV1--Migration--migrate--keep-history": {
-        "message": "Allur ferill skilaboða og myndefnis mun verða geymdur frá því fyrir uppfærsluna.",
+        "message": "Allur ferill skilaboða og margmiðlunarefnis mun verða geymdur frá því fyrir uppfærsluna.",
         "description": "Shown on Migration popup before GV1 migration"
     },
     "GroupV1--Migration--info--invited--you": {
@@ -5023,6 +5489,30 @@
         "message": "næsta",
         "description": "Generic next label"
     },
+    "BadgeDialog__become-a-sustainer-button": {
+        "message": "Gerstu stuðningsaðili",
+        "description": "In the badge dialog. This button is shown under sustainer badges, taking users to some instructions"
+    },
+    "BadgeSustainerInstructions__header": {
+        "message": "Gerstu stuðningsaðili",
+        "description": "In the instructions for becoming a sustainer. The heading."
+    },
+    "BadgeSustainerInstructions__subheader": {
+        "message": "Signal er keyrt áfram af fólki eins og þér. Sýndu stuðning þinn í verki og fáðu merki.",
+        "description": "In the instructions for becoming a sustainer. The subheading."
+    },
+    "BadgeSustainerInstructions__instructions__1": {
+        "message": "Opnaðu Signal á símanum þínum",
+        "description": "In the instructions for becoming a sustainer. First instruction."
+    },
+    "BadgeSustainerInstructions__instructions__2": {
+        "message": "Ýttu á auðkennismyndina þína efst til vinstri til að opna stillingar",
+        "description": "In the instructions for becoming a sustainer. Second instruction."
+    },
+    "BadgeSustainerInstructions__instructions__3": {
+        "message": "Ýttu á 'Gerstu stuðningsaðili' og skráðu þig í áskrift",
+        "description": "In the instructions for becoming a sustainer. Third instruction."
+    },
     "CompositionArea--expand": {
         "message": "Fletta út",
         "description": "Aria label for expanding composition area"
@@ -5044,7 +5534,7 @@
         "description": "Displayed while checking if the contact is SMS-only"
     },
     "countMutedConversationsDescription": {
-        "message": "Include muted conversations in badge count",
+        "message": "Telja þögguð samtöl með í talningu á merki",
         "description": "Description for counting muted conversations in badge setting"
     },
     "ContactModal--message": {
@@ -5070,7 +5560,7 @@
         }
     },
     "ContactModal--rm-admin-info": {
-        "message": "Taka hópstjórarréttindi af $contact$",
+        "message": "Taka hópstjórarréttindi af $contact$?",
         "description": "Shown in a confirmation dialog when you are about to remove admin privileges from someone",
         "placeholders": {
             "contact": {
@@ -5091,6 +5581,14 @@
         "message": "Stillingar hóps",
         "description": "This is a button in the conversation context menu to show group settings"
     },
+    "showConversationDetails--direct": {
+        "message": "Stillingar spjalls",
+        "description": "This is a button in the conversation context menu to show chat settings"
+    },
+    "ConversationDetails__unmute--title": {
+        "message": "Afþagga þetta spjall?",
+        "description": "Title for the modal to unmute a chat"
+    },
     "ConversationDetails--group-link": {
         "message": "Tengill hóps",
         "description": "This is the label for the group link management panel"
@@ -5099,9 +5597,13 @@
         "message": "Sjálfeyðandi skilaboð",
         "description": "This is the label for the disappearing messages setting panel"
     },
-    "ConversationDetails--disappearing-messages-info": {
+    "ConversationDetails--disappearing-messages-info--group": {
         "message": "Þegar þetta er virkt, munu send og móttekin skilaboð í þessum hópi hverfa eftir að þau hafa verið skoðuð.",
-        "description": "This is the info about the disappearing messages setting"
+        "description": "This is the info about the disappearing messages setting, in groups"
+    },
+    "ConversationDetails--disappearing-messages-info--direct": {
+        "message": "Þegar þetta er virkt, munu send og móttekin skilaboð í þessu maður-á-mann spjalli hverfa eftir að þau hafa verið skoðuð.",
+        "description": "This is the info about the disappearing messages setting, for direct conversations"
     },
     "ConversationDetails--notifications": {
         "message": "Tilkynningar",
@@ -5129,7 +5631,7 @@
     },
     "ConversationDetails--announcement-info": {
         "message": "Veldu hverjir geta sent skilaboð á þennan hóp.",
-        "description": "This is the additional info for the 'who can send mesages' panel"
+        "description": "This is the additional info for the 'who can send messages' panel"
     },
     "ConversationDetails--requests-and-invites": {
         "message": "Beiðnir og boð",
@@ -5188,7 +5690,7 @@
         }
     },
     "ConversationDetailsMediaList--shared-media": {
-        "message": "Deilt myndefni",
+        "message": "Deilt margmiðlunarefni",
         "description": "Title for the media thumbnails in the conversation details screen"
     },
     "ConversationDetailsMediaList--show-all": {
@@ -5293,6 +5795,16 @@
             }
         }
     },
+    "PendingRequests--deny-for--with-link": {
+        "message": "Hafna beiðni frá “$name$”? Viðkomandi munu ekki geta gengið aftur í hópinn með hóptenglinum.",
+        "description": "This is the modal content when confirming denying a group request to join",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Meowsy Purrington"
+            }
+        }
+    },
     "PendingInvites--invites": {
         "message": "Boðið af þér",
         "description": "This is the title list of all invites"
@@ -5344,7 +5856,7 @@
         }
     },
     "PendingInvites--revoke-from-plural": {
-        "message": "Afturkalla $number$ boð í hóp sent af \"$name$\"",
+        "message": "Afturkalla $number$ boð send af \"$name$\"?",
         "description": "This is the modal content when confirming revoking multiple invites",
         "placeholders": {
             "number": {
@@ -5371,7 +5883,7 @@
     },
     "PendingRequests--info": {
         "message": "Fólk á þessum lista er að reyna að ganga í \"$name$\" með hóptengli.",
-        "description": "Inforamtion shown below the pending admin approval list",
+        "description": "Information shown below the pending admin approval list",
         "placeholders": {
             "name": {
                 "content": "$1",
@@ -5382,6 +5894,28 @@
     "PendingInvites--info": {
         "message": "Nánari upplýsingar um fólk sem boðið er í þennan hóp eru ekki birtar fyrr en það hefur gengið í hópinn. Boðsgestir munu aðeins sjá skilaboð þegar það hefur gengið í hópinn.",
         "description": "Information shown below the invite list"
+    },
+    "PendingRequests--block--button": {
+        "message": "Loka á beiðni",
+        "description": "Shown in timeline if users cancel their request to join a group via a group link"
+    },
+    "PendingRequests--block--title": {
+        "message": "Loka á beiðni?",
+        "description": "Title of dialog to block a user from requesting to join via the link again"
+    },
+    "PendingRequests--block--contents": {
+        "message": "$name$ mun ekki geta beðið um eða gengið í þennan hóp með hóptenglinum. Eftir sem áður er hægt að bæta viðkomandi inn handvirkt.",
+        "description": "Details of dialog to block a user from requesting to join via the link again",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Annoying Person"
+            }
+        }
+    },
+    "PendingRequests--block--confirm": {
+        "message": "Loka á beiðni",
+        "description": "Confirmation button of dialog to block a user from requesting to join via the link again"
     },
     "AvatarInput--no-photo-label--group": {
         "message": "Bæta við hópmynd",
@@ -5496,16 +6030,34 @@
         "description": "The text of the button to create new groups"
     },
     "selectContact": {
-        "message": "Velja tengilið",
-        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)"
+        "message": "Velja tengiliðinn $name$",
+        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "deselectContact": {
-        "message": "Afvelja tengilið",
-        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)"
+        "message": "Afvelja tengiliðinn $name$",
+        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "cannotSelectContact": {
-        "message": "Get ekki valið tengilið",
-        "description": "The label for contact checkboxes that are disabled"
+        "message": "Get ekki valið tengiliðinn $name$",
+        "description": "The label for contact checkboxes that are disabled",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "alreadyAMember": {
         "message": "Nú þegar meðlimur",
@@ -5548,6 +6100,14 @@
     "ForwardMessageModal--continue": {
         "message": "Áfram",
         "description": "aria-label for the 'next' button in the forward a message modal dialog"
+    },
+    "TimelineDateHeader--date-in-last-6-months": {
+        "message": "ddd. D. MMM",
+        "description": "Moment.js format for date headers in the message timeline, for dates <6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
+    "TimelineDateHeader--date-older-than-6-months": {
+        "message": "D. MMM, YYYY",
+        "description": "Moment.js format for date headers in the message timeline, for dates >=6 months old. See https://momentjs.com/docs/#/displaying/format/."
     },
     "MessageRequestWarning__learn-more": {
         "message": "Kanna nánar",
@@ -5649,6 +6209,16 @@
             }
         }
     },
+    "RemoveGroupMemberConfirmation__description__with-link": {
+        "message": "Fjarlægja \"$name$\" úr hópnum? Viðkomandi munu ekki geta gengið aftur í hópinn með hóptenglinum.",
+        "description": "When confirming the removal of a group member, show this text in the dialog",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Jane Doe"
+            }
+        }
+    },
     "CaptchaDialog__title": {
         "message": "Sannreyna til að halda áfram samskiptum",
         "description": "Header in the captcha dialog"
@@ -5683,7 +6253,7 @@
     },
     "deleteForEveryoneFailed": {
         "message": "Mistókst að eyða skilaboðum hjá öllum. Reyndu aftur síðar.",
-        "description": "Displayed when delete-for-everyone has failed to send to all recepients"
+        "description": "Displayed when delete-for-everyone has failed to send to all recipients"
     },
     "ChatColorPicker__delete--title": {
         "message": "Eyða lit",
@@ -5787,6 +6357,14 @@
         "message": "Sérsniðinn tími",
         "description": "Text for an option in Conversation Details Disappearing Messages setting when user previously selected custom time"
     },
+    "DisappearingTimeDialog__label--value": {
+        "message": "Number",
+        "description": "aria-label for the number select box"
+    },
+    "DisappearingTimeDialog__label--units": {
+        "message": "Unit of time",
+        "description": "aria-label for the units of time select box"
+    },
     "DisappearingTimeDialog__title": {
         "message": "Sérsniðinn tími",
         "description": "Title for the custom disappearing message timeout dialog"
@@ -5825,7 +6403,7 @@
     },
     "settings__DisappearingMessages__timer__label": {
         "message": "Sjálfgefin tímastilling fyrir nýtt spjall",
-        "description": "Label for the Disapearring Messages default timer setting"
+        "description": "Label for the Disappearing Messages default timer setting"
     },
     "UniversalTimerNotification__text": {
         "message": "Niðurtalning sjálfeyðandi skilaboða er tímastillt á $timeValue$ þegar þú sendir viðkomandi aðila skilaboð.",
@@ -5838,7 +6416,7 @@
         }
     },
     "ErrorBoundaryNotification__text": {
-        "message": "Couldn't display this message. Click to submit a debug log.",
+        "message": "Gat ekki birt þessi skilaboð. Smelltu til að senda villuskýrslu.",
         "description": "An error notification displayed when message fails to render due to an internal error"
     },
     "GroupDescription__read-more": {
@@ -5854,11 +6432,11 @@
         "description": "Placeholder text in the details header for those that can edit the group description"
     },
     "MediaQualitySelector--button": {
-        "message": "Veldu gæði myndefnis",
+        "message": "Veldu gæði margmiðlunarefnis",
         "description": "aria-label for the media quality selector button"
     },
     "MediaQualitySelector--title": {
-        "message": "Gæði myndefnis",
+        "message": "Gæði margmiðlunarefnis",
         "description": "Popup selector title"
     },
     "MediaQualitySelector--standard-quality-title": {
@@ -5904,6 +6482,70 @@
     "ProfileEditor--about": {
         "message": "Nánar",
         "description": "Default text for about field"
+    },
+    "ProfileEditor--username": {
+        "message": "Notandanafn",
+        "description": "Default text for username field"
+    },
+    "ProfileEditor--username--placeholder": {
+        "message": "Skráðu notandanafn:",
+        "description": "Placeholder for the username field"
+    },
+    "ProfileEditor--username--helper": {
+        "message": "Notendanöfn eru valfrjáls á Signal. Ef þú kýst að útbúa notandanafn munu aðrir notendur Signal geta fundið þig með þessu notandanafni og haft samband við þig án þess að þekkja símanúmerið þitt.",
+        "description": "Shown on the edit username screen"
+    },
+    "ProfileEditor--username--check-characters": {
+        "message": "Notendanöfn mega bara innihalda a-z, 0-9, og _",
+        "description": "Shown if user has attempted to use forbidden characters"
+    },
+    "ProfileEditor--username--check-starting-character": {
+        "message": "Notandanöfn geta ekki byrjað á tölustaf.",
+        "description": "Shown if user has attempted to begin their username with a number"
+    },
+    "ProfileEditor--username--check-character-min": {
+        "message": "Notandanöfn verða að hafa minnst $min$ stafi.",
+        "description": "Shown if user has attempted to enter a username with too few characters - currently min is 3",
+        "placeholders": {
+            "min": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "ProfileEditor--username--check-character-max": {
+        "message": "Notandanöfn mega hafa mest $max$ stafi.",
+        "description": "Shown if user has attempted to enter a username with too many characters - currently min is 25",
+        "placeholders": {
+            "max": {
+                "content": "$1",
+                "example": "25"
+            }
+        }
+    },
+    "ProfileEditor--username--check-username-taken": {
+        "message": "Þetta notandanafn er frátekið.",
+        "description": "Shown if user has attempted to save a username which is not available"
+    },
+    "ProfileEditor--username--general-error": {
+        "message": "Ekki var hægt að vista notandanafnið þitt. Athugaðu nettenginguna þína og prófaðu svo aftur.",
+        "description": "Shown if something unknown has gone wrong with username save."
+    },
+    "ProfileEditor--username--delete-general-error": {
+        "message": "Ekki var hægt að fjarlægja notandanafnið þitt. Athugaðu nettenginguna þína og prófaðu svo aftur.",
+        "description": "Shown if something unknown has gone wrong with username delete."
+    },
+    "ProfileEditor--username--delete-username": {
+        "message": "Eyða notandanafni",
+        "description": "Shown as aria label for trash icon next to username"
+    },
+    "ProfileEditor--username--confirm-delete-body": {
+        "message": "Þetta mun fjarlægja notandanafnið þitt og gera þar með öðrum kleift að biðja um það. Ertu viss?",
+        "description": "Shown in dialog body if user has saved an empty string to delete their username"
+    },
+    "ProfileEditor--username--confirm-delete-button": {
+        "message": "Eyða",
+        "description": "Shown in dialog button if user has saved an empty string to delete their username"
     },
     "ProfileEditor--about-placeholder": {
         "message": "Skrifaðu nokkur orð um sjálfa/n þig...",
@@ -5967,6 +6609,14 @@
         "message": "Nánar",
         "description": "Title for about editing"
     },
+    "ProfileEditorModal--avatar": {
+        "message": "Auðkennismyndin þín",
+        "description": "Title for profile avatar editing"
+    },
+    "ProfileEditorModal--username": {
+        "message": "Notandanafn",
+        "description": "Title for username editing"
+    },
     "ProfileEditorModal--error": {
         "message": "Ekki var hægt að uppfæra notandasniðið þitt. Reyndu aftur.",
         "description": "Error message when something goes wrong updating your profile."
@@ -6010,8 +6660,8 @@
         "description": "Button to switch the settings view"
     },
     "Preferences__button--chats": {
-        "message": "Spjöll",
-        "description": "Button to switch the settings view"
+        "message": "Spjall",
+        "description": "Button to switch the settings view (and a title of pane)"
     },
     "Preferences__button--calls": {
         "message": "Símtöl",
@@ -6026,7 +6676,7 @@
         "description": "Button to switch the settings view"
     },
     "Preferences--lastSynced": {
-        "message": "Last import at $date$ $time$",
+        "message": "Síðasti innflutningur þann $date$ $time$",
         "description": "Label for date and time of last sync operation",
         "placeholders": {
             "date": {
@@ -6044,7 +6694,7 @@
         "description": "Title for system type settings"
     },
     "Preferences--zoom": {
-        "message": "Zoom level",
+        "message": "Aðdráttarstig",
         "description": "Label for changing the zoom level"
     },
     "Preferences__link-previews--title": {
@@ -6052,7 +6702,7 @@
         "description": "Title for the generate link previews setting"
     },
     "Preferences__link-previews--description": {
-        "message": "To change this setting, open the Signal app on your mobile device and navigate to Settings > Chats",
+        "message": "Til að breyta þessum stillingum skaltu opna Signal-forritið á farsímanum þínum og fara í Stillingar > Spjall",
         "description": "Description for the generate link previews setting"
     },
     "Preferences--advanced": {
@@ -6060,15 +6710,15 @@
         "description": "Title for advanced settings"
     },
     "Preferences--notification-content": {
-        "message": "Notification content",
+        "message": "Efni tilkynningar",
         "description": "Label for the notification content setting select box"
     },
     "Preferences--blocked": {
-        "message": "Bannaður",
+        "message": "Bannaðir",
         "description": "Label for blocked contacts setting"
     },
     "Preferences--blocked-count-singular": {
-        "message": "$num$ contact",
+        "message": "$num$ tengiliður",
         "description": "Number of contacts blocked singular",
         "placeholders": {
             "num": {
@@ -6078,7 +6728,7 @@
         }
     },
     "Preferences--blocked-count-plural": {
-        "message": "$num$ contacts",
+        "message": "$num$ tengiliðir",
         "description": "Number of contacts blocked plural",
         "placeholders": {
             "num": {
@@ -6088,11 +6738,11 @@
         }
     },
     "Preferences__who-can--title": {
-        "message": "Who can...",
+        "message": "Hver getur…",
         "description": "Title for the 'who can do X' setting"
     },
     "Preferences__privacy--description": {
-        "message": "To change these settings, open the Signal app on your mobile device and navigate to Settings > Privacy",
+        "message": "Til að breyta þessum stillingum skaltu opna Signal-forritið á farsímanum þínum og fara í Stillingar > Gagnaleynd",
         "description": "Description for the 'who can do X' setting"
     },
     "Preferences__who-can--everybody": {
@@ -6116,7 +6766,7 @@
         "description": "Label for the see my phone number setting"
     },
     "Preferences--find-me": {
-        "message": "Find me by my phone number",
+        "message": "Fundið mig með símanúmerinu mínu",
         "description": "Label for the find me by my phone number setting"
     },
     "Preferences--read-receipts": {
@@ -6128,15 +6778,23 @@
         "description": "Label for the typing indicators setting"
     },
     "Preferences--updates": {
-        "message": "Updates",
+        "message": "Uppfærslur",
         "description": "Header for settings having to do with updates"
     },
     "Preferences__download-update": {
-        "message": "Automatically download updates",
+        "message": "Sótt uppfærslur sjálfkrafa",
         "description": "Label for checkbox for the auto download updates setting"
     },
+    "Preferences__enable-notifications": {
+        "message": "Virkja tilkynningar",
+        "description": "Label for checkbox for the notifications setting"
+    },
+    "Preferences__devices": {
+        "message": "Tæki",
+        "description": "Label for Device list in call settings pane"
+    },
     "DialogUpdate--version-available": {
-        "message": "Update to version $version$ available",
+        "message": "Uppfærsla í útgáfu $version$ er tiltæk",
         "description": "Tooltip for new update available",
         "placeholders": {
             "status": {
@@ -6145,24 +6803,322 @@
             }
         }
     },
-    "WhatsNew__v5.15--1": {
-        "message": "No that's not speck of dust you need to flick off your monitor, there's now a dot for unplayed incoming audio messages.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--first-line": {
+        "message": "Ekki er hægt að loka Signal.",
+        "description": "First line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--2": {
-        "message": "The calling lobby got some remodeling and renovations done and we didn't even have to refinance.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--second-line": {
+        "message": "Lokaðu því handvirkt og ýttu á 'Reyna aftur' til að halda áfram.",
+        "description": "Second line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--3": {
-        "message": "The new preferences window is better and faster. Go ahead and change your zoom level, toggle the theme, set a custom disappearing timer.",
-        "description": "Release notes for v5.15"
+    "NSIS__appRunning": {
+        "message": "$appName$ is running.\nClick OK to close it.\nIf it doesn't close, try closing it manually.",
+        "description": "The contents of a dialog displayed when Windows installer detect that the application is running and asks user to close it. Note: please keep the line breaks so that the text occupies three separate lines",
+        "placeholders": {
+            "appName": {
+                "content": "$1",
+                "example": "Signal"
+            }
+        }
     },
-    "WhatsNew__v5.15--4": {
-        "message": "You can now choose when to download and apply new updates for Signal. The dialogs got a small makeover too. Check out the setting in the new preferences window.",
-        "description": "Release notes for v5.15"
+    "NSIS__decompressionFailed": {
+        "message": "Failed to decompress files. Please try running the installer again.",
+        "description": "Displayed when Windows installer cannot decompress application files"
     },
-    "WhatsNew__v5.15--5": {
-        "message": "Squashed lots of bugs and there are some performance improvements as well. Thank you all for your reports!",
-        "description": "Release notes for v5.15"
+    "NSIS__uninstallFailed": {
+        "message": "Failed to uninstall old application files. Please try running the installer again.",
+        "description": "Displayed when Windows installer cannot uninstall the old application"
+    },
+    "CrashReportDialog__title": {
+        "message": "Forritið hrundi",
+        "description": "A title of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__body": {
+        "message": "Signal endurræsti eftir hrun. Þú getur sent inn hrunskýrslu til að hjálpa Signal við að rannsaka vandamálið.",
+        "description": "The body of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__submit": {
+        "message": "Senda",
+        "description": "A button label for submission of the crash reporter data after a recent crash"
+    },
+    "CrashReportDialog__erase": {
+        "message": "Ekki senda",
+        "description": "A button label for erasure of the crash reporter data after a recent crash and continuing to start the app"
+    },
+    "CustomizingPreferredReactions__title": {
+        "message": "Sérsníða viðbrögð",
+        "description": "Shown in the header of the modal for customizing the preferred reactions. Also shown in the tooltip for the button that opens this modal."
+    },
+    "CustomizingPreferredReactions__subtitle": {
+        "message": "Smelltu til að skipta út tákni",
+        "description": "Instructions in the modal for customizing the preferred reactions."
+    },
+    "CustomizingPreferredReactions__had-save-error": {
+        "message": "Það kom upp villa við að vista stillingarnar þínar. Prófaðu aftur.",
+        "description": "Shown if there is an error when saving your preferred reaction settings. Should be very rare to see this message."
+    },
+    "MediaEditor__control--draw": {
+        "message": "Teikna",
+        "description": "Label for the draw button in the media editor"
+    },
+    "MediaEditor__control--text": {
+        "message": "Bæta við texta",
+        "description": "Label for the text button in the media editor"
+    },
+    "MediaEditor__control--sticker": {
+        "message": "Límmerki",
+        "description": "Label for the sticker button in the media editor"
+    },
+    "MediaEditor__control--crop": {
+        "message": "Utansníða og snúa",
+        "description": "Label for the crop & rotate button in the media editor"
+    },
+    "MediaEditor__control--undo": {
+        "message": "Afturkalla",
+        "description": "Label for the undo button in the media editor"
+    },
+    "MediaEditor__control--redo": {
+        "message": "Endurgera",
+        "description": "Label for the redo button in the media editor"
+    },
+    "MediaEditor__text--regular": {
+        "message": "Venjulegt",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--highlight": {
+        "message": "Áherslulitað",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--outline": {
+        "message": "Útlína",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--underline": {
+        "message": "Undirstrikað",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__draw--pen": {
+        "message": "Penni",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--highlighter": {
+        "message": "Áherslupenni",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--thin": {
+        "message": "Mjór",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--regular": {
+        "message": "Venjulegt",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--medium": {
+        "message": "Miðlungs",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--heavy": {
+        "message": "Breiður",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__crop--reset": {
+        "message": "Endurstilla",
+        "description": "Reset the crop state"
+    },
+    "MediaEditor__crop--rotate": {
+        "message": "Snúa",
+        "description": "Rotate the canvas"
+    },
+    "MediaEditor__crop--flip": {
+        "message": "Fletta",
+        "description": "Flip/mirror the canvas"
+    },
+    "MediaEditor__crop--lock": {
+        "message": "Læsa",
+        "description": "Lock the aspect ratio"
+    },
+    "MediaEditor__crop--crop": {
+        "message": "Utansníða",
+        "description": "Performs the crop"
+    },
+    "MyStories__title": {
+        "message": "Sögurnar mínar",
+        "description": "Title for the my stories list"
+    },
+    "MyStories__story": {
+        "message": "Sagan þín",
+        "description": "aria-label for each one of your stories"
+    },
+    "MyStories__download": {
+        "message": "Sækja sögu",
+        "description": "aria-label for the download button"
+    },
+    "MyStories__more": {
+        "message": "Fleiri valkostir",
+        "description": "aria-label for the more button"
+    },
+    "MyStories__views--singular": {
+        "message": "$num$ innlit",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__views--plural": {
+        "message": "$num$ innlit",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "16"
+            }
+        }
+    },
+    "MyStories__replies--singular": {
+        "message": "$num$ svar",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__replies--plural": {
+        "message": "$num$ svör",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "MyStories__delete": {
+        "message": "Eyða þessari sögu? Henni verður líka eytt hjá öllum sem hafa fengið hana.",
+        "description": "Confirmation dialog description text for deleting a story"
+    },
+    "Stories__title": {
+        "message": "Sögur",
+        "description": "Title for the stories list"
+    },
+    "Stories__mine": {
+        "message": "Sögurnar mínar",
+        "description": "Label for your stories"
+    },
+    "Stories__add": {
+        "message": "Bæta við sögu",
+        "description": "Description hint to add a story"
+    },
+    "Stories__hidden-stories": {
+        "message": "Faldar sögur",
+        "description": "Button label to go to hidden stories pane"
+    },
+    "Stories__list-empty": {
+        "message": "Í augnablikinu eru engar nýlegar sögur til að birta",
+        "description": "Description for when there are no stories to show"
+    },
+    "Stories__placeholder--text": {
+        "message": "Smelltu til að skoða sögu",
+        "description": "Placeholder label for the story view"
+    },
+    "Stories__from-to-group": {
+        "message": "$name$ í $group$",
+        "description": "Title for someone sending a story to a group",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Elle"
+            },
+            "group": {
+                "content": "$2",
+                "example": "Family"
+            }
+        }
+    },
+    "StoryViewer__reply": {
+        "message": "Svara",
+        "description": "Button label to reply to a story"
+    },
+    "StoryViewsNRepliesModal__placeholder": {
+        "message": "Skrifaðu svar...",
+        "description": "Placeholder text for the story reply modal"
+    },
+    "StoryViewsNRepliesModal__tab--views": {
+        "message": "Skoðað",
+        "description": "Title for views tab"
+    },
+    "StoryViewsNRepliesModal__tab--replies": {
+        "message": "Svör",
+        "description": "Title for replies tab"
+    },
+    "StoryViewsNRepliesModal__react": {
+        "message": "Bregðast við sögu",
+        "description": "aria-label for reaction button"
+    },
+    "StoryViewsNRepliesModal__reacted": {
+        "message": "Brást við sögunni",
+        "description": "Description of someone reacting to a story"
+    },
+    "StoryListItem__label": {
+        "message": "Saga",
+        "description": "aria-label for the story list button"
+    },
+    "StoryListItem__unhide": {
+        "message": "Show stories",
+        "description": "Label for menu item to un-hide the story"
+    },
+    "StoryListItem__hide": {
+        "message": "Fela sögu",
+        "description": "Label for menu item to hide the story"
+    },
+    "StoryListItem__go-to-chat": {
+        "message": "Fara í spjall",
+        "description": "Label for menu item to go to conversation"
+    },
+    "StoryListItem__hide-modal--body": {
+        "message": "Fela sögu? Nýjar uppfærslur á sögu frá $name$ munu ekki birtast framar efst í sögulistanum.",
+        "description": "Body for the confirmation dialog for hiding a story"
+    },
+    "StoryListItem__hide-modal--confirm": {
+        "message": "Fela",
+        "description": "Action button for the confirmation dialog to hide a story"
+    },
+    "StoryImage__error": {
+        "message": "Villa við að birta mynd",
+        "description": "aria-label for image errors"
+    },
+    "TextAttachment__preview__link": {
+        "message": "Skoða tengil",
+        "description": "Title for the link preview tooltip"
+    },
+    "WhatsNew__modal-title": {
+        "message": "Hvað er nýtt",
+        "description": "Title for the whats new modal"
+    },
+    "WhatsNew__bugfixes": {
+        "message": "Þessi útgáfa inniheldur nokkrar villuleiðréttingar og fínstillingar til að Signal keyri sem áreiðanlegast.",
+        "description": "Release notes for releases that only include bug fixes"
+    },
+    "WhatsNew__v5.40--1": {
+        "message": "Bug fixes including a fix to an issue that would sometimes make it difficult to click on menus. ",
+        "description": "Release notes for v5.40"
+    },
+    "WhatsNew__v5.40--2": {
+        "message": "Thanks to our open source contributors $dsanders11$ and $yusufsahinhamza$ for contributing to these improvements.",
+        "description": "Release notes for v5.40",
+        "placeholders": {
+            "dsanders11": {
+                "content": "$1",
+                "example": "dsanders11"
+            },
+            "yusufsahinhamza": {
+                "content": "$2",
+                "example": "yusufsahinhamza"
+            }
+        }
     }
 }

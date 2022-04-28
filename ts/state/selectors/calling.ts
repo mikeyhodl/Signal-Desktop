@@ -1,24 +1,19 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { createSelector } from 'reselect';
 
-import { StateType } from '../reducer';
-import {
+import type { StateType } from '../reducer';
+import type {
   CallingStateType,
   CallsByConversationType,
   DirectCallStateType,
   GroupCallStateType,
-  isAnybodyElseInGroupCall,
 } from '../ducks/calling';
-import {
-  CallMode,
-  CallState,
-  GroupCallConnectionState,
-} from '../../types/Calling';
+import { getIncomingCall as getIncomingCallHelper } from '../ducks/calling';
 import { getUserUuid } from './user';
 import { getOwn } from '../../util/getOwn';
-import { missingCaseError } from '../../util/missingCaseError';
+import type { UUIDStringType } from '../../types/UUID';
 
 export type CallStateType = DirectCallStateType | GroupCallStateType;
 
@@ -40,9 +35,9 @@ export type CallSelectorType = (
 ) => CallStateType | undefined;
 export const getCallSelector = createSelector(
   getCallsByConversation,
-  (callsByConversation: CallsByConversationType): CallSelectorType => (
-    conversationId: string
-  ) => getOwn(callsByConversation, conversationId)
+  (callsByConversation: CallsByConversationType): CallSelectorType =>
+    (conversationId: string) =>
+      getOwn(callsByConversation, conversationId)
 );
 
 export const getActiveCall = createSelector(
@@ -62,29 +57,17 @@ export const isInCall = createSelector(
   (call: CallStateType | undefined): boolean => Boolean(call)
 );
 
-// In theory, there could be multiple incoming calls, or an incoming call while there's
-//   an active call. In practice, the UI is not ready for this, and RingRTC doesn't
-//   support it for direct calls.
 export const getIncomingCall = createSelector(
   getCallsByConversation,
   getUserUuid,
   (
     callsByConversation: CallsByConversationType,
-    ourUuid: string
+    ourUuid: UUIDStringType | undefined
   ): undefined | DirectCallStateType | GroupCallStateType => {
-    return Object.values(callsByConversation).find(call => {
-      switch (call.callMode) {
-        case CallMode.Direct:
-          return call.isIncoming && call.callState === CallState.Ringing;
-        case CallMode.Group:
-          return (
-            call.ringerUuid &&
-            call.connectionState === GroupCallConnectionState.NotConnected &&
-            isAnybodyElseInGroupCall(call.peekInfo, ourUuid)
-          );
-        default:
-          throw missingCaseError(call);
-      }
-    });
+    if (!ourUuid) {
+      return undefined;
+    }
+
+    return getIncomingCallHelper(callsByConversation, ourUuid);
   }
 );

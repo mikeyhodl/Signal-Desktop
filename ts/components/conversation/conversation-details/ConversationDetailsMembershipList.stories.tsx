@@ -8,15 +8,16 @@ import { storiesOf } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { number } from '@storybook/addon-knobs';
 
-import { setup as setupI18n } from '../../../../js/modules/i18n';
+import { setupI18n } from '../../../util/setupI18n';
 import enMessages from '../../../../_locales/en/messages.json';
 import { getDefaultConversation } from '../../../test-both/helpers/getDefaultConversation';
+import { ThemeType } from '../../../types/Util';
 
-import {
-  ConversationDetailsMembershipList,
+import type {
   Props,
   GroupV2Membership,
 } from './ConversationDetailsMembershipList';
+import { ConversationDetailsMembershipList } from './ConversationDetailsMembershipList';
 
 const i18n = setupI18n('en', enMessages);
 
@@ -44,10 +45,13 @@ const createProps = (overrideProps: Partial<Props>): Props => ({
   canAddNewMembers: isBoolean(overrideProps.canAddNewMembers)
     ? overrideProps.canAddNewMembers
     : false,
+  conversationId: '123',
+  getPreferredBadge: () => undefined,
   i18n,
   memberships: overrideProps.memberships || [],
   showContactModal: action('showContactModal'),
   startAddingNewMembers: action('startAddingNewMembers'),
+  theme: ThemeType.light,
 });
 
 story.add('Few', () => {

@@ -7,7 +7,8 @@ import { readdir as readdirCallback } from 'fs';
 
 import pify from 'pify';
 
-import { getCliOptions, getPrintableError } from './common';
+import * as Errors from '../types/errors';
+import { getCliOptions } from './common';
 import { writeSignature } from './signature';
 import * as packageJson from '../../package.json';
 
@@ -46,40 +47,51 @@ type OptionsType = {
 
 const cliOptions = getCliOptions<OptionsType>(OPTIONS);
 go(cliOptions).catch(error => {
-  console.error('Something went wrong!', getPrintableError(error));
+  console.error('Something went wrong!', Errors.toLogFormat(error));
 });
 
 async function go(options: OptionsType) {
   const { private: privateKeyPath, version } = options;
-  let { update: updatePath } = options;
 
-  if (!updatePath) {
-    updatePath = await findUpdatePath();
+  let updatePaths: Array<string>;
+  if (options.update) {
+    updatePaths = [options.update];
+  } else {
+    updatePaths = await findUpdatePaths();
   }
 
-  console.log('Signing with...');
-  console.log(`  version: ${version}`);
-  console.log(`  update file: ${updatePath}`);
-  console.log(`  private key file: ${privateKeyPath}`);
+  await Promise.all(
+    updatePaths.map(async updatePath => {
+      console.log('Signing with...');
+      console.log(`  version: ${version}`);
+      console.log(`  update file: ${updatePath}`);
+      console.log(`  private key file: ${privateKeyPath}`);
 
-  await writeSignature(updatePath, version, privateKeyPath);
+      await writeSignature(updatePath, version, privateKeyPath);
+    })
+  );
 }
 
 const IS_EXE = /\.exe$/;
 const IS_ZIP = /\.zip$/;
-async function findUpdatePath(): Promise<string> {
+async function findUpdatePaths(): Promise<Array<string>> {
   const releaseDir = resolve('release');
   const files: Array<string> = await readdir(releaseDir);
 
   const max = files.length;
+  const results = new Array<string>();
   for (let i = 0; i < max; i += 1) {
     const file = files[i];
     const fullPath = join(releaseDir, file);
 
     if (IS_EXE.test(file) || IS_ZIP.test(file)) {
-      return fullPath;
+      results.push(fullPath);
     }
   }
 
-  throw new Error("No suitable file found in 'release' folder!");
+  if (results.length === 0) {
+    throw new Error("No suitable file found in 'release' folder!");
+  }
+
+  return results;
 }

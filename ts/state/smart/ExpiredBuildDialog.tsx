@@ -1,16 +1,20 @@
-// Copyright 2020 Signal Messenger, LLC
+// Copyright 2020-2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { connect } from 'react-redux';
 import { mapDispatchToProps } from '../actions';
 import { DialogExpiredBuild } from '../../components/DialogExpiredBuild';
-import { StateType } from '../reducer';
+import type { StateType } from '../reducer';
 import { getIntl } from '../selectors/user';
+import type { WidthBreakpoint } from '../../components/_util';
 
-const mapStateToProps = (state: StateType) => {
+type PropsType = Readonly<{ containerWidthBreakpoint: WidthBreakpoint }>;
+
+const mapStateToProps = (state: StateType, ownProps: PropsType) => {
   return {
     hasExpired: state.expiration.hasExpired,
     i18n: getIntl(state),
+    ...ownProps,
   };
 };
 

@@ -1,33 +1,48 @@
-// Copyright 2019-2021 Signal Messenger, LLC
+// Copyright 2019-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import memoizee from 'memoizee';
-import { fromPairs, isNumber } from 'lodash';
+import { isNumber } from 'lodash';
 import { createSelector } from 'reselect';
 
-import { StateType } from '../reducer';
-import {
-  ComposerStep,
+import type { StateType } from '../reducer';
+
+import type {
   ConversationLookupType,
   ConversationMessageType,
   ConversationsStateType,
   ConversationType,
+  ConversationVerificationData,
   MessageLookupType,
   MessagesByConversationType,
-  OneTimeModalState,
   PreJoinConversationType,
 } from '../ducks/conversations';
+import type { UsernameSaveState } from '../ducks/conversationsEnums';
+import {
+  ComposerStep,
+  OneTimeModalState,
+  ConversationVerificationState,
+} from '../ducks/conversationsEnums';
 import { getOwn } from '../../util/getOwn';
+import { isNotNil } from '../../util/isNotNil';
+import type { UUIDFetchStateType } from '../../util/uuidFetchState';
 import { deconstructLookup } from '../../util/deconstructLookup';
-import { PropsDataType as TimelinePropsType } from '../../components/conversation/Timeline';
-import { TimelineItemType } from '../../components/conversation/TimelineItem';
+import type { PropsDataType as TimelinePropsType } from '../../components/conversation/Timeline';
+import type { TimelineItemType } from '../../components/conversation/TimelineItem';
 import { assert } from '../../util/assert';
 import { isConversationUnregistered } from '../../util/isConversationUnregistered';
 import { filterAndSortConversationsByTitle } from '../../util/filterAndSortConversations';
-import { ContactNameColors, ContactNameColorType } from '../../types/Colors';
-import { AvatarDataType } from '../../types/Avatar';
+import type { ContactNameColorType } from '../../types/Colors';
+import { ContactNameColors } from '../../types/Colors';
+import type { AvatarDataType } from '../../types/Avatar';
+import type { UUIDStringType } from '../../types/UUID';
 import { isInSystemContacts } from '../../util/isInSystemContacts';
-import { isGroupV2 } from '../../util/whatTypeOfConversation';
+import { sortByTitle } from '../../util/sortByTitle';
+import {
+  isDirectConversation,
+  isGroupV1,
+  isGroupV2,
+} from '../../util/whatTypeOfConversation';
 
 import {
   getIntl,
@@ -38,13 +53,12 @@ import {
 } from './user';
 import { getPinnedConversationIds } from './items';
 import { getPropsForBubble } from './message';
-import {
-  CallSelectorType,
-  CallStateType,
-  getActiveCall,
-  getCallSelector,
-} from './calling';
-import { getAccountSelector, AccountSelectorType } from './accounts';
+import type { CallSelectorType, CallStateType } from './calling';
+import { getActiveCall, getCallSelector } from './calling';
+import type { AccountSelectorType } from './accounts';
+import { getAccountSelector } from './accounts';
+import * as log from '../../logging/log';
+import { TimelineMessageLoadingState } from '../../util/timelineUtil';
 
 let placeholderContact: ConversationType;
 export const getPlaceholderContact = (): ConversationType => {
@@ -54,6 +68,7 @@ export const getPlaceholderContact = (): ConversationType => {
 
   placeholderContact = {
     acceptedMessageRequest: false,
+    badges: [],
     id: 'placeholder-contact',
     type: 'direct',
     title: window.i18n('unknownContact'),
@@ -99,42 +114,29 @@ export const getConversationsByGroupId = createSelector(
     return state.conversationsByGroupId;
   }
 );
+export const getConversationsByUsername = createSelector(
+  getConversations,
+  (state: ConversationsStateType): ConversationLookupType => {
+    return state.conversationsByUsername;
+  }
+);
 
-const getAllConversations = createSelector(
+export const getAllConversations = createSelector(
   getConversationLookup,
   (lookup): Array<ConversationType> => Object.values(lookup)
 );
 
 export const getConversationsByTitleSelector = createSelector(
   getAllConversations,
-  (conversations): ((title: string) => Array<ConversationType>) => (
-    title: string
-  ) => conversations.filter(conversation => conversation.title === title)
+  (conversations): ((title: string) => Array<ConversationType>) =>
+    (title: string) =>
+      conversations.filter(conversation => conversation.title === title)
 );
 
 export const getSelectedConversationId = createSelector(
   getConversations,
   (state: ConversationsStateType): string | undefined => {
     return state.selectedConversationId;
-  }
-);
-
-export const getSelectedConversation = createSelector(
-  getSelectedConversationId,
-  getConversationLookup,
-  (
-    selectedConversationId: string | undefined,
-    conversationLookup: ConversationLookupType
-  ): undefined | ConversationType => {
-    if (!selectedConversationId) {
-      return undefined;
-    }
-    const conversation = getOwn(conversationLookup, selectedConversationId);
-    assert(
-      conversation,
-      'getSelectedConversation: could not find selected conversation in lookup; returning undefined'
-    );
-    return conversation;
   }
 );
 
@@ -153,6 +155,13 @@ export const getSelectedMessage = createSelector(
       id: state.selectedMessage,
       counter: state.selectedMessageCounter,
     };
+  }
+);
+
+export const getUsernameSaveState = createSelector(
+  getConversations,
+  (state: ConversationsStateType): UsernameSaveState => {
+    return state.usernameSaveState;
   }
 );
 
@@ -358,9 +367,13 @@ export const getMe = createSelector(
   [getConversationLookup, getUserConversationId],
   (
     lookup: ConversationLookupType,
-    ourConversationId: string
+    ourConversationId: string | undefined
   ): ConversationType => {
-    return lookup[ourConversationId];
+    if (!ourConversationId) {
+      return getPlaceholderContact();
+    }
+
+    return lookup[ourConversationId] || getPlaceholderContact();
   }
 );
 
@@ -382,6 +395,28 @@ export const getComposerConversationSearchTerm = createSelector(
   }
 );
 
+export const getComposerUUIDFetchState = createSelector(
+  getComposerState,
+  (composer): UUIDFetchStateType => {
+    if (!composer) {
+      assert(false, 'getIsFetchingUsername: composer is not open');
+      return {};
+    }
+    if (
+      composer.step !== ComposerStep.StartDirectConversation &&
+      composer.step !== ComposerStep.ChooseGroupMembers
+    ) {
+      assert(
+        false,
+        `getComposerUUIDFetchState: step ${composer.step} ` +
+          'has no uuidFetchState key'
+      );
+      return {};
+    }
+    return composer.uuidFetchState;
+  }
+);
+
 function isTrusted(conversation: ConversationType): boolean {
   if (conversation.type === 'group') {
     return true;
@@ -389,6 +424,7 @@ function isTrusted(conversation: ConversationType): boolean {
 
   return Boolean(
     isInSystemContacts(conversation) ||
+      conversation.sharedGroupNames.length > 0 ||
       conversation.profileSharing ||
       conversation.isMe
   );
@@ -481,51 +517,34 @@ const getNormalizedComposerConversationSearchTerm = createSelector(
 export const getFilteredComposeContacts = createSelector(
   getNormalizedComposerConversationSearchTerm,
   getComposableContacts,
+  getRegionCode,
   (
     searchTerm: string,
-    contacts: Array<ConversationType>
+    contacts: Array<ConversationType>,
+    regionCode: string | undefined
   ): Array<ConversationType> => {
-    return filterAndSortConversationsByTitle(contacts, searchTerm);
+    return filterAndSortConversationsByTitle(contacts, searchTerm, regionCode);
   }
 );
 
 export const getFilteredComposeGroups = createSelector(
   getNormalizedComposerConversationSearchTerm,
   getComposableGroups,
+  getRegionCode,
   (
     searchTerm: string,
-    groups: Array<ConversationType>
+    groups: Array<ConversationType>,
+    regionCode: string | undefined
   ): Array<ConversationType> => {
-    return filterAndSortConversationsByTitle(groups, searchTerm);
+    return filterAndSortConversationsByTitle(groups, searchTerm, regionCode);
   }
 );
 
 export const getFilteredCandidateContactsForNewGroup = createSelector(
   getCandidateContactsForNewGroup,
   getNormalizedComposerConversationSearchTerm,
+  getRegionCode,
   filterAndSortConversationsByTitle
-);
-
-export const getCantAddContactForModal = createSelector(
-  getConversationLookup,
-  getComposerState,
-  (conversationLookup, composerState): undefined | ConversationType => {
-    if (composerState?.step !== ComposerStep.ChooseGroupMembers) {
-      return undefined;
-    }
-
-    const conversationId = composerState.cantAddContactIdForModal;
-    if (!conversationId) {
-      return undefined;
-    }
-
-    const result = getOwn(conversationLookup, conversationId);
-    assert(
-      result,
-      'getCantAddContactForModal: failed to look up conversation by ID; returning undefined'
-    );
-    return result;
-  }
 );
 
 const getGroupCreationComposerState = createSelector(
@@ -534,7 +553,7 @@ const getGroupCreationComposerState = createSelector(
     composerState
   ): {
     groupName: string;
-    groupAvatar: undefined | ArrayBuffer;
+    groupAvatar: undefined | Uint8Array;
     groupExpireTimer: number;
     selectedConversationIds: Array<string>;
   } => {
@@ -559,7 +578,7 @@ const getGroupCreationComposerState = createSelector(
 
 export const getComposeGroupAvatar = createSelector(
   getGroupCreationComposerState,
-  (composerState): undefined | ArrayBuffer => composerState.groupAvatar
+  (composerState): undefined | Uint8Array => composerState.groupAvatar
 );
 
 export const getComposeGroupName = createSelector(
@@ -629,10 +648,6 @@ export const getConversationSelector = createSelector(
   ): GetConversationByIdType => {
     return (id?: string) => {
       if (!id) {
-        window.log.warn(
-          `getConversationSelector: Called with a falsey id ${id}`
-        );
-        // This will return a placeholder contact
         return selector(undefined);
       }
 
@@ -653,9 +668,7 @@ export const getConversationSelector = createSelector(
         return selector(onId);
       }
 
-      window.log.warn(
-        `getConversationSelector: No conversation found for id ${id}`
-      );
+      log.warn(`getConversationSelector: No conversation found for id ${id}`);
       // This will return a placeholder contact
       return selector(undefined);
     };
@@ -664,8 +677,16 @@ export const getConversationSelector = createSelector(
 
 export const getConversationByIdSelector = createSelector(
   getConversationLookup,
-  conversationLookup => (id: string): undefined | ConversationType =>
-    getOwn(conversationLookup, id)
+  conversationLookup =>
+    (id: string): undefined | ConversationType =>
+      getOwn(conversationLookup, id)
+);
+
+export const getConversationByUuidSelector = createSelector(
+  getConversationsByUuid,
+  conversationsByUuid =>
+    (uuid: UUIDStringType): undefined | ConversationType =>
+      getOwn(conversationsByUuid, uuid)
 );
 
 // A little optimization to reset our selector cache whenever high-level application data
@@ -685,10 +706,10 @@ const getCachedConversationMemberColorsSelector = createSelector(
   getUserConversationId,
   (
     conversationSelector: GetConversationByIdType,
-    ourConversationId: string
+    ourConversationId: string | undefined
   ) => {
     return memoizee(
-      (conversationId: string) => {
+      (conversationId: string | undefined) => {
         const contactNameColors: Map<string, ContactNameColorType> = new Map();
         const {
           sortedGroupMembers = [],
@@ -697,7 +718,9 @@ const getCachedConversationMemberColorsSelector = createSelector(
         } = conversationSelector(conversationId);
 
         if (type === 'direct') {
-          contactNameColors.set(ourConversationId, ContactNameColors[0]);
+          if (ourConversationId) {
+            contactNameColors.set(ourConversationId, ContactNameColors[0]);
+          }
           contactNameColors.set(theirId, ContactNameColors[0]);
           return contactNameColors;
         }
@@ -722,7 +745,7 @@ const getCachedConversationMemberColorsSelector = createSelector(
 
 export type ContactNameColorSelectorType = (
   conversationId: string,
-  contactId: string
+  contactId: string | undefined
 ) => ContactNameColorType;
 
 export const getContactNameColorSelector = createSelector(
@@ -730,14 +753,18 @@ export const getContactNameColorSelector = createSelector(
   conversationMemberColorsSelector => {
     return (
       conversationId: string,
-      contactId: string
+      contactId: string | undefined
     ): ContactNameColorType => {
-      const contactNameColors = conversationMemberColorsSelector(
-        conversationId
-      );
+      if (!contactId) {
+        log.warn('No color generated for missing contactId');
+        return ContactNameColors[0];
+      }
+
+      const contactNameColors =
+        conversationMemberColorsSelector(conversationId);
       const color = contactNameColors.get(contactId);
       if (!color) {
-        window.log.warn(`No color generated for contact ${contactId}`);
+        log.warn(`No color generated for contact ${contactId}`);
         return ContactNameColors[0];
       }
       return color;
@@ -764,10 +791,10 @@ export const getMessageSelector = createSelector(
     messageLookup: MessageLookupType,
     selectedMessage: SelectedMessageType | undefined,
     conversationSelector: GetConversationByIdType,
-    regionCode: string,
-    ourNumber: string,
-    ourUuid: string,
-    ourConversationId: string,
+    regionCode: string | undefined,
+    ourNumber: string | undefined,
+    ourUuid: UUIDStringType | undefined,
+    ourConversationId: string | undefined,
     callSelector: CallSelectorType,
     activeCall: undefined | CallStateType,
     accountSelector: AccountSelectorType,
@@ -800,22 +827,19 @@ export function _conversationMessagesSelector(
   conversation: ConversationMessageType
 ): TimelinePropsType {
   const {
-    heightChangeMessageIds,
-    isLoadingMessages,
     isNearBottom,
-    loadCountdownStart,
     messageIds,
+    messageLoadingState,
     metrics,
-    resetCounter,
-    scrollToMessageId,
     scrollToMessageCounter,
+    scrollToMessageId,
   } = conversation;
 
   const firstId = messageIds[0];
   const lastId =
     messageIds.length === 0 ? undefined : messageIds[messageIds.length - 1];
 
-  const { oldestUnread } = metrics;
+  const { oldestUnseen } = metrics;
 
   const haveNewest = !metrics.newest || !lastId || lastId === metrics.newest.id;
   const haveOldest =
@@ -823,42 +847,28 @@ export function _conversationMessagesSelector(
 
   const items = messageIds;
 
-  const messageHeightChangeLookup =
-    heightChangeMessageIds && heightChangeMessageIds.length
-      ? fromPairs(heightChangeMessageIds.map(id => [id, true]))
-      : null;
-  const messageHeightChangeIndex = messageHeightChangeLookup
-    ? messageIds.findIndex(id => messageHeightChangeLookup[id])
-    : undefined;
-
-  const oldestUnreadIndex = oldestUnread
-    ? messageIds.findIndex(id => id === oldestUnread.id)
+  const oldestUnseenIndex = oldestUnseen
+    ? messageIds.findIndex(id => id === oldestUnseen.id)
     : undefined;
   const scrollToIndex = scrollToMessageId
     ? messageIds.findIndex(id => id === scrollToMessageId)
     : undefined;
-  const { totalUnread } = metrics;
+  const { totalUnseen } = metrics;
 
   return {
     haveNewest,
     haveOldest,
-    isLoadingMessages,
-    loadCountdownStart,
-    items,
     isNearBottom,
-    messageHeightChangeIndex:
-      isNumber(messageHeightChangeIndex) && messageHeightChangeIndex >= 0
-        ? messageHeightChangeIndex
+    items,
+    messageLoadingState,
+    oldestUnseenIndex:
+      isNumber(oldestUnseenIndex) && oldestUnseenIndex >= 0
+        ? oldestUnseenIndex
         : undefined,
-    oldestUnreadIndex:
-      isNumber(oldestUnreadIndex) && oldestUnreadIndex >= 0
-        ? oldestUnreadIndex
-        : undefined,
-    resetCounter,
     scrollToIndex:
       isNumber(scrollToIndex) && scrollToIndex >= 0 ? scrollToIndex : undefined,
     scrollToIndexCounter: scrollToMessageCounter,
-    totalUnread,
+    totalUnseen,
   };
 }
 
@@ -882,10 +892,18 @@ export const getConversationMessagesSelector = createSelector(
     conversationMessagesSelector: CachedConversationMessagesSelectorType,
     messagesByConversation: MessagesByConversationType
   ) => {
-    return (id: string): TimelinePropsType | undefined => {
+    return (id: string): TimelinePropsType => {
       const conversation = messagesByConversation[id];
       if (!conversation) {
-        return undefined;
+        // TODO: DESKTOP-2340
+        return {
+          haveNewest: false,
+          haveOldest: false,
+          messageLoadingState: TimelineMessageLoadingState.DoingInitialLoad,
+          scrollToIndexCounter: 0,
+          totalUnseen: 0,
+          items: [],
+        };
       }
 
       return conversationMessagesSelector(conversation);
@@ -894,16 +912,13 @@ export const getConversationMessagesSelector = createSelector(
 );
 
 export const getInvitedContactsForNewlyCreatedGroup = createSelector(
-  getConversationLookup,
+  getConversationsByUuid,
   getConversations,
   (
     conversationLookup,
-    { invitedConversationIdsForNewlyCreatedGroup = [] }
+    { invitedUuidsForNewlyCreatedGroup = [] }
   ): Array<ConversationType> =>
-    deconstructLookup(
-      conversationLookup,
-      invitedConversationIdsForNewlyCreatedGroup
-    )
+    deconstructLookup(conversationLookup, invitedUuidsForNewlyCreatedGroup)
 );
 
 export const getConversationsWithCustomColorSelector = createSelector(
@@ -920,8 +935,14 @@ export const getConversationsWithCustomColorSelector = createSelector(
 export function isMissingRequiredProfileSharing(
   conversation: ConversationType
 ): boolean {
+  const doesConversationRequireIt =
+    !conversation.isMe &&
+    !conversation.left &&
+    (isGroupV1(conversation) || isDirectConversation(conversation));
+
   return Boolean(
-    !conversation.profileSharing &&
+    doesConversationRequireIt &&
+      !conversation.profileSharing &&
       window.Signal.RemoteConfig.isEnabled('desktop.mandatoryProfileSharing') &&
       conversation.messageCount &&
       conversation.messageCount > 0
@@ -932,9 +953,11 @@ export const getGroupAdminsSelector = createSelector(
   getConversationSelector,
   (conversationSelector: GetConversationByIdType) => {
     return (conversationId: string): Array<ConversationType> => {
-      const { groupId, groupVersion, memberships = [] } = conversationSelector(
-        conversationId
-      );
+      const {
+        groupId,
+        groupVersion,
+        memberships = [],
+      } = conversationSelector(conversationId);
 
       if (
         !isGroupV2({
@@ -948,11 +971,73 @@ export const getGroupAdminsSelector = createSelector(
       const admins: Array<ConversationType> = [];
       memberships.forEach(membership => {
         if (membership.isAdmin) {
-          const admin = conversationSelector(membership.conversationId);
+          const admin = conversationSelector(membership.uuid);
           admins.push(admin);
         }
       });
       return admins;
     };
+  }
+);
+
+const getConversationVerificationData = createSelector(
+  getConversations,
+  (
+    conversations: Readonly<ConversationsStateType>
+  ): Record<string, ConversationVerificationData> =>
+    conversations.verificationDataByConversation
+);
+
+export const getConversationIdsStoppedForVerification = createSelector(
+  getConversationVerificationData,
+  (verificationDataByConversation): Array<string> =>
+    Object.keys(verificationDataByConversation)
+);
+
+export const getConversationsStoppedForVerification = createSelector(
+  getConversationByIdSelector,
+  getConversationIdsStoppedForVerification,
+  (
+    conversationSelector: (id: string) => undefined | ConversationType,
+    conversationIds: ReadonlyArray<string>
+  ): Array<ConversationType> => {
+    const conversations = conversationIds
+      .map(conversationId => conversationSelector(conversationId))
+      .filter(isNotNil);
+    return sortByTitle(conversations);
+  }
+);
+
+export const getConversationIdsStoppingSend = createSelector(
+  getConversationVerificationData,
+  (pendingData): Array<string> => {
+    const result = new Set<string>();
+    Object.values(pendingData).forEach(item => {
+      if (item.type === ConversationVerificationState.PendingVerification) {
+        item.conversationsNeedingVerification.forEach(conversationId => {
+          result.add(conversationId);
+        });
+      }
+    });
+    return Array.from(result);
+  }
+);
+
+export const getConversationsStoppingSend = createSelector(
+  getConversationByIdSelector,
+  getConversationIdsStoppingSend,
+  (
+    conversationSelector: (id: string) => undefined | ConversationType,
+    conversationIds: ReadonlyArray<string>
+  ): Array<ConversationType> => {
+    const conversations = conversationIds
+      .map(conversationId => conversationSelector(conversationId))
+      .filter(isNotNil);
+    if (conversationIds.length !== conversations.length) {
+      log.warn(
+        `getConversationsStoppingSend: Started with ${conversationIds.length} items, ended up with ${conversations.length}.`
+      );
+    }
+    return sortByTitle(conversations);
   }
 );

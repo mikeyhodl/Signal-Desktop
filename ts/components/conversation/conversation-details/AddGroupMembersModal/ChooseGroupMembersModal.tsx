@@ -1,63 +1,104 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { FunctionComponent } from 'react';
 import React, {
-  FunctionComponent,
   useEffect,
   useMemo,
-  useRef,
   useState,
+  useRef,
+  useCallback,
 } from 'react';
-import Measure, { MeasuredComponentProps } from 'react-measure';
+import { omit } from 'lodash';
+import type { MeasuredComponentProps } from 'react-measure';
+import Measure from 'react-measure';
 
-import { LocalizerType } from '../../../../types/Util';
+import type { LocalizerType, ThemeType } from '../../../../types/Util';
 import { assert } from '../../../../util/assert';
-import { getOwn } from '../../../../util/getOwn';
+import { refMerger } from '../../../../util/refMerger';
+import { useRestoreFocus } from '../../../../hooks/useRestoreFocus';
 import { missingCaseError } from '../../../../util/missingCaseError';
+import type { LookupConversationWithoutUuidActionsType } from '../../../../util/lookupConversationWithoutUuid';
+import { parseAndFormatPhoneNumber } from '../../../../util/libphonenumberInstance';
 import { filterAndSortConversationsByTitle } from '../../../../util/filterAndSortConversations';
-import { ConversationType } from '../../../../state/ducks/conversations';
+import type { ConversationType } from '../../../../state/ducks/conversations';
+import type { PreferredBadgeSelectorType } from '../../../../state/selectors/badges';
+import type {
+  UUIDFetchStateKeyType,
+  UUIDFetchStateType,
+} from '../../../../util/uuidFetchState';
+import { isFetchingByE164 } from '../../../../util/uuidFetchState';
 import { ModalHost } from '../../../ModalHost';
 import { ContactPills } from '../../../ContactPills';
 import { ContactPill } from '../../../ContactPill';
-import { ConversationList, Row, RowType } from '../../../ConversationList';
+import type { Row } from '../../../ConversationList';
+import { ConversationList, RowType } from '../../../ConversationList';
 import { ContactCheckboxDisabledReason } from '../../../conversationList/ContactCheckbox';
 import { Button, ButtonVariant } from '../../../Button';
 import { SearchInput } from '../../../SearchInput';
 
-type PropsType = {
+export type StatePropsType = {
+  regionCode: string | undefined;
   candidateContacts: ReadonlyArray<ConversationType>;
-  confirmAdds: () => void;
-  contactLookup: Record<string, ConversationType>;
   conversationIdsAlreadyInGroup: Set<string>;
+  getPreferredBadge: PreferredBadgeSelectorType;
   i18n: LocalizerType;
+  theme: ThemeType;
   maxGroupSize: number;
-  onClose: () => void;
-  removeSelectedContact: (_: string) => void;
   searchTerm: string;
   selectedContacts: ReadonlyArray<ConversationType>;
-  setCantAddContactForModal: (
-    _: Readonly<undefined | ConversationType>
-  ) => void;
+
+  confirmAdds: () => void;
+  onClose: () => void;
+  removeSelectedContact: (_: string) => void;
   setSearchTerm: (_: string) => void;
   toggleSelectedContact: (conversationId: string) => void;
-};
+} & Pick<
+  LookupConversationWithoutUuidActionsType,
+  'lookupConversationWithoutUuid'
+>;
+
+type ActionPropsType = Omit<
+  LookupConversationWithoutUuidActionsType,
+  'setIsFetchingUUID' | 'lookupConversationWithoutUuid'
+>;
+
+type PropsType = StatePropsType & ActionPropsType;
 
 // TODO: This should use <Modal>. See DESKTOP-1038.
 export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
+  regionCode,
   candidateContacts,
   confirmAdds,
-  contactLookup,
   conversationIdsAlreadyInGroup,
+  getPreferredBadge,
   i18n,
   maxGroupSize,
   onClose,
   removeSelectedContact,
   searchTerm,
   selectedContacts,
-  setCantAddContactForModal,
   setSearchTerm,
+  theme,
   toggleSelectedContact,
+  lookupConversationWithoutUuid,
+  showUserNotFoundModal,
 }) => {
+  const [focusRef] = useRestoreFocus();
+
+  const phoneNumber = parseAndFormatPhoneNumber(searchTerm, regionCode);
+
+  let isPhoneNumberChecked = false;
+  if (phoneNumber) {
+    isPhoneNumberChecked =
+      phoneNumber.isValid &&
+      selectedContacts.some(contact => contact.e164 === phoneNumber.e164);
+  }
+
+  const isPhoneNumberVisible =
+    phoneNumber &&
+    candidateContacts.every(contact => contact.e164 !== phoneNumber.e164);
+
   const inputRef = useRef<null | HTMLInputElement>(null);
 
   const numberOfContactsAlreadyInGroup = conversationIdsAlreadyInGroup.size;
@@ -73,7 +114,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
   const canContinue = Boolean(selectedContacts.length);
 
   const [filteredContacts, setFilteredContacts] = useState(
-    filterAndSortConversationsByTitle(candidateContacts, '')
+    filterAndSortConversationsByTitle(candidateContacts, '', regionCode)
   );
   const normalizedSearchTerm = searchTerm.trim();
   useEffect(() => {
@@ -81,40 +122,106 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
       setFilteredContacts(
         filterAndSortConversationsByTitle(
           candidateContacts,
-          normalizedSearchTerm
+          normalizedSearchTerm,
+          regionCode
         )
       );
     }, 200);
     return () => {
       clearTimeout(timeout);
     };
-  }, [candidateContacts, normalizedSearchTerm, setFilteredContacts]);
+  }, [
+    candidateContacts,
+    normalizedSearchTerm,
+    setFilteredContacts,
+    regionCode,
+  ]);
 
-  const rowCount = filteredContacts.length;
+  const [uuidFetchState, setUuidFetchState] = useState<UUIDFetchStateType>({});
+
+  const setIsFetchingUUID = useCallback(
+    (identifier: UUIDFetchStateKeyType, isFetching: boolean) => {
+      setUuidFetchState(prevState => {
+        return isFetching
+          ? {
+              ...prevState,
+              [identifier]: isFetching,
+            }
+          : omit(prevState, identifier);
+      });
+    },
+    [setUuidFetchState]
+  );
+
+  let rowCount = 0;
+  if (filteredContacts.length) {
+    rowCount += filteredContacts.length;
+  }
+  if (isPhoneNumberVisible) {
+    // "Contacts" header
+    if (filteredContacts.length) {
+      rowCount += 1;
+    }
+
+    // "Find by phone number" + phone number
+    rowCount += 2;
+  }
   const getRow = (index: number): undefined | Row => {
-    const contact = filteredContacts[index];
-    if (!contact) {
-      return undefined;
+    let virtualIndex = index;
+
+    if (isPhoneNumberVisible && filteredContacts.length) {
+      if (virtualIndex === 0) {
+        return {
+          type: RowType.Header,
+          i18nKey: 'contactsHeader',
+        };
+      }
+
+      virtualIndex -= 1;
     }
 
-    const isSelected = selectedConversationIdsSet.has(contact.id);
-    const isAlreadyInGroup = conversationIdsAlreadyInGroup.has(contact.id);
+    if (virtualIndex < filteredContacts.length) {
+      const contact = filteredContacts[virtualIndex];
 
-    let disabledReason: undefined | ContactCheckboxDisabledReason;
-    if (isAlreadyInGroup) {
-      disabledReason = ContactCheckboxDisabledReason.AlreadyAdded;
-    } else if (hasSelectedMaximumNumberOfContacts && !isSelected) {
-      disabledReason = ContactCheckboxDisabledReason.MaximumContactsSelected;
-    } else if (!contact.isGroupV2Capable) {
-      disabledReason = ContactCheckboxDisabledReason.NotCapable;
+      const isSelected = selectedConversationIdsSet.has(contact.id);
+      const isAlreadyInGroup = conversationIdsAlreadyInGroup.has(contact.id);
+
+      let disabledReason: undefined | ContactCheckboxDisabledReason;
+      if (isAlreadyInGroup) {
+        disabledReason = ContactCheckboxDisabledReason.AlreadyAdded;
+      } else if (hasSelectedMaximumNumberOfContacts && !isSelected) {
+        disabledReason = ContactCheckboxDisabledReason.MaximumContactsSelected;
+      }
+
+      return {
+        type: RowType.ContactCheckbox,
+        contact,
+        isChecked: isSelected || isAlreadyInGroup,
+        disabledReason,
+      };
     }
 
-    return {
-      type: RowType.ContactCheckbox,
-      contact,
-      isChecked: isSelected || isAlreadyInGroup,
-      disabledReason,
-    };
+    virtualIndex -= filteredContacts.length;
+
+    if (isPhoneNumberVisible) {
+      if (virtualIndex === 0) {
+        return {
+          type: RowType.Header,
+          i18nKey: 'findByPhoneNumberHeader',
+        };
+      }
+      if (virtualIndex === 1) {
+        return {
+          type: RowType.PhoneNumberCheckbox,
+          isChecked: isPhoneNumberChecked,
+          isFetching: isFetchingByE164(uuidFetchState, phoneNumber.e164),
+          phoneNumber,
+        };
+      }
+      virtualIndex -= 2;
+    }
+
+    return undefined;
   };
 
   return (
@@ -132,7 +239,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
           {i18n('AddGroupMembersModal--title')}
         </h1>
         <SearchInput
-          disabled={candidateContacts.length === 0}
+          i18n={i18n}
           placeholder={i18n('contactSearchPlaceholder')}
           onChange={event => {
             setSearchTerm(event.target.value);
@@ -142,7 +249,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
               confirmAdds();
             }
           }}
-          ref={inputRef}
+          ref={refMerger<HTMLInputElement>(inputRef, focusRef)}
           value={searchTerm}
         />
         {Boolean(selectedContacts.length) && (
@@ -169,7 +276,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
             ))}
           </ContactPills>
         )}
-        {candidateContacts.length ? (
+        {rowCount ? (
           <Measure bounds>
             {({ contentRect, measureRef }: MeasuredComponentProps) => {
               // We disable this ESLint rule because we're capturing a bubbled keydown
@@ -189,6 +296,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
                 >
                   <ConversationList
                     dimensions={contentRect.bounds}
+                    getPreferredBadge={getPreferredBadge}
                     getRow={getRow}
                     i18n={i18n}
                     onClickArchiveButton={shouldNeverBeCalled}
@@ -204,19 +312,16 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
                         case ContactCheckboxDisabledReason.MaximumContactsSelected:
                           // These are no-ops.
                           break;
-                        case ContactCheckboxDisabledReason.NotCapable: {
-                          const contact = getOwn(contactLookup, conversationId);
-                          assert(
-                            contact,
-                            'Contact was not in lookup; not showing modal'
-                          );
-                          setCantAddContactForModal(contact);
-                          break;
-                        }
                         default:
                           throw missingCaseError(disabledReason);
                       }
                     }}
+                    lookupConversationWithoutUuid={
+                      lookupConversationWithoutUuid
+                    }
+                    showUserNotFoundModal={showUserNotFoundModal}
+                    setIsFetchingUUID={setIsFetchingUUID}
+                    showConversation={shouldNeverBeCalled}
                     onSelectConversation={shouldNeverBeCalled}
                     renderMessageSearchResult={() => {
                       shouldNeverBeCalled();
@@ -225,7 +330,7 @@ export const ChooseGroupMembersModal: FunctionComponent<PropsType> = ({
                     rowCount={rowCount}
                     shouldRecomputeRowHeights={false}
                     showChooseGroupMembers={shouldNeverBeCalled}
-                    startNewConversationFromPhoneNumber={shouldNeverBeCalled}
+                    theme={theme}
                   />
                 </div>
               );

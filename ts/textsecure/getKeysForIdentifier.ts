@@ -6,11 +6,20 @@ import {
   processPreKeyBundle,
   ProtocolAddress,
   PublicKey,
-} from '@signalapp/signal-client';
+} from '@signalapp/libsignal-client';
 
-import { UnregisteredUserError } from './Errors';
+import {
+  UnregisteredUserError,
+  HTTPError,
+  OutgoingIdentityKeyError,
+} from './Errors';
 import { Sessions, IdentityKeys } from '../LibSignalStores';
-import { ServerKeysType, WebAPIType } from './WebAPI';
+import { Address } from '../types/Address';
+import { QualifiedAddress } from '../types/QualifiedAddress';
+import { UUID } from '../types/UUID';
+import type { ServerKeysType, WebAPIType } from './WebAPI';
+import * as log from '../logging/log';
+import { isRecord } from '../util/isRecord';
 
 export async function getKeysForIdentifier(
   identifier: string,
@@ -31,10 +40,17 @@ export async function getKeysForIdentifier(
       accessKeyFailed,
     };
   } catch (error) {
-    if (error.name === 'HTTPError' && error.code === 404) {
-      await window.textsecure.storage.protocol.archiveAllSessions(identifier);
+    if (error instanceof HTTPError && error.code === 404) {
+      const theirUuid = UUID.lookup(identifier);
+
+      if (theirUuid) {
+        await window.textsecure.storage.protocol.archiveAllSessions(theirUuid);
+      }
+
+      throw new UnregisteredUserError(identifier, error);
     }
-    throw new UnregisteredUserError(identifier, error);
+
+    throw error;
   }
 }
 
@@ -43,20 +59,32 @@ async function getServerKeys(
   server: WebAPIType,
   accessKey?: string
 ): Promise<{ accessKeyFailed?: boolean; keys: ServerKeysType }> {
-  if (!accessKey) {
-    return {
-      keys: await server.getKeysForIdentifier(identifier),
-    };
-  }
-
   try {
+    if (!accessKey) {
+      return {
+        keys: await server.getKeysForIdentifier(identifier),
+      };
+    }
+
     return {
       keys: await server.getKeysForIdentifierUnauth(identifier, undefined, {
         accessKey,
       }),
     };
-  } catch (error) {
-    if (error.code === 401 || error.code === 403) {
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      error.message.includes('untrusted identity')
+    ) {
+      throw new OutgoingIdentityKeyError(identifier);
+    }
+
+    if (
+      accessKey &&
+      isRecord(error) &&
+      typeof error.code === 'number' &&
+      (error.code === 401 || error.code === 403)
+    ) {
       return {
         accessKeyFailed: true,
         keys: await server.getKeysForIdentifier(identifier),
@@ -72,8 +100,9 @@ async function handleServerKeys(
   response: ServerKeysType,
   devicesToUpdate?: Array<number>
 ): Promise<void> {
-  const sessionStore = new Sessions();
-  const identityKeyStore = new IdentityKeys();
+  const ourUuid = window.textsecure.storage.user.getCheckedUuid();
+  const sessionStore = new Sessions({ ourUuid });
+  const identityKeyStore = new IdentityKeys({ ourUuid });
 
   await Promise.all(
     response.devices.map(async device => {
@@ -86,7 +115,7 @@ async function handleServerKeys(
       }
 
       if (device.registrationId === 0) {
-        window.log.info(
+        log.info(
           `handleServerKeys/${identifier}: Got device registrationId zero!`
         );
       }
@@ -95,7 +124,11 @@ async function handleServerKeys(
           `getKeysForIdentifier/${identifier}: Missing signed prekey for deviceId ${deviceId}`
         );
       }
-      const protocolAddress = ProtocolAddress.new(identifier, deviceId);
+      const theirUuid = UUID.checkedLookup(identifier);
+      const protocolAddress = ProtocolAddress.new(
+        theirUuid.toString(),
+        deviceId
+      );
       const preKeyId = preKey?.keyId || null;
       const preKeyObject = preKey
         ? PublicKey.deserialize(Buffer.from(preKey.publicKey))
@@ -118,7 +151,10 @@ async function handleServerKeys(
         identityKey
       );
 
-      const address = `${identifier}.${deviceId}`;
+      const address = new QualifiedAddress(
+        ourUuid,
+        new Address(theirUuid, deviceId)
+      );
       await window.textsecure.storage.protocol
         .enqueueSessionJob(address, () =>
           processPreKeyBundle(

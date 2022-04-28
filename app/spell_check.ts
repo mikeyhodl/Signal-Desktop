@@ -3,15 +3,15 @@
 
 /* eslint-disable strict */
 
-import { BrowserWindow, Menu, clipboard, nativeImage } from 'electron';
-import { sync as osLocaleSync } from 'os-locale';
+import type { BrowserWindow } from 'electron';
+import { Menu, clipboard, nativeImage } from 'electron';
 import { uniq } from 'lodash';
 import { fileURLToPath } from 'url';
 
 import { maybeParseUrl } from '../ts/util/url';
-import { LocaleMessagesType } from '../ts/types/I18N';
+import type { LocaleType } from './locale';
 
-import { MenuListType } from './menu';
+import type { MenuListType } from './menu';
 
 export function getLanguages(
   userLocale: string,
@@ -34,10 +34,9 @@ export function getLanguages(
 
 export const setup = (
   browserWindow: BrowserWindow,
-  messages: LocaleMessagesType
+  { name: userLocale, messages }: LocaleType
 ): void => {
   const { session } = browserWindow.webContents;
-  const userLocale = osLocaleSync().replace(/_/g, '-');
   const availableLocales = session.availableSpellCheckerLanguages;
   const languages = getLanguages(userLocale, availableLocales);
   console.log(`spellcheck: user locale: ${userLocale}`);

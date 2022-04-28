@@ -1,9 +1,8 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import type { ClipboardEvent, ReactNode } from 'react';
 import React, {
-  ClipboardEvent,
-  ReactNode,
   forwardRef,
   useCallback,
   useEffect,
@@ -13,20 +12,25 @@ import React, {
 import classNames from 'classnames';
 
 import * as grapheme from '../util/grapheme';
-import { LocalizerType } from '../types/Util';
+import type { LocalizerType } from '../types/Util';
 import { getClassNamesFor } from '../util/getClassNamesFor';
-import { multiRef } from '../util/multiRef';
+import { useRefMerger } from '../hooks/useRefMerger';
+import { byteLength } from '../Bytes';
 
 export type PropsType = {
+  countBytes?: (value: string) => number;
   countLength?: (value: string) => number;
   disabled?: boolean;
+  disableSpellcheck?: boolean;
   expandable?: boolean;
   hasClearButton?: boolean;
   i18n: LocalizerType;
   icon?: ReactNode;
+  maxByteCount?: number;
   maxLengthCount?: number;
   moduleClassName?: string;
   onChange: (value: string) => unknown;
+  onEnter?: () => unknown;
   placeholder: string;
   value?: string;
   whenToShowRemainingCount?: number;
@@ -55,15 +59,19 @@ export const Input = forwardRef<
 >(
   (
     {
+      countBytes = byteLength,
       countLength = grapheme.count,
       disabled,
+      disableSpellcheck,
       expandable,
       hasClearButton,
       i18n,
       icon,
+      maxByteCount = 0,
       maxLengthCount = 0,
       moduleClassName,
       onChange,
+      onEnter,
       placeholder,
       value = '',
       whenToShowRemainingCount = Infinity,
@@ -76,6 +84,7 @@ export const Input = forwardRef<
     const valueOnKeydownRef = useRef<string>(value);
     const selectionStartOnKeydownRef = useRef<number>(value.length);
     const [isLarge, setIsLarge] = useState(false);
+    const refMerger = useRefMerger();
 
     const maybeSetLarge = useCallback(() => {
       if (!expandable) {
@@ -95,15 +104,22 @@ export const Input = forwardRef<
       }
     }, [expandable]);
 
-    const handleKeyDown = useCallback(() => {
-      const inputEl = innerRef.current;
-      if (!inputEl) {
-        return;
-      }
+    const handleKeyDown = useCallback(
+      event => {
+        if (onEnter && event.key === 'Enter') {
+          onEnter();
+        }
 
-      valueOnKeydownRef.current = inputEl.value;
-      selectionStartOnKeydownRef.current = inputEl.selectionStart || 0;
-    }, []);
+        const inputEl = innerRef.current;
+        if (!inputEl) {
+          return;
+        }
+
+        valueOnKeydownRef.current = inputEl.value;
+        selectionStartOnKeydownRef.current = inputEl.selectionStart || 0;
+      },
+      [onEnter]
+    );
 
     const handleChange = useCallback(() => {
       const inputEl = innerRef.current;
@@ -114,8 +130,9 @@ export const Input = forwardRef<
       const newValue = inputEl.value;
 
       const newLengthCount = maxLengthCount ? countLength(newValue) : 0;
+      const newByteCount = maxByteCount ? countBytes(newValue) : 0;
 
-      if (newLengthCount <= maxLengthCount) {
+      if (newLengthCount <= maxLengthCount && newByteCount <= maxByteCount) {
         onChange(newValue);
       } else {
         inputEl.value = valueOnKeydownRef.current;
@@ -124,12 +141,19 @@ export const Input = forwardRef<
       }
 
       maybeSetLarge();
-    }, [countLength, maxLengthCount, maybeSetLarge, onChange]);
+    }, [
+      countLength,
+      countBytes,
+      maxLengthCount,
+      maxByteCount,
+      maybeSetLarge,
+      onChange,
+    ]);
 
     const handlePaste = useCallback(
       (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const inputEl = innerRef.current;
-        if (!inputEl || !maxLengthCount) {
+        if (!inputEl || !maxLengthCount || !maxByteCount) {
           return;
         }
 
@@ -145,14 +169,25 @@ export const Input = forwardRef<
           countLength(textBeforeSelection) +
           countLength(pastedText) +
           countLength(textAfterSelection);
+        const newByteCount =
+          countBytes(textBeforeSelection) +
+          countBytes(pastedText) +
+          countBytes(textAfterSelection);
 
-        if (newLengthCount > maxLengthCount) {
+        if (newLengthCount > maxLengthCount || newByteCount > maxByteCount) {
           event.preventDefault();
         }
 
         maybeSetLarge();
       },
-      [countLength, maxLengthCount, maybeSetLarge, value]
+      [
+        countLength,
+        countBytes,
+        maxLengthCount,
+        maxByteCount,
+        maybeSetLarge,
+        value,
+      ]
     );
 
     useEffect(() => {
@@ -169,11 +204,12 @@ export const Input = forwardRef<
         isLarge && getClassName('__input--large')
       ),
       disabled: Boolean(disabled),
+      spellCheck: !disableSpellcheck,
       onChange: handleChange,
       onKeyDown: handleKeyDown,
       onPaste: handlePaste,
       placeholder,
-      ref: multiRef<HTMLInputElement | HTMLTextAreaElement | null>(
+      ref: refMerger<HTMLInputElement | HTMLTextAreaElement | null>(
         ref,
         innerRef
       ),

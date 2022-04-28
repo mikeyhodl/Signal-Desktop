@@ -1,22 +1,22 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { KeyboardEvent, MouseEvent, useRef, useState } from 'react';
+import type { KeyboardEvent, MouseEvent } from 'react';
+import React, { useRef, useState } from 'react';
 import classNames from 'classnames';
 import { ContextMenu, ContextMenuTrigger, MenuItem } from 'react-contextmenu';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { CustomColorEditor } from './CustomColorEditor';
 import { Modal } from './Modal';
-import {
-  ConversationColors,
-  ConversationColorType,
-  CustomColorType,
-} from '../types/Colors';
-import { ConversationType } from '../state/ducks/conversations';
-import { LocalizerType } from '../types/Util';
+import type { ConversationColorType, CustomColorType } from '../types/Colors';
+import { ConversationColors } from '../types/Colors';
+import type { ConversationType } from '../state/ducks/conversations';
+import type { LocalizerType } from '../types/Util';
 import { SampleMessageBubbles } from './SampleMessageBubbles';
 import { PanelRow } from './conversation/conversation-details/PanelRow';
 import { getCustomColorStyle } from '../util/getCustomColorStyle';
+
+import { useDelayedRestoreFocus } from '../hooks/useRestoreFocus';
 
 type CustomColorDataType = {
   id?: string;
@@ -83,6 +83,8 @@ export const ChatColorPicker = ({
   const [customColorToEdit, setCustomColorToEdit] = useState<
     CustomColorDataType | undefined
   >(undefined);
+
+  const [focusRef] = useDelayedRestoreFocus();
 
   const onSelectColor = (
     conversationColor: ConversationColorType,
@@ -172,7 +174,7 @@ export const ChatColorPicker = ({
       />
       <hr />
       <div className="ChatColorPicker__bubbles">
-        {ConversationColors.map(color => (
+        {ConversationColors.map((color, i) => (
           <div
             aria-label={color}
             className={classNames(
@@ -190,6 +192,7 @@ export const ChatColorPicker = ({
             }}
             role="button"
             tabIndex={0}
+            ref={i === 0 ? focusRef : undefined}
           />
         ))}
         {Object.keys(customColors).map(colorId => {
@@ -223,7 +226,7 @@ export const ChatColorPicker = ({
         })}
         <div
           aria-label={i18n('ChatColorPicker__custom-color--label')}
-          className="ChatColorPicker__bubble"
+          className="ChatColorPicker__bubble ChatColorPicker__bubble--custom"
           onClick={() =>
             setCustomColorToEdit({ id: undefined, value: undefined })
           }

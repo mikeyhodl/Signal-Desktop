@@ -3,7 +3,8 @@
 
 import React from 'react';
 
-import { LocalizerType } from '../../types/Util';
+import { SystemMessage } from './SystemMessage';
+import type { LocalizerType } from '../../types/Util';
 import * as expirationTimer from '../../util/expirationTimer';
 
 export type Props = {
@@ -21,15 +22,11 @@ export const UniversalTimerNotification: React.FC<Props> = props => {
   const timeValue = expirationTimer.format(i18n, expireTimer);
 
   return (
-    <div className="SystemMessage">
-      <div className="SystemMessage__icon SystemMessage__icon--timer" />
-      <div className="SystemMessage__text">
-        <div>
-          {i18n('UniversalTimerNotification__text', {
-            timeValue,
-          })}
-        </div>
-      </div>
-    </div>
+    <SystemMessage
+      icon="timer"
+      contents={i18n('UniversalTimerNotification__text', {
+        timeValue,
+      })}
+    />
   );
 };

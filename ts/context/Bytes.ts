@@ -1,8 +1,6 @@
 // Copyright 2021 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/* eslint-disable class-methods-use-this */
-
 import { Buffer } from 'buffer';
 
 export class Bytes {
@@ -38,6 +36,10 @@ export class Bytes {
 
   public toString(data: Uint8Array): string {
     return Buffer.from(data).toString();
+  }
+
+  public byteLength(value: string): number {
+    return Buffer.byteLength(value);
   }
 
   public concatenate(list: ReadonlyArray<Uint8Array>): Uint8Array {

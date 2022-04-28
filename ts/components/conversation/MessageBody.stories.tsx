@@ -6,8 +6,9 @@ import * as React from 'react';
 import { boolean, text } from '@storybook/addon-knobs';
 import { storiesOf } from '@storybook/react';
 
-import { MessageBody, Props } from './MessageBody';
-import { setup as setupI18n } from '../../../js/modules/i18n';
+import type { Props } from './MessageBody';
+import { MessageBody } from './MessageBody';
+import { setupI18n } from '../../util/setupI18n';
 import enMessages from '../../../_locales/en/messages.json';
 
 const i18n = setupI18n('en', enMessages);
@@ -106,8 +107,7 @@ story.add('@Mention', () => {
         replacementText: 'Bender B Rodriguez 🤖',
       },
     ],
-    text:
-      'Like \uFFFC once said: My story is a lot like yours, only more interesting because it involves robots',
+    text: 'Like \uFFFC once said: My story is a lot like yours, only more interesting because it involves robots',
   });
 
   return <MessageBody {...props} />;
@@ -166,8 +166,7 @@ story.add('Complex MessageBody', () => {
       },
     ],
     direction: 'outgoing',
-    text:
-      'Hey \uFFFC\nCheck out https://www.signal.org I think you will really like it 😍\n\ncc \uFFFC \uFFFC',
+    text: 'Hey \uFFFC\nCheck out https://www.signal.org I think you will really like it 😍\n\ncc \uFFFC \uFFFC',
   });
 
   return <MessageBody {...props} />;

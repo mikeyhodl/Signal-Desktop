@@ -1,23 +1,33 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import React from 'react';
 import { connect } from 'react-redux';
 
-import { StateType } from '../reducer';
+import type { StateType } from '../reducer';
 import { mapDispatchToProps } from '../actions';
+import type { StateProps } from '../../components/conversation/conversation-details/ConversationDetails';
+import { ConversationDetails } from '../../components/conversation/conversation-details/ConversationDetails';
 import {
-  ConversationDetails,
-  StateProps,
-} from '../../components/conversation/conversation-details/ConversationDetails';
-import {
-  getCandidateContactsForNewGroup,
   getConversationByIdSelector,
+  getConversationByUuidSelector,
 } from '../selectors/conversations';
 import { getGroupMemberships } from '../../util/getGroupMemberships';
-import { getIntl } from '../selectors/user';
-import { MediaItemType } from '../../types/MediaItem';
+import { getActiveCallState } from '../selectors/calling';
+import { getAreWeASubscriber } from '../selectors/items';
+import { getIntl, getTheme } from '../selectors/user';
+import type { MediaItemType } from '../../types/MediaItem';
+import {
+  getBadgesSelector,
+  getPreferredBadgeSelector,
+} from '../selectors/badges';
 import { assert } from '../../util/assert';
 import { SignalService as Proto } from '../../protobuf';
+import { getConversationColorAttributes } from '../../util/getConversationColorAttributes';
+import type { SmartChooseGroupMembersModalPropsType } from './ChooseGroupMembersModal';
+import { SmartChooseGroupMembersModal } from './ChooseGroupMembersModal';
+import type { SmartConfirmAdditionsModalPropsType } from './ConfirmAdditionsModal';
+import { SmartConfirmAdditionsModal } from './ConfirmAdditionsModal';
 
 export type SmartConversationDetailsProps = {
   addMembers: (conversationIds: ReadonlyArray<string>) => Promise<void>;
@@ -25,8 +35,7 @@ export type SmartConversationDetailsProps = {
   loadRecentMediaItems: (limit: number) => void;
   setDisappearingMessages: (seconds: number) => void;
   showAllMedia: () => void;
-  showContactModal: (conversationId: string) => void;
-  showGroupChatColorEditor: () => void;
+  showChatColorEditor: () => void;
   showGroupLinkManagement: () => void;
   showGroupV2Permissions: () => void;
   showConversationNotificationsSettings: () => void;
@@ -37,15 +46,31 @@ export type SmartConversationDetailsProps = {
   ) => void;
   updateGroupAttributes: (
     _: Readonly<{
-      avatar?: undefined | ArrayBuffer;
+      avatar?: undefined | Uint8Array;
       title?: string;
     }>
   ) => Promise<void>;
   onBlock: () => void;
   onLeave: () => void;
+  onUnblock: () => void;
+  setMuteExpiration: (muteExpiresAt: undefined | number) => unknown;
+  onOutgoingAudioCallInConversation: () => unknown;
+  onOutgoingVideoCallInConversation: () => unknown;
 };
 
 const ACCESS_ENUM = Proto.AccessControl.AccessRequired;
+
+const renderChooseGroupMembersModal = (
+  props: SmartChooseGroupMembersModalPropsType
+) => {
+  return <SmartChooseGroupMembersModal {...props} />;
+};
+
+const renderConfirmAdditionsModal = (
+  props: SmartConfirmAdditionsModalPropsType
+) => {
+  return <SmartConfirmAdditionsModal {...props} />;
+};
 
 const mapStateToProps = (
   state: StateType,
@@ -60,22 +85,39 @@ const mapStateToProps = (
 
   const canEditGroupInfo = Boolean(conversation.canEditGroupInfo);
   const isAdmin = Boolean(conversation.areWeAdmin);
-  const candidateContactsToAdd = getCandidateContactsForNewGroup(state);
 
   const hasGroupLink =
     Boolean(conversation.groupLink) &&
     conversation.accessControlAddFromInviteLink !== ACCESS_ENUM.UNSATISFIABLE;
 
+  const conversationByUuidSelector = getConversationByUuidSelector(state);
+  const groupMemberships = getGroupMemberships(
+    conversation,
+    conversationByUuidSelector
+  );
+
+  const badges = getBadgesSelector(state)(conversation.badges);
+
   return {
     ...props,
+    areWeASubscriber: getAreWeASubscriber(state),
+    badges,
     canEditGroupInfo,
-    candidateContactsToAdd,
-    conversation,
+    conversation: {
+      ...conversation,
+      ...getConversationColorAttributes(conversation),
+    },
+    getPreferredBadge: getPreferredBadgeSelector(state),
+    hasActiveCall: Boolean(getActiveCallState(state)),
     i18n: getIntl(state),
     isAdmin,
-    ...getGroupMemberships(conversation, conversationSelector),
+    ...groupMemberships,
     userAvatarData: conversation.avatars || [],
     hasGroupLink,
+    isGroup: conversation.type === 'group',
+    theme: getTheme(state),
+    renderChooseGroupMembersModal,
+    renderConfirmAdditionsModal,
   };
 };
 

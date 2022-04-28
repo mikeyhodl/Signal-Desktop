@@ -1,21 +1,18 @@
-// Copyright 2020-2021 Signal Messenger, LLC
+// Copyright 2020-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import React from 'react';
 import { minBy, debounce, noop } from 'lodash';
+import type { VideoFrameSource } from 'ringrtc';
 import { CallingPipRemoteVideo } from './CallingPipRemoteVideo';
-import { LocalizerType } from '../types/Util';
-import {
-  ActiveCallType,
-  GroupCallVideoRequest,
-  VideoFrameSource,
-} from '../types/Calling';
-import {
-  HangUpType,
+import type { LocalizerType } from '../types/Util';
+import type { ActiveCallType, GroupCallVideoRequest } from '../types/Calling';
+import type {
   SetLocalPreviewType,
   SetRendererCanvasType,
 } from '../state/ducks/calling';
 import { missingCaseError } from '../util/missingCaseError';
+import { useActivateSpeakerViewOnPresenting } from '../hooks/useActivateSpeakerViewOnPresenting';
 
 enum PositionMode {
   BeingDragged,
@@ -54,13 +51,14 @@ type SnapCandidate = {
 export type PropsType = {
   activeCall: ActiveCallType;
   getGroupCallVideoFrameSource: (demuxId: number) => VideoFrameSource;
-  hangUp: (_: HangUpType) => void;
+  hangUpActiveCall: () => void;
   hasLocalVideo: boolean;
   i18n: LocalizerType;
   setGroupCallVideoRequest: (_: Array<GroupCallVideoRequest>) => void;
   setLocalPreview: (_: SetLocalPreviewType) => void;
   setRendererCanvas: (_: SetRendererCanvasType) => void;
   togglePip: () => void;
+  toggleSpeakerView: () => void;
 };
 
 const PIP_HEIGHT = 156;
@@ -71,13 +69,14 @@ const PIP_PADDING = 8;
 export const CallingPip = ({
   activeCall,
   getGroupCallVideoFrameSource,
-  hangUp,
+  hangUpActiveCall,
   hasLocalVideo,
   i18n,
   setGroupCallVideoRequest,
   setLocalPreview,
   setRendererCanvas,
   togglePip,
+  toggleSpeakerView,
 }: PropsType): JSX.Element | null => {
   const videoContainerRef = React.useRef<null | HTMLDivElement>(null);
   const localVideoRef = React.useRef(null);
@@ -88,6 +87,12 @@ export const CallingPip = ({
     mode: PositionMode.SnapToRight,
     offsetY: PIP_TOP_MARGIN,
   });
+
+  useActivateSpeakerViewOnPresenting(
+    activeCall.remoteParticipants,
+    activeCall.isInSpeakerView,
+    toggleSpeakerView
+  );
 
   React.useEffect(() => {
     setLocalPreview({ element: localVideoRef });
@@ -287,9 +292,7 @@ export const CallingPip = ({
         <button
           aria-label={i18n('calling__hangup')}
           className="module-calling-pip__button--hangup"
-          onClick={() => {
-            hangUp({ conversationId: activeCall.conversation.id });
-          }}
+          onClick={hangUpActiveCall}
           type="button"
         />
         <button

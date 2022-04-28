@@ -177,15 +177,15 @@
     },
     "avatarMenuViewArchive": {
         "message": "Просмотреть архив",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuChatColors": {
         "message": "Цвет чата",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "avatarMenuUpdateAvailable": {
         "message": "Обновить Signal",
-        "description": "One of the menu options available in the Avatar Popup menu"
+        "description": "One of the menu options available in the Avatar popup menu"
     },
     "loading": {
         "message": "Загрузка…",
@@ -210,7 +210,7 @@
         "description": "Shown in place of the search box when showing archived conversation list"
     },
     "LeftPane--pinned": {
-        "message": "Прикреплённые",
+        "message": "Прикрепленные",
         "description": "Shown as a header for pinned conversations in the left pane"
     },
     "LeftPane--chats": {
@@ -220,6 +220,10 @@
     "archiveHelperText": {
         "message": "Эти разговоры архивированы и появятся во Входящих, только если будут получены новые сообщения.",
         "description": "Shown at the top of the archived conversations list in the left pane"
+    },
+    "noArchivedConversations": {
+        "message": "Нет архивированных разговоров.",
+        "description": "Shown at the top of the archived conversations list in the left pane if there is no any archived conversation"
     },
     "archiveConversation": {
         "message": "Архивировать",
@@ -243,7 +247,7 @@
     },
     "pinnedConversationsFull": {
         "message": "Вы можете прикрепить только до 4 чатов",
-        "description": ""
+        "description": "Shown in a toast when a user attempts to pin more than the maximum number of chats"
     },
     "chooseDirectory": {
         "message": "Выбрать папку",
@@ -415,6 +419,10 @@
         "message": "Следующие люди могли переустановить Signal или сменить устройства. Подтвердите ваш код безопасности с ними, чтобы обеспечить конфиденциальность.",
         "description": "Shown on confirmation dialog when user attempts to send a message"
     },
+    "safetyNumberChangeDialog__pending-messages": {
+        "message": "Отправить ожидающие сообщения",
+        "description": "Shown on confirmation dialog when user attempts to send a message in the outbox"
+    },
     "identityKeyErrorOnSend": {
         "message": "Ваш код безопасности с $name1$ изменился. Это может означать, что кто-то пытается перехватить вашу переписку и звонки или что $name2$ просто переустановил(-а) Signal. Возможно, вы захотите подтвердить ваш код безопасности с этим контактом.",
         "description": "Shown when user clicks on a failed recipient in the message detail view after an identity key change",
@@ -434,7 +442,7 @@
         "description": "Used on a warning dialog to make it clear that it might be risky to send the message."
     },
     "callAnyway": {
-        "message": "Всё равно позвонить",
+        "message": "Все равно позвонить",
         "description": "Used on a warning dialog to make it clear that it might be risky to call the conversation."
     },
     "continueCall": {
@@ -456,27 +464,39 @@
         "description": "Shown in conversation banner when more than one group member's safety number has changed, but they were previously verified."
     },
     "debugLogExplanation": {
-        "message": "Этот журнал будет опубликован в интернете, чтобы разработчики смогли его просмотреть. Вы можете изучить и отредактировать его перед отправкой.",
-        "description": ""
+        "message": "Когда вы нажмёте «Отправить», ваш журнал будет размещён в интернете на 30 дней по уникальному неопубликованному URL-адресу. Вы можете сначала сохранить его локально.",
+        "description": "Description of what will happen with your debug log"
     },
     "debugLogError": {
-        "message": "Что-то пошло не так с загрузкой! Пожалуйста, подумайте о том, чтобы вручную добавить журнал к вашему сообщению об ошибке.",
-        "description": ""
+        "message": "С загрузкой что-то пошло не так! Пожалуйста, отправьте письмо по адресу support@signal.org и прикрепите свой журнал в виде текстового файла.",
+        "description": "Error message a recommendations if debug log upload fails"
     },
-    "debugLogCopy": {
-        "message": "Копировать",
+    "debugLogSuccess": {
+        "message": "Журнал отладки отправлен",
+        "description": "Title of the success page for submitting a debug log"
+    },
+    "debugLogSuccessNextSteps": {
+        "message": "Журнал отладки был загружен. При обращении в поддержку скопируйте URL-адрес, указанный ниже, и вставьте его в письмо вместе с описанием проблемы и действиями для её воспроизведения.",
+        "description": "Explanation of next steps to take when submitting debug log"
+    },
+    "debugLogLogIsIncomplete": {
+        "message": "…чтобы просмотреть журнал полностью, нажмите «Сохранить»",
         "description": "Shown as the text for the copy button on the debug log screen"
     },
-    "debugLogCopyAlt": {
-        "message": "Копировать ссылку в ваш буфер обмена",
-        "description": "Shown as the alt text for the copy button on the debug log screen"
+    "debugLogCopy": {
+        "message": "Копировать ссылку",
+        "description": "Shown as the text for the copy button on the debug log screen"
+    },
+    "debugLogSave": {
+        "message": "Сохранить",
+        "description": "Shown as the text for the download button on the debug log screen"
     },
     "debugLogLinkCopied": {
         "message": "Ссылка скопирована в ваш буфер обмена",
         "description": "Shown in a toast to let the user know that the link to the debug log has been copied to their clipboard"
     },
     "reportIssue": {
-        "message": "Сообщить о проблеме",
+        "message": "Связаться с поддержкой",
         "description": "Link to open the issue tracker"
     },
     "gotIt": {
@@ -557,11 +577,11 @@
     },
     "today": {
         "message": "Сегодня",
-        "description": "Section header in the media gallery"
+        "description": "The string \"today\""
     },
     "yesterday": {
         "message": "Вчера",
-        "description": "Section header in the media gallery"
+        "description": "The string \"yesterday\""
     },
     "thisWeek": {
         "message": "На этой неделе",
@@ -609,7 +629,7 @@
         "message": "Миниатюра предпросмотра ссылки для $domain$",
         "description": "Shown while Signal Desktop is fetching metadata for a url in composition area",
         "placeholders": {
-            "path": {
+            "domain": {
                 "content": "$1",
                 "example": "instagram.com"
             }
@@ -626,8 +646,22 @@
         }
     },
     "decryptionErrorToast": {
-        "message": "В Signal Desktop произошла ошибка расшифровки. Нажмите, чтобы отправить журнал отладки.",
-        "description": "An error popup when we haven't added an error for decryption error."
+        "message": "В Signal Desktop произошла ошибка расшифровки сообщения от $name$, устройство $deviceId$",
+        "description": "An error popup when we haven't added an in-timeline error for decryption error, only for beta/internal users.",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            },
+            "deviceId": {
+                "content": "$1",
+                "example": "2"
+            }
+        }
+    },
+    "decryptionErrorToastAction": {
+        "message": "Отправить журнал",
+        "description": "Label for the decryption error toast button"
     },
     "oneNonImageAtATimeToast": {
         "message": "При включении вложений, не относящихся к изображениям, ограничение составляет по одному вложению на сообщение.",
@@ -754,14 +788,8 @@
         "description": "Aria label for clear search button"
     },
     "searchIn": {
-        "message": "Искать в $conversationName$",
-        "description": "Shown in the search box before text is entered when searching in a specific conversation",
-        "placeholders": {
-            "conversationName": {
-                "content": "$1",
-                "example": "Friends"
-            }
-        }
+        "message": "Поиск в чате",
+        "description": "Shown in the search box before text is entered when searching in a specific conversation"
     },
     "noSearchResults": {
         "message": "Нет результатов для «$searchTerm$»",
@@ -806,6 +834,24 @@
     "messagesHeader": {
         "message": "Сообщения",
         "description": "Shown to separate the types of search results"
+    },
+    "findByUsernameHeader": {
+        "message": "Поиск по имени пользователя",
+        "description": "Shown when search could be a valid username, with one sub-item that will kick off the search"
+    },
+    "findByPhoneNumberHeader": {
+        "message": "Поиск по номеру телефона",
+        "description": "Shown when search could be a valid phone number, with one sub-item that will kick off the search"
+    },
+    "at-username": {
+        "message": "@$username$",
+        "description": "@ added to username to signify it as a username. Should it be on the right in your language?",
+        "placeholders": {
+            "username": {
+                "content": "$1",
+                "example": "sammy45"
+            }
+        }
     },
     "welcomeToSignal": {
         "message": "Добро пожаловать в Signal",
@@ -861,7 +907,7 @@
     },
     "mobile": {
         "message": "мобильный",
-        "description": "Shown on contact detail screen as a label for aa phone or email"
+        "description": "Shown on contact detail screen as a label for a phone or email"
     },
     "email": {
         "message": "email",
@@ -907,6 +953,18 @@
         "message": "Исходное сообщение найдено, но не загружено. Прокрутите вверх, чтобы загрузить его.",
         "description": "Shown in toast if user clicks on quote references messages not loaded in view, but in database"
     },
+    "voiceRecording--start": {
+        "message": "Начать запись голосового сообщения",
+        "description": "Tooltip for microphone button to start voice message"
+    },
+    "voiceRecording--complete": {
+        "message": "Завершить и отправить голосовое сообщение",
+        "description": "Tooltip for green complete voice message and send"
+    },
+    "voiceRecording--cancel": {
+        "message": "Отменить голосовое сообщение",
+        "description": "Tooltip for red button to cancel voice message"
+    },
     "voiceRecordingInterruptedMax": {
         "message": "Запись голосового сообщения остановилась, потому что был достигнут максимальный порог длительности.",
         "description": "Confirmation dialog message for when the voice recording is interrupted due to max time limit"
@@ -916,22 +974,24 @@
         "description": "Confirmation dialog message for when the voice recording is interrupted due to app losing focus"
     },
     "voiceNoteLimit": {
-        "message": "Голосовые сообщения ограничены пятью минутами. Запись остановится, если вы переключитесь на другое приложение.",
+        "message": "Голосовые сообщения ограничены одним часом. Запись остановится, если вы переключитесь на другое приложение.",
         "description": "Shown in toast to warn user about limited time and that window must be in focus"
     },
     "voiceNoteMustBeOnlyAttachment": {
         "message": "Голосовое сообщение должно содержать только одно вложение.",
         "description": "Shown in toast if tries to record a voice note with any staged attachments"
     },
+    "voiceNoteError": {
+        "message": "При записи голосового сообщения произошла ошибка.",
+        "description": "Shown in a dialog to inform user that we experienced an unrecoverable error"
+    },
     "attachmentSaved": {
-        "message": "Вложение сохранено. Нажмите, чтобы показать в папке.",
-        "description": "Shown after user selects to save to downloads",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "proof.jpg"
-            }
-        }
+        "message": "Вложение сохранено.",
+        "description": "Shown after user selects to save to downloads"
+    },
+    "attachmentSavedShow": {
+        "message": "Показать в папке",
+        "description": "Button label for showing the attachment in your file system"
     },
     "you": {
         "message": "Вы",
@@ -987,13 +1047,43 @@
         "message": "Невозможно обновить",
         "description": "Shown as the title of our update error dialogs on windows"
     },
+    "muted": {
+        "message": "Увед. отключены",
+        "description": "Shown in a button when a conversation is muted"
+    },
+    "mute": {
+        "message": "Откл. уведомления",
+        "description": "Shown in a button when a conversation is unmuted and can be muted"
+    },
     "cannotUpdateDetail": {
-        "message": "Signal Desktop не удалось обновиться, но новая версия доступна. Пожалуйста, перейдите на $url$ и установите новую версию вручную, затем свяжитесь с поддержкой или сообщите об этой проблеме.",
+        "message": "Signal не удалось обновиться. $retry$ или посетите $url$, чтобы установить обновление вручную. Затем $support$ об этой проблеме",
         "description": "Shown if a general error happened while trying to install update package",
         "placeholders": {
+            "retry": {
+                "content": "$2",
+                "example": "retry update"
+            },
             "url": {
-                "content": "$1",
+                "content": "$2",
                 "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
+            }
+        }
+    },
+    "cannotUpdateRequireManualDetail": {
+        "message": "Signal не удалось обновиться. Посетите $url$, чтобы установить обновление вручную. Затем $support$ об этой проблеме",
+        "description": "Shown if a general error happened while trying to install update package and manual update is required",
+        "placeholders": {
+            "url": {
+                "content": "$2",
+                "example": "https://signal.org/download"
+            },
+            "support": {
+                "content": "$3",
+                "example": "contact support"
             }
         }
     },
@@ -1041,6 +1131,10 @@
     },
     "accept": {
         "message": "Принять",
+        "description": ""
+    },
+    "forward": {
+        "message": "Переслать",
         "description": ""
     },
     "done": {
@@ -1095,10 +1189,6 @@
         "message": "Показать участников",
         "description": ""
     },
-    "resetSession": {
-        "message": "Сбросить сессию",
-        "description": "This is a menu item for resetting the session, using the imperative case, as in a command."
-    },
     "showSafetyNumber": {
         "message": "Просмотреть код безопасности",
         "description": ""
@@ -1108,7 +1198,7 @@
         "description": "This is a menu item for viewing all media (images + video) in a conversation, using the imperative case, as in a command."
     },
     "verifyHelp": {
-        "message": "Если вы хотите подтвердить безопасность вашего сквозного шифрования с $name$, сравните цифры, указанные выше, с цифрами на их устройстве.",
+        "message": "Чтобы подтвердить безопасность вашего сквозного шифрования с $name$, сравните цифры, указанные выше, с устройством собеседника.",
         "description": "",
         "placeholders": {
             "name": {
@@ -1136,6 +1226,10 @@
     "retrySend": {
         "message": "Повторить попытку отправки",
         "description": "Shown on the drop-down menu for an individual message, but only if it is an outgoing message that failed to send"
+    },
+    "retryDeleteForEveryone": {
+        "message": "Попробовать удалить для всех ещё раз",
+        "description": "Shown on the drop-down menu for an individual message, but only if a previous delete for everyone failed to send"
     },
     "forwardMessage": {
         "message": "Переслать сообщение",
@@ -1249,13 +1343,13 @@
         "message": "Значок, показывающий, что у этого изображения есть подпись",
         "description": "Used for the icon layered on top of an image in message bubbles"
     },
-    "addACaption": {
-        "message": "Добавить подпись…",
-        "description": "Used as the placeholder text in the caption editor text field"
-    },
     "save": {
         "message": "Сохранить",
-        "description": "Used as a 'commit changes' button in the Caption Editor for outgoing image attachments"
+        "description": "Used on save buttons"
+    },
+    "reset": {
+        "message": "Сбросить",
+        "description": "Used on reset buttons"
     },
     "fileIconAlt": {
         "message": "Значок файла",
@@ -1269,25 +1363,79 @@
         "message": "Приватное общение возможно. Signal помогает его упростить.",
         "description": "Tagline displayed under 'installWelcome' string on the install page"
     },
-    "linkYourPhone": {
-        "message": "Привяжите свой телефон к Signal Desktop",
-        "description": "Shown on the front page when the application first starts, above the QR code"
-    },
-    "signalSettings": {
-        "message": "Настройки Signal",
-        "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
-    },
     "linkedDevices": {
         "message": "Привязанные устройства",
         "description": "Used in the guidance to help people find the 'link new device' area of their Signal mobile app"
     },
-    "plusButton": {
-        "message": "Кнопка «+»",
-        "description": "The button used in Signal Android to add a new linked device"
-    },
     "linkNewDevice": {
         "message": "Привязать новое устройство",
         "description": "The menu option shown in Signal iOS to add a new linked device"
+    },
+    "Install__scan-this-code": {
+        "message": "Просканируйте этот код в приложении Signal на своем телефоне",
+        "description": "Title of the device link screen. Also used as alt text for the QR code on the device link screen"
+    },
+    "Install__instructions__1": {
+        "message": "Откройте Signal на своем телефоне",
+        "description": "Instructions on the device link screen"
+    },
+    "Install__instructions__2": {
+        "message": "Нажмите на $settings$, затем на $linkedDevices$",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "settings": {
+                "content": "$1",
+                "example": "<strong>Settings</strong>"
+            },
+            "linkedDevices": {
+                "content": "$2",
+                "example": "<strong>Linked Devices</strong>"
+            }
+        }
+    },
+    "Install__instructions__2__settings": {
+        "message": "Настройки",
+        "description": "Part of the 2nd instruction on the device link screen"
+    },
+    "Install__instructions__3": {
+        "message": "Нажмите $plusButton$ (Android) или $linkNewDevice$ (iPhone)",
+        "description": "Instructions on the device link screen",
+        "placeholders": {
+            "plusButton": {
+                "content": "$1",
+                "example": "<PlusButton />"
+            },
+            "linkNewDevice": {
+                "content": "$2",
+                "example": "<strong>Link New Device</strong>"
+            }
+        }
+    },
+    "Install__qr-failed": {
+        "message": "Не удалось загрузить QR-код. Проверьте подключение к интернету и попробуйте снова. $learnMore$",
+        "description": "Shown on the install screen if the QR code fails to load",
+        "placeholders": {
+            "learnMore": {
+                "content": "$1",
+                "example": "<a>Learn more</a>"
+            }
+        }
+    },
+    "Install__qr-failed__learn-more": {
+        "message": "Узнать больше",
+        "description": "Shown on the install screen if the QR code fails to load"
+    },
+    "Install__support-link": {
+        "message": "Нужна помощь?",
+        "description": "Shown on the install screen. Link takes users to a support page"
+    },
+    "Install__choose-device-name__description": {
+        "message": "Вы увидите это имя в разделе «Привязанные устройства» на своём телефоне",
+        "description": "The subheader shown on the 'choose device name' screen in the device linking process"
+    },
+    "Install__choose-device-name__placeholder": {
+        "message": "Мой компьютер",
+        "description": "The placeholder for the 'choose device name' input"
     },
     "Preferences--device-name": {
         "message": "Имя устройства",
@@ -1303,6 +1451,10 @@
     },
     "initialSync": {
         "message": "Синхронизация контактов и групп",
+        "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
+    },
+    "initialSync__subtitle": {
+        "message": "Обратите внимание: ваша история сообщений не будет синхронизирована на это устройство",
         "description": "Shown during initial link while contacts and groups are being pulled from mobile device"
     },
     "installConnectionFailed": {
@@ -1321,8 +1473,12 @@
         "message": "Что-то пошло не так!",
         "description": ""
     },
+    "installUnknownError": {
+        "message": "Произошла неожиданная ошибка. Пожалуйста, попробуйте ещё раз.",
+        "description": ""
+    },
     "installTryAgain": {
-        "message": "Попробовать ещё раз",
+        "message": "Попробовать еще раз",
         "description": ""
     },
     "Preferences--theme": {
@@ -1332,6 +1488,14 @@
     "calling": {
         "message": "Звонки",
         "description": "Header for calling options on the settings screen"
+    },
+    "calling__call-back": {
+        "message": "Перезвонить",
+        "description": "Button to call someone back"
+    },
+    "calling__call-again": {
+        "message": "Позвонить снова",
+        "description": "Button to call someone again"
     },
     "calling__start": {
         "message": "Начать звонок",
@@ -1344,6 +1508,10 @@
     "calling__return": {
         "message": "Вернуться к звонку",
         "description": "Button label in the call lobby for returning to a call"
+    },
+    "calling__lobby-automatically-muted-because-there-are-a-lot-of-people": {
+        "message": "Микрофон был отключён из-за размера звонка",
+        "description": "Shown in a call lobby toast if there are a lot of people already on the call"
     },
     "calling__call-is-full": {
         "message": "Звонок заполнен",
@@ -1370,7 +1538,7 @@
         "description": "Label under the audio button"
     },
     "calling__button--audio-disabled": {
-        "message": "Микрофон отключён",
+        "message": "Микрофон отключен",
         "description": "Button tooltip label when the microphone is disabled"
     },
     "calling__button--audio-off": {
@@ -1386,7 +1554,7 @@
         "description": "Label under the share screen button"
     },
     "calling__button--presenting-disabled": {
-        "message": "Показ отключён",
+        "message": "Показ отключен",
         "description": "Button tooltip label for when screen sharing is disabled"
     },
     "calling__button--presenting-on": {
@@ -1396,6 +1564,22 @@
     "calling__button--presenting-off": {
         "message": "Остановить показ",
         "description": "Button tooltip label for stopping screen sharing"
+    },
+    "calling__button--ring__label": {
+        "message": "Звонить",
+        "description": "Label under the ring button"
+    },
+    "calling__button--ring__disabled-because-group-is-too-large": {
+        "message": "Невозможно звонить участникам: группа слишком большая.",
+        "description": "Button tooltip label when you can't ring because the group is too large"
+    },
+    "calling__button--ring__off": {
+        "message": "Уведомить, не звонить",
+        "description": "Button tooltip label for turning ringing off"
+    },
+    "calling__button--ring__on": {
+        "message": "Включить звонок",
+        "description": "Button tooltip label for turning ringing on"
     },
     "calling__your-video-is-off": {
         "message": "Ваша камера отключена",
@@ -1452,7 +1636,7 @@
         }
     },
     "calling__pre-call-info--many-people-in-call": {
-        "message": "$first$, $second$ и ещё $others$ человек(-а) в этом звонке",
+        "message": "$first$, $second$ и еще $others$ человек(-а) в этом звонке",
         "description": "Shown in the calling lobby to describe who is in the call",
         "placeholders": {
             "first": {
@@ -1476,6 +1660,56 @@
             "person": {
                 "content": "$1",
                 "example": "Sam"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-2": {
+        "message": "Signal будет звонить у $first$ и $second$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-3": {
+        "message": "Signal будет звонить у $first$, $second$ и $third$",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "first": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "third": {
+                "content": "$3",
+                "example": "April"
+            }
+        }
+    },
+    "calling__pre-call-info--will-ring-many": {
+        "message": "Signal будет звонить у $first$, $second$ и еще $others$ человек",
+        "description": "Shown in the calling lobby to describe who will be rang",
+        "placeholders": {
+            "person": {
+                "content": "$1",
+                "example": "Sam"
+            },
+            "second": {
+                "content": "$2",
+                "example": "Cayce"
+            },
+            "others": {
+                "content": "$3",
+                "example": "5"
             }
         }
     },
@@ -1522,7 +1756,7 @@
         }
     },
     "calling__pre-call-info--will-notify-many": {
-        "message": "$first$, $second$ и ещё $others$ человек(-а) будут уведомлены",
+        "message": "$first$, $second$ и еще $others$ человек(-а) будут уведомлены",
         "description": "Shown in the calling lobby to describe who will be notified",
         "placeholders": {
             "person": {
@@ -1569,7 +1803,7 @@
     },
     "calling__block-info": {
         "message": "Вы не будете получать аудио и видео этого участника, и он не будет получать ваши.",
-        "description": "Shown in the modal dialog to describe how blocking works in a gorup call"
+        "description": "Shown in the modal dialog to describe how blocking works in a group call"
     },
     "calling__overflow__scroll-up": {
         "message": "Прокрутить вверх",
@@ -1661,7 +1895,7 @@
         "message": "Пропускать все звонки через сервер Signal, чтобы не раскрывать ваш IP-адрес собеседнику. Качество звонка ухудшится.",
         "description": "Details describing the always relay calls setting"
     },
-    "Preferences--permissions": {
+    "permissions": {
         "message": "Разрешения",
         "description": "Header for permissions section of settings"
     },
@@ -1678,7 +1912,7 @@
         "description": "Header for general options on the settings screen"
     },
     "spellCheckDescription": {
-        "message": "Проверка орфографии текста, введённого в поле составления сообщения",
+        "message": "Проверка орфографии текста, введенного в поле составления сообщения",
         "description": "Description of the spell check setting"
     },
     "spellCheckWillBeEnabled": {
@@ -1694,7 +1928,7 @@
         "description": "In the settings, shown next to the checkbox option for minimizing to the system tray"
     },
     "SystemTraySetting__minimize-to-and-start-in-system-tray": {
-        "message": "Запускать свёрнутым в трее",
+        "message": "Запускать свернутым в трее",
         "description": "In the settings, shown next to the checkbox option for starting in the system tray"
     },
     "autoLaunchDescription": {
@@ -1730,7 +1964,7 @@
         "description": "Message shown to user when app is disconnected and data deleted"
     },
     "deleteOldIndexedDBData": {
-        "message": "У вас есть устаревшие данные из предыдущей установки Signal Desktop. Если вы решите продолжить, они будут удалены, и вы начнёте с нуля.",
+        "message": "У вас есть устаревшие данные из предыдущей установки Signal Desktop. Если вы решите продолжить, они будут удалены, и вы начнете с нуля.",
         "description": "Shown if user last ran Signal Desktop before October 2018"
     },
     "deleteOldData": {
@@ -1815,6 +2049,10 @@
         "message": "Отправка не удалась",
         "description": "Shown on outgoing message if it fails to send"
     },
+    "deleteFailed": {
+        "message": "Не удалось удалить",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to anyone"
+    },
     "sendPaused": {
         "message": "Отправка приостановлена",
         "description": "Shown on outgoing message if it cannot be sent immediately"
@@ -1822,6 +2060,10 @@
     "partiallySent": {
         "message": "Частично отправлено. Подробнее…",
         "description": "Shown on outgoing message if it is partially sent"
+    },
+    "partiallyDeleted": {
+        "message": "Частично удалено. Нажмите, чтобы попробовать ещё раз",
+        "description": "Shown on a message which was deleted for everyone if the delete wasn't successfully sent to everyone"
     },
     "showMore": {
         "message": "Подробнее",
@@ -1908,12 +2150,20 @@
         }
     },
     "justNow": {
-        "message": "сейчас",
+        "message": "Сейчас",
         "description": "Shown if a message is very recent, less than 60 seconds old"
     },
     "timestampFormat_M": {
         "message": "D MMM",
         "description": "Timestamp format string for displaying month and day (but not the year) of a date within the current year, ex: use 'MMM D' for 'Aug 8', or 'D MMM' for '8 Aug'."
+    },
+    "timestampFormat__long__today": {
+        "message": "[Сегодня] LT",
+        "description": "Timestamp format string for displaying \"Today\" and the time"
+    },
+    "timestampFormat__long__yesterday": {
+        "message": "[Вчера] LT",
+        "description": "Timestamp format string for displaying \"Yesterday\" and the time"
     },
     "messageBodyTooLong": {
         "message": "Текст сообщения слишком длинный.",
@@ -2028,7 +2278,7 @@
         "description": "Description for incoming calls setting"
     },
     "contactChangedProfileName": {
-        "message": "$sender$ изменил(-а) своё имя профиля с $oldProfile$ на $newProfile$",
+        "message": "$sender$ изменил(-а) свое имя профиля с $oldProfile$ на $newProfile$",
         "description": "Description for incoming calls setting",
         "placeholders": {
             "sender": {
@@ -2046,7 +2296,7 @@
         }
     },
     "changedProfileName": {
-        "message": "$oldProfile$ изменил(-а) своё имя профиля на $newProfile$.",
+        "message": "$oldProfile$ изменил(-а) свое имя профиля на $newProfile$.",
         "description": "Shown when a contact not in your address book changes their profile name",
         "placeholders": {
             "oldProfile": {
@@ -2058,6 +2308,10 @@
                 "example": "Bob Smith"
             }
         }
+    },
+    "SafetyNumberModal__title": {
+        "message": "Подтверждение кода безопасности",
+        "description": "Title for the modal for safety number verification"
     },
     "safetyNumberChanged": {
         "message": "Код безопасности изменился",
@@ -2082,7 +2336,7 @@
         "description": "Label on button included with safety number change notification in the conversation"
     },
     "cannotGenerateSafetyNumber": {
-        "message": "Этот пользователь не может быть подтверждён, пока вы не обменяетесь сообщениями с ним.",
+        "message": "Этот пользователь не может быть подтвержден, пока вы не обменяетесь сообщениями с ним.",
         "description": "Shown on the safety number screen if you have never exchanged messages with that contact"
     },
     "yourSafetyNumberWith": {
@@ -2112,7 +2366,7 @@
         "description": "Name for the conversation with your own phone number"
     },
     "noteToSelfHero": {
-        "message": "Вы можете добавлять заметки для себя в этом разговоре. Если у вашей учётной записи есть привязанные устройства, то новые заметки будут синхронизированы.",
+        "message": "Вы можете добавлять заметки для себя в этом разговоре. Если у вашей учетной записи есть привязанные устройства, то новые заметки будут синхронизированы.",
         "description": "Description for the Note to Self conversation"
     },
     "notificationDrawAttention": {
@@ -2131,6 +2385,10 @@
         "message": "Новый разговор",
         "description": "Label for header when starting a new conversation"
     },
+    "stories": {
+        "message": "Истории",
+        "description": "Label for header to go to stories view"
+    },
     "contactSearchPlaceholder": {
         "message": "Поиск по имени или номеру телефона",
         "description": "Placeholder to use when searching for contacts in the composer"
@@ -2142,6 +2400,44 @@
     "noConversationsFound": {
         "message": "Разговоры не найдены",
         "description": "Label shown when there are no conversations to compose to"
+    },
+    "Toast--failed-to-fetch-username": {
+        "message": "Не удалось выполнить запрос по имени пользователя. Проверьте ваше подключение к интернету и попробуйте еще раз.",
+        "description": "Shown if request to Signal servers to find username fails"
+    },
+    "Toast--failed-to-fetch-phone-number": {
+        "message": "Не удалось выполнить запрос по номеру телефона. Проверьте ваше подключение к интернету и попробуйте ещё раз.",
+        "description": "Shown if request to Signal servers to find phone number fails"
+    },
+    "startConversation--username-not-found": {
+        "message": "Пользователь не найден. $atUsername$ — не пользователь Signal; убедитесь, что вы ввели полное имя пользователя.",
+        "description": "Shown in dialog if username is not found. Note that 'username' will be the output of at-username",
+        "placeholders": {
+            "atUsername": {
+                "content": "$1",
+                "example": "@alex"
+            }
+        }
+    },
+    "startConversation--phone-number-not-found": {
+        "message": "Пользователь не найден. «$phoneNumber$» — не пользователь Signal.",
+        "description": "Shown in dialog if phone number is not found.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
+    },
+    "startConversation--phone-number-not-valid": {
+        "message": "Пользователь не найден. «$phoneNumber$» — недействительный номер телефона.",
+        "description": "Shown in dialog if phone number is not valid.",
+        "placeholders": {
+            "phoneNumber": {
+                "content": "$1",
+                "example": "+1 203-123-4567"
+            }
+        }
     },
     "chooseGroupMembers__title": {
         "message": "Выберите участников",
@@ -2178,26 +2474,12 @@
         "description": "Shown in the alert when you add the maximum recommended number of group members"
     },
     "chooseGroupMembers__maximum-recommended-group-size__body": {
-        "message": "Группы Signal работают лучше всего с $max$ участниками или меньше. Добавление большего количества участников приведёт к задержкам при отправке и получении сообщений.",
+        "message": "Группы Signal работают лучше всего с $max$ участниками или меньше. Добавление большего количества участников приведет к задержкам при отправке и получении сообщений.",
         "description": "Shown in the alert when you add the maximum recommended number of group members",
         "placeholders": {
             "max": {
                 "content": "$1",
                 "example": "150"
-            }
-        }
-    },
-    "chooseGroupMembers__cant-add-member__title": {
-        "message": "Невозможно добавить участника",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group"
-    },
-    "chooseGroupMembers__cant-add-member__body": {
-        "message": "«$name$» не может быть добавлен(-а) в группу, так как он(-а) использует старую версию Signal. Вы сможете добавить этого человека в группу после того, как он обновит Signal.",
-        "description": "Shown in the alert when you try to add someone who can't be added to a group",
-        "placeholders": {
-            "max": {
-                "content": "$1",
-                "example": "Jane Doe"
             }
         }
     },
@@ -2226,7 +2508,7 @@
         "description": "The header for the members list in the 'set group metadata' left pane screen"
     },
     "setGroupMetadata__error-message": {
-        "message": "Не удалось создать эту группу. Проверьте ваше подключение к интернету и попробуйте ещё раз.",
+        "message": "Не удалось создать эту группу. Проверьте ваше подключение к интернету и попробуйте еще раз.",
         "description": "Shown in the modal when we can't create a group"
     },
     "updateGroupAttributes__title": {
@@ -2234,7 +2516,7 @@
         "description": "Shown in the modal when we want to update a group"
     },
     "updateGroupAttributes__error-message": {
-        "message": "Не удалось обновить группу. Проверьте ваше подключение к интернету и попробуйте ещё раз.",
+        "message": "Не удалось обновить группу. Проверьте ваше подключение к интернету и попробуйте еще раз.",
         "description": "Shown in the modal when we can't update a group"
     },
     "notSupportedSMS": {
@@ -2250,7 +2532,7 @@
         "description": "When a person inputs a number that is invalid"
     },
     "unlinkedWarning": {
-        "message": "Повторно привяжите Signal Desktop к вашему мобильному устройству для продолжения обмена сообщениями.",
+        "message": "Нажмите, чтобы повторно привязать Signal Desktop к своему мобильному устройству для продолжения обмена сообщениями.",
         "description": ""
     },
     "unlinked": {
@@ -2265,6 +2547,14 @@
         "message": "Доступно обновление",
         "description": ""
     },
+    "autoUpdateRetry": {
+        "message": "Попробуйте обновиться ещё раз",
+        "description": ""
+    },
+    "autoUpdateContactSupport": {
+        "message": "свяжитесь со службой поддержки",
+        "description": ""
+    },
     "autoUpdateNewVersionMessage": {
         "message": "Нажмите, чтобы перезапустить Signal",
         "description": ""
@@ -2272,6 +2562,10 @@
     "downloadNewVersionMessage": {
         "message": "Нажмите, чтобы скачать обновление",
         "description": ""
+    },
+    "downloadFullNewVersionMessage": {
+        "message": "Signal не удалось обновиться. Нажмите, чтобы попробовать ещё раз.",
+        "description": "Shown in update dialog when partial update fails and we have to ask user to download full update"
     },
     "autoUpdateNewVersionInstructions": {
         "message": "Для применения обновлений нажмите «Перезапустить Signal».",
@@ -2283,6 +2577,10 @@
     },
     "autoUpdateLaterButtonLabel": {
         "message": "Позже",
+        "description": ""
+    },
+    "autoUpdateIgnoreButtonLabel": {
+        "message": "Игнорировать обновление",
         "description": ""
     },
     "leftTheGroup": {
@@ -2320,7 +2618,7 @@
         "description": "Shown in the conversation history when you update a group"
     },
     "updatedGroupAvatar": {
-        "message": "Аватар группы был обновлён.",
+        "message": "Аватар группы был обновлен.",
         "description": "Shown in the conversation history when someone updates the group"
     },
     "titleIsNow": {
@@ -2354,6 +2652,38 @@
             "names": {
                 "content": "$1",
                 "example": "Alice, Bob"
+            }
+        }
+    },
+    "ConversationList__aria-label": {
+        "message": "Разговор с «$title$», новых сообщений: $unreadCount$, последнее сообщение: $lastMessage$.",
+        "description": "Aria label for the conversation list item",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "unreadCount": {
+                "content": "$2",
+                "example": "23"
+            },
+            "lastMessage": {
+                "content": "$3",
+                "example": "How about Friday?"
+            }
+        }
+    },
+    "ConversationList__last-message-undefined": {
+        "message": "Последнее сообщение могло быть удалено.",
+        "description": "For aria-label within conversation list. Describes if last message is not defined."
+    },
+    "BaseConversationListItem__aria-label": {
+        "message": "Перейти к разговору с $title$",
+        "description": "Aria label for the conversation list item button",
+        "placeholders": {
+            "title": {
+                "content": "$1",
+                "example": "Alice"
             }
         }
     },
@@ -2589,6 +2919,10 @@
         "message": "Отменить",
         "description": "Appears on the cancel button in confirmation dialogs."
     },
+    "MessageBody--read-more": {
+        "message": "Читать далее",
+        "description": "When a message is too long this is the affordance to expand the message"
+    },
     "Message--unsupported-message": {
         "message": "$contact$ отправил(-a) вам сообщение, которое не может быть обработано или отображено, поскольку оно использует новую функцию Signal.",
         "description": "",
@@ -2758,7 +3092,7 @@
         "description": "Shown in the shortcuts guide"
     },
     "Keyboard--send-in-expanded-composer": {
-        "message": "Отправить (в развёрнутой панели ввода)",
+        "message": "Отправить (в развернутой панели ввода)",
         "description": "Shown in the shortcuts guide"
     },
     "Keyboard--attach-file": {
@@ -2774,7 +3108,7 @@
         "description": "Shown in the shortcuts guide"
     },
     "Keyboard--conversation-by-index": {
-        "message": "Перейти к определённому разговору в списке",
+        "message": "Перейти к определенному разговору в списке",
         "description": "A shortcut allowing direct navigation to conversations 1 to 9 in list"
     },
     "Keyboard--Key--ctrl": {
@@ -2865,8 +3199,12 @@
         "message": "Разговор заархивирован",
         "description": "A toast that shows up when user archives a conversation"
     },
+    "conversationArchivedUndo": {
+        "message": "Отменить",
+        "description": "Undo button for archiving a conversation"
+    },
     "conversationReturnedToInbox": {
-        "message": "Разговор был возвращён во входящие",
+        "message": "Разговор был возвращен во входящие",
         "description": "A toast that shows up when the user unarchives a conversation"
     },
     "conversationMarkedUnread": {
@@ -2925,6 +3263,14 @@
         "message": "Добавьте ваши стикеры",
         "description": "Title for the drop stage of the sticker creator"
     },
+    "StickerCreator--DropStage--removeSticker": {
+        "message": "Убрать стикер",
+        "description": "Label for the X button used to remove a staged sticker"
+    },
+    "StickerCreator--DropStage--dragDrop": {
+        "message": "Нажмите или перетащите файл, чтобы добавить стикер",
+        "description": "Shown on the + section of the file addition stage of sticker pack creation"
+    },
     "StickerCreator--DropStage--help": {
         "message": "Стикеры должны быть в формате PNG, APNG или WebP с прозрачным фоном, размером 512 x 512 пикселей. Рекомендуемое поле (margin) — 16 пикселей.",
         "description": "Help text for the drop stage of the sticker creator"
@@ -2952,7 +3298,7 @@
         "description": "Help text for the drop stage of the sticker creator"
     },
     "StickerCreator--MetaStage--title": {
-        "message": "Ещё несколько деталей…",
+        "message": "Еще несколько деталей…",
         "description": "Title for the meta stage of the sticker creator"
     },
     "StickerCreator--MetaStage--Field--title": {
@@ -2984,7 +3330,7 @@
         "description": "The text inside the confirmation dialog on the meta stage of the sticker creator"
     },
     "StickerCreator--UploadStage--title": {
-        "message": "Создаём ваш набор стикеров",
+        "message": "Создаем ваш набор стикеров",
         "description": "Title for the upload stage of the sticker creator"
     },
     "StickerCreator--UploadStage-uploaded": {
@@ -3028,7 +3374,7 @@
         "description": "Text for the close button on the share stage of the sticker creator"
     },
     "StickerCreator--ShareStage--createAnother": {
-        "message": "Создать ещё один набор стикеров",
+        "message": "Создать еще один набор стикеров",
         "description": "Text for the create another sticker pack button on the share stage of the sticker creator"
     },
     "StickerCreator--ShareStage--socialMessage": {
@@ -3092,18 +3438,22 @@
         "description": "Text for the sticker preview for the light theme"
     },
     "StickerCreator--StickerPreview--dark": {
-        "message": "Мой стикер в тёмной теме",
+        "message": "Мой стикер в темной теме",
         "description": "Text for the sticker preview for the dark theme"
     },
     "StickerCreator--Authentication--error": {
         "message": "Пожалуйста, настройте Signal на вашем телефоне и ПК, чтобы использовать редактор наборов стикеров",
         "description": "The error message which appears when the user has not linked their account and attempts to use the Sticker Creator"
     },
+    "Reactions--remove": {
+        "message": "Убрать реакцию",
+        "description": ""
+    },
     "Reactions--error": {
-        "message": "Не удалось отправить реакцию. Пожалуйста, попробуйте ещё раз.",
+        "message": "Не удалось отправить реакцию. Пожалуйста, попробуйте еще раз.",
         "description": "Shown when a reaction fails to send"
     },
-    "ReactionsViewer--more": {
+    "Reactions--more": {
         "message": "Больше",
         "description": "Use in the reaction picker as the alt text for the 'more' button"
     },
@@ -3132,17 +3482,11 @@
         }
     },
     "MessageRequests--message-group": {
-        "message": "Присоединиться к этой группе и поделиться своим именем и фото с её участниками? Они не узнают, что вы видели их сообщения, пока вы не примете.",
-        "description": "Shown as the message for a message request in a group",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "message": "Присоединиться к этой группе и поделиться своим именем и фото с ее участниками? Они не узнают, что вы видели их сообщения, пока вы не примете.",
+        "description": "Shown as the message for a message request in a group"
     },
     "MessageRequests--message-group-blocked": {
-        "message": "Разблокировать эту группу и поделиться своим именем и фото с её участниками? Вы не будете получать сообщений, пока не разблокируете эту группу.",
+        "message": "Разблокировать эту группу и поделиться своим именем и фото с ее участниками? Вы не будете получать сообщений, пока не разблокируете эту группу.",
         "description": "Shown as the message for a message request in a blocked group"
     },
     "MessageRequests--block": {
@@ -3153,7 +3497,7 @@
         "message": "Разблокировать",
         "description": "Shown as a button to let the user unblock a message request"
     },
-    "MessageRequests--unblock-confirm-title": {
+    "MessageRequests--unblock-direct-confirm-title": {
         "message": "Разблокировать $name$?",
         "description": "Shown as a button to let the user unblock a message request",
         "placeholders": {
@@ -3165,23 +3509,11 @@
     },
     "MessageRequests--unblock-direct-confirm-body": {
         "message": "Вы сможете отправлять сообщения и звонить друг другу.",
-        "description": "Shown as the body in the confirmation modal for unblocking a private message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "description": "Shown as the body in the confirmation modal for unblocking a private message request"
     },
     "MessageRequests--unblock-group-confirm-body": {
-        "message": "Участники группы смогут снова добавить вас в неё.",
-        "description": "Shown as the body in the confirmation modal for unblocking a group message request",
-        "placeholders": {
-            "name": {
-                "content": "$1",
-                "example": "Cayce Pollard"
-            }
-        }
+        "message": "Участники группы смогут снова добавить вас в нее.",
+        "description": "Shown as the body in the confirmation modal for unblocking a group message request"
     },
     "MessageRequests--block-and-report-spam": {
         "message": "Сообщить о спаме и заблокировать",
@@ -3216,7 +3548,7 @@
         }
     },
     "MessageRequests--block-group-confirm-body": {
-        "message": "Вы больше не будете получать сообщения и обновления от этой группы, и участники группы не смогут снова добавить вас в неё.",
+        "message": "Вы больше не будете получать сообщения и обновления от этой группы, и участники группы не смогут снова добавить вас в нее.",
         "description": "Shown as the body in the confirmation modal for blocking a group message request"
     },
     "MessageRequests--delete": {
@@ -3228,7 +3560,7 @@
         "description": "Shown as the title in the confirmation modal for deleting a private message request"
     },
     "MessageRequests--delete-direct-confirm-body": {
-        "message": "Этот разговор будет удалён со всех ваших устройств.",
+        "message": "Этот разговор будет удален со всех ваших устройств.",
         "description": "Shown as the body in the confirmation modal for deleting a private message request"
     },
     "MessageRequests--delete-group-confirm-title": {
@@ -3262,7 +3594,7 @@
         "description": "Shown as a button to share your profile, necessary to continue messaging in a conversation"
     },
     "MessageRequests--profile-sharing--group": {
-        "message": "Продолжить ваш разговор с этой группой и поделиться своими именем и фото с её участниками? $learnMore$",
+        "message": "Продолжить ваш разговор с этой группой и поделиться своими именем и фото с ее участниками? $learnMore$",
         "description": "Shown when user hasn't shared their profile in a group yet",
         "placeholders": {
             "learnMore": {
@@ -3321,7 +3653,7 @@
     },
     "member-of-2-groups": {
         "message": "Состоит в $group1$ и $group2$",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least two mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of two mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3335,7 +3667,7 @@
     },
     "member-of-3-groups": {
         "message": "Состоит в $group1$, $group2$ и $group3$",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+        "description": "Shown in the conversation hero to indicate this user is a member of three mutual groups",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3351,9 +3683,27 @@
             }
         }
     },
-    "member-of-more-than-3-groups": {
-        "message": "Состоит в $group1$, $group2$, $group3$ и ещё $remainingCount$ группах",
-        "description": "Shown in the conversation hero to indicate this user is a member of at least three mutual groups",
+    "member-of-more-than-3-groups--one-more": {
+        "message": "Состоит в $group1$, $group2$, $group3$ и еще одной группе",
+        "description": "Shown in the conversation hero to indicate this user is a member of four mutual groups",
+        "placeholders": {
+            "group1": {
+                "content": "$1",
+                "example": "NYC Rock Climbers"
+            },
+            "group2": {
+                "content": "$2",
+                "example": "Dinner Party"
+            },
+            "group3": {
+                "content": "$3",
+                "example": "Friends 🌿"
+            }
+        }
+    },
+    "member-of-more-than-3-groups--multiple-more": {
+        "message": "Состоит в $group1$, $group2$, $group3$ и еще $remainingCount$ группах",
+        "description": "Shown in the conversation hero to indicate this user is a member of 5+ mutual groups.",
         "placeholders": {
             "group1": {
                 "content": "$1",
@@ -3451,9 +3801,87 @@
         "message": "Входящий видеозвонок…",
         "description": "Shown in both the incoming call bar and notification for an incoming video call"
     },
-    "outgoingCallPrering": {
-        "message": "Подключаемся…",
-        "description": "Shown in the call screen when placing an outgoing call that isn't ringing yet"
+    "incomingGroupCall__ringing-you": {
+        "message": "$ringer$ звонит вам",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-1-other": {
+        "message": "$ringer$ звонит вам и $otherMember$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "otherMember": {
+                "content": "$2",
+                "example": "Bob"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-2-others": {
+        "message": "$ringer$ звонит вам, $first$ и $second$",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-3-others": {
+        "message": "$ringer$ звонит вам, $first$, $second$ и еще 1 человеку",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            }
+        }
+    },
+    "incomingGroupCall__ringing-many": {
+        "message": "$ringer$ звонит вам, $first$, $second$ и еще $remaining$ людям",
+        "description": "Shown in the incoming call bar when someone is ringing you for a group call",
+        "placeholders": {
+            "ringer": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "first": {
+                "content": "$2",
+                "example": "Bob"
+            },
+            "second": {
+                "content": "$3",
+                "example": "Charlie"
+            },
+            "remaining": {
+                "content": "$4",
+                "example": "5"
+            }
+        }
     },
     "outgoingCallRinging": {
         "message": "Звоним…",
@@ -3510,7 +3938,7 @@
         }
     },
     "calling__call-notification__ended": {
-        "message": "Групповой звонок был завершён",
+        "message": "Групповой звонок был завершен",
         "description": "Notification message when a group call has ended"
     },
     "calling__call-notification__started-by-someone": {
@@ -3531,7 +3959,7 @@
             }
         }
     },
-    "calling__call-notification__button__in-another-call-tooltip": {
+    "calling__in-another-call-tooltip": {
         "message": "Вы уже участвуете в другом звонке",
         "description": "Tooltip in disabled notification button when you're on another call"
     },
@@ -3570,7 +3998,7 @@
         "description": "Title for the select your screen sharing sources modal"
     },
     "calling__SelectPresentingSourcesModal--confirm": {
-        "message": "Начать показ экрана",
+        "message": "Начать показ",
         "description": "Confirm button for sharing screen modal"
     },
     "calling__SelectPresentingSourcesModal--entireScreen": {
@@ -3616,7 +4044,7 @@
         "description": "Label for the mute notifications drop-down selector"
     },
     "notMuted": {
-        "message": "Звуки включены",
+        "message": "Уведомления включены",
         "description": "Label when the conversation is not muted"
     },
     "muteHour": {
@@ -3663,15 +4091,15 @@
     },
     "ErrorModal--title": {
         "message": "Что-то пошло не так!",
-        "description": "Title of pop-up dialog when user-initiated task has gone wrong"
+        "description": "Title of popup dialog when user-initiated task has gone wrong"
     },
     "ErrorModal--description": {
-        "message": "Пожалуйста, попробуйте ещё раз или свяжитесь с поддержкой.",
-        "description": "Description text in pop-up dialog when user-initiated task has gone wrong"
+        "message": "Пожалуйста, попробуйте еще раз или свяжитесь с поддержкой.",
+        "description": "Description text in popup dialog when user-initiated task has gone wrong"
     },
     "Confirmation--confirm": {
         "message": "Хорошо",
-        "description": "Button to dismiss pop-up dialog when user-initiated task has gone wrong"
+        "description": "Button to dismiss popup dialog when user-initiated task has gone wrong"
     },
     "unknown-sgnl-link": {
         "message": "Извините, эта ссылка sgnl:// в данный момент не поддерживается Signal Desktop.",
@@ -3694,11 +4122,11 @@
         "description": "Shown if we are unable to parse a group link"
     },
     "GroupV2--join--invalid-link": {
-        "message": "Это недействительная ссылка на группу. Убедитесь, что вся ссылка неповреждённая и правильная перед тем, как пытаться присоединиться.",
+        "message": "Это недействительная ссылка на группу. Убедитесь, что вся ссылка неповрежденная и правильная перед тем, как пытаться присоединиться.",
         "description": "Shown if we are unable to parse a group link"
     },
     "GroupV2--join--prompt": {
-        "message": "Вы хотите присоединиться к этой группе и поделиться своими именем и фото с её участниками?",
+        "message": "Вы хотите присоединиться к этой группе и поделиться своими именем и фото с ее участниками?",
         "description": "Shown when you click on a group link to confirm"
     },
     "GroupV2--join--already-in-group": {
@@ -3724,6 +4152,14 @@
     "GroupV2--join--link-revoked": {
         "message": "Эта ссылка на группу уже недействительна.",
         "description": "Shown if you click a group link and we can't get information about it"
+    },
+    "GroupV2--join--link-forbidden--title": {
+        "message": "Невозможно присоединиться к группе",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
+    },
+    "GroupV2--join--link-forbidden": {
+        "message": "Вы не можете присоединиться к этой группе по ссылке, потому что администратор удалил вас из этой группы.",
+        "description": "Shown if you click a group link and you have been forbidden from joining via the link"
     },
     "GroupV2--join--prompt-with-approval": {
         "message": "Администратор этой группы должен принять ваш запрос, прежде чем вы сможете присоединиться к ней. Когда вы отправите запрос, ваши имя и фото станут доступны участникам этой группы.",
@@ -3786,7 +4222,7 @@
         "description": "Shown if something went wrong when you try to join via a group link"
     },
     "GroupV2--join--general-join-failure": {
-        "message": "Не удалось присоединиться к группе. Попробуйте ещё раз позже.",
+        "message": "Не удалось присоединиться к группе. Попробуйте еще раз позже.",
         "description": "Shown if something went wrong when you try to join via a group link"
     },
     "GroupV2--admin": {
@@ -4020,7 +4456,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--member-add--invited--you": {
-        "message": "Вы добавили приглашённого участника $inviteeName$.",
+        "message": "Вы добавили приглашенного участника $inviteeName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4030,7 +4466,7 @@
         }
     },
     "GroupV2--member-add--invited--other": {
-        "message": "$memberName$ добавил(-а) приглашённого участника $inviteeName$.",
+        "message": "$memberName$ добавил(-а) приглашенного участника $inviteeName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4044,7 +4480,7 @@
         }
     },
     "GroupV2--member-add--invited--unknown": {
-        "message": "Один из участников добавил приглашённого участника $inviteeName$.",
+        "message": "Один из участников добавил приглашенного участника $inviteeName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4351,7 +4787,13 @@
     },
     "GroupV2--member-privilege--demote--other--unknown": {
         "message": "Один из администраторов отозвал привилегии администратора у $memberName$.",
-        "description": "Shown in timeline or conversation preview when v2 group changes"
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "memberName": {
+                "content": "$1",
+                "example": "Bob"
+            }
+        }
     },
     "GroupV2--member-privilege--demote--you--other": {
         "message": "$adminName$ отозвал(-а) ваши привилегии администратора.",
@@ -4388,7 +4830,7 @@
         }
     },
     "GroupV2--pending-add--one--other--unknown": {
-        "message": "Один человек был приглашён в группу.",
+        "message": "Один человек был приглашен в группу.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4470,7 +4912,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-remove--decline--unknown": {
-        "message": "1 человек отклонил своё приглашение в группу.",
+        "message": "1 человек отклонил свое приглашение в группу.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--pending-remove--revoke--one--other": {
@@ -4494,7 +4936,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-own--to-you": {
-        "message": "$inviterName$ отозвал(-а) своё приглашение для вас.",
+        "message": "$inviterName$ отозвал(-а) свое приглашение для вас.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviterName": {
@@ -4504,7 +4946,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-own--unknown": {
-        "message": "$inviterName$ отозвал(-а) своё приглашение для 1 человека.",
+        "message": "$inviterName$ отозвал(-а) свое приглашение для 1 человека.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviterName": {
@@ -4558,7 +5000,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--other": {
-        "message": "$adminName$ отозвал(-а) приглашение в группу для 1 человека, который был приглашён $memberName$.",
+        "message": "$adminName$ отозвал(-а) приглашение в группу для 1 человека, который был приглашен $memberName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4572,7 +5014,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--you": {
-        "message": "Вы отозвали приглашение в группу для 1 человека, который был приглашён $memberName$.",
+        "message": "Вы отозвали приглашение в группу для 1 человека, который был приглашен $memberName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4582,7 +5024,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from--one--unknown": {
-        "message": "Один из администраторов отозвал приглашение в группу для 1 человека, который был приглашён $memberName$.",
+        "message": "Один из администраторов отозвал приглашение в группу для 1 человека, который был приглашен $memberName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "memberName": {
@@ -4602,7 +5044,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--one--you": {
-        "message": "Вы отменили своё приглашение для $inviteeName$.",
+        "message": "Вы отменили свое приглашение для $inviteeName$.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "inviteeName": {
@@ -4678,7 +5120,7 @@
         }
     },
     "GroupV2--pending-remove--revoke-invite-from-you--many--you": {
-        "message": "Вы отменили своё приглашение для $count$ людей.",
+        "message": "Вы отменили свое приглашение для $count$ людей.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "count": {
@@ -4716,7 +5158,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--admin-approval-remove-one--you--unknown": {
-        "message": "Ваш запрос на присоединение к группе был отклонён администратором.",
+        "message": "Ваш запрос на присоединение к группе был отклонен администратором.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--admin-approval-remove-one--other--you": {
@@ -4753,12 +5195,36 @@
             }
         }
     },
+    "GroupV2--admin-approval-bounce--one": {
+        "message": "$joinerName$ запросил(-а) и отменил(-а) свой запрос на присоединение к группе по ссылке",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            }
+        }
+    },
+    "GroupV2--admin-approval-bounce": {
+        "message": "$joinerName$ запросил(-а) и отменил(-а) $numberOfRequests$ запросов на присоединение к группе по ссылке",
+        "description": "Shown in timeline or conversation preview when v2 group changes",
+        "placeholders": {
+            "joinerName": {
+                "content": "$1",
+                "example": "Alice"
+            },
+            "numberOfRequests": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
     "GroupV2--group-link-add--disabled--you": {
-        "message": "Вы включили ссылку на группу с отключённым одобрением администратора.",
+        "message": "Вы включили ссылку на группу с отключенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--group-link-add--disabled--other": {
-        "message": "$adminName$ включил(-а) ссылку на группу с отключённым одобрением администратора.",
+        "message": "$adminName$ включил(-а) ссылку на группу с отключенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4768,15 +5234,15 @@
         }
     },
     "GroupV2--group-link-add--disabled--unknown": {
-        "message": "Ссылка на группу была включена с отключённым одобрением администратора.",
+        "message": "Ссылка на группу была включена с отключенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--group-link-add--enabled--you": {
-        "message": "Вы включили ссылку на группу со включённым одобрением администратора.",
+        "message": "Вы включили ссылку на группу со включенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--group-link-add--enabled--other": {
-        "message": "$adminName$ включил(-а) ссылку на группу со включённым одобрением администратора.",
+        "message": "$adminName$ включил(-а) ссылку на группу со включенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes",
         "placeholders": {
             "adminName": {
@@ -4786,7 +5252,7 @@
         }
     },
     "GroupV2--group-link-add--enabled--unknown": {
-        "message": "Ссылка на группу была включена со включённым одобрением администратора.",
+        "message": "Ссылка на группу была включена со включенным одобрением администратора.",
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV2--group-link-remove--you": {
@@ -4898,7 +5364,7 @@
         "description": "Shown in timeline or conversation preview when v2 group changes"
     },
     "GroupV1--Migration--disabled": {
-        "message": "Обновите эту группу, чтобы активировать такие новые функции, как @упоминания и администраторы групп. Участники, которые ещё не поделились своими именем или фото с этой группой, будут приглашены присоединиться. $learnMore$",
+        "message": "Обновите эту группу, чтобы активировать такие новые функции, как @упоминания и администраторы групп. Участники, которые еще не поделились своими именем или фото с этой группой, будут приглашены присоединиться. $learnMore$",
         "description": "Shown instead of composition area when user is forced to migrate a legacy group (GV1).",
         "placeholders": {
             "learnMore": {
@@ -4956,7 +5422,7 @@
         "description": "Shown on Learn More popup after or Migration popup before GV1 migration"
     },
     "GroupV1--Migration--info--removed--before--one": {
-        "message": "Этот участник не может присоединяться к Новым группам и будет удалён из группы:",
+        "message": "Этот участник не может присоединяться к Новым группам и будет удален из группы:",
         "description": "Shown on Learn More popup after or Migration popup before GV1 migration"
     },
     "GroupV1--Migration--info--removed--after--many": {
@@ -4964,7 +5430,7 @@
         "description": "Shown on Learn More popup after or Migration popup before GV1 migration"
     },
     "GroupV1--Migration--info--removed--after--one": {
-        "message": "Этот участник не мог присоединяться к Новым группам и был удалён из группы:",
+        "message": "Этот участник не мог присоединяться к Новым группам и был удален из группы:",
         "description": "Shown on Learn More popup after or Migration popup before GV1 migration"
     },
     "GroupV1--Migration--invited--you": {
@@ -4972,7 +5438,7 @@
         "description": "Shown in timeline when a group is upgraded and you were invited instead of added"
     },
     "GroupV1--Migration--invited--one": {
-        "message": "$contact$ не мог быть добавлен в Новую группу, поэтому был приглашён присоединиться.",
+        "message": "$contact$ не мог быть добавлен в Новую группу, поэтому был приглашен присоединиться.",
         "description": "Shown in timeline when a group is upgraded and one person was invited, instead of added",
         "placeholders": {
             "contact": {
@@ -5023,6 +5489,30 @@
         "message": "следующее",
         "description": "Generic next label"
     },
+    "BadgeDialog__become-a-sustainer-button": {
+        "message": "Стать Поддерживающим",
+        "description": "In the badge dialog. This button is shown under sustainer badges, taking users to some instructions"
+    },
+    "BadgeSustainerInstructions__header": {
+        "message": "Стать Поддерживающим",
+        "description": "In the instructions for becoming a sustainer. The heading."
+    },
+    "BadgeSustainerInstructions__subheader": {
+        "message": "Signal существует благодаря таким людям, как вы. Поддержите нас и получите значок.",
+        "description": "In the instructions for becoming a sustainer. The subheading."
+    },
+    "BadgeSustainerInstructions__instructions__1": {
+        "message": "Откройте Signal на своем телефоне",
+        "description": "In the instructions for becoming a sustainer. First instruction."
+    },
+    "BadgeSustainerInstructions__instructions__2": {
+        "message": "Нажмите на свое фото профиля в левом верхнем углу, чтобы открыть настройки",
+        "description": "In the instructions for becoming a sustainer. Second instruction."
+    },
+    "BadgeSustainerInstructions__instructions__3": {
+        "message": "Нажмите на «Стать Поддерживающим» и подпишитесь",
+        "description": "In the instructions for becoming a sustainer. Third instruction."
+    },
     "CompositionArea--expand": {
         "message": "Развернуть",
         "description": "Aria label for expanding composition area"
@@ -5044,7 +5534,7 @@
         "description": "Displayed while checking if the contact is SMS-only"
     },
     "countMutedConversationsDescription": {
-        "message": "Считать разговоры с отключёнными уведомлениями в счётчике на наклейке",
+        "message": "Считать разговоры с отключенными уведомлениями в счетчике на наклейке",
         "description": "Description for counting muted conversations in badge setting"
     },
     "ContactModal--message": {
@@ -5060,7 +5550,7 @@
         "description": "Button text for make admin button in Group Contact Details modal"
     },
     "ContactModal--make-admin-info": {
-        "message": "$contact$ сможет редактировать эту группу и её участников.",
+        "message": "$contact$ сможет редактировать эту группу и ее участников.",
         "description": "Shown in a confirmation dialog when you are about to grant admin privileges to someone",
         "placeholders": {
             "contact": {
@@ -5070,7 +5560,7 @@
         }
     },
     "ContactModal--rm-admin-info": {
-        "message": "Удалить $contact$ как администратора группы",
+        "message": "Удалить $contact$ как администратора группы?",
         "description": "Shown in a confirmation dialog when you are about to remove admin privileges from someone",
         "placeholders": {
             "contact": {
@@ -5091,6 +5581,14 @@
         "message": "Настройки группы",
         "description": "This is a button in the conversation context menu to show group settings"
     },
+    "showConversationDetails--direct": {
+        "message": "Настройки чата",
+        "description": "This is a button in the conversation context menu to show chat settings"
+    },
+    "ConversationDetails__unmute--title": {
+        "message": "Включить уведомления в этом чате?",
+        "description": "Title for the modal to unmute a chat"
+    },
     "ConversationDetails--group-link": {
         "message": "Ссылка на группу",
         "description": "This is the label for the group link management panel"
@@ -5099,9 +5597,13 @@
         "message": "Исчезающие сообщения",
         "description": "This is the label for the disappearing messages setting panel"
     },
-    "ConversationDetails--disappearing-messages-info": {
+    "ConversationDetails--disappearing-messages-info--group": {
         "message": "При включении этой настройки сообщения, отправленные и полученные в этой группе, будут исчезать после прочтения.",
-        "description": "This is the info about the disappearing messages setting"
+        "description": "This is the info about the disappearing messages setting, in groups"
+    },
+    "ConversationDetails--disappearing-messages-info--direct": {
+        "message": "При включении этой настройки сообщения, отправленные и полученные в этом чате, будут исчезать после прочтения.",
+        "description": "This is the info about the disappearing messages setting, for direct conversations"
     },
     "ConversationDetails--notifications": {
         "message": "Уведомления",
@@ -5129,7 +5631,7 @@
     },
     "ConversationDetails--announcement-info": {
         "message": "Выберите, кто может отправлять сообщения в этой группе.",
-        "description": "This is the additional info for the 'who can send mesages' panel"
+        "description": "This is the additional info for the 'who can send messages' panel"
     },
     "ConversationDetails--requests-and-invites": {
         "message": "Запросы на участие и приглашения",
@@ -5144,7 +5646,7 @@
         "description": "This is a button to block a group"
     },
     "ConversationDetailsActions--leave-group-must-choose-new-admin": {
-        "message": "Прежде чем покинуть эту группу, вы должны назначить для неё как минимум одного нового администратора.",
+        "message": "Прежде чем покинуть эту группу, вы должны назначить для нее как минимум одного нового администратора.",
         "description": "Shown if, before leaving a group, you need to choose an admin"
     },
     "ConversationDetailsActions--leave-group-modal-title": {
@@ -5218,7 +5720,7 @@
         "description": "In the conversation notifications settings, this is the label for the mentions option"
     },
     "ConversationNotificationsSettings__mentions__info": {
-        "message": "Получать уведомления, когда вас упоминают в чатах с отключёнными уведомлениями",
+        "message": "Получать уведомления, когда вас упоминают в чатах с отключенными уведомлениями",
         "description": "In the conversation notifications settings, this is the sub-label for the mentions option"
     },
     "ConversationNotificationsSettings__mentions__select__always-notify": {
@@ -5293,16 +5795,26 @@
             }
         }
     },
+    "PendingRequests--deny-for--with-link": {
+        "message": "Отклонить запрос от «$name$»? Этот пользователь больше не сможет запросить присоединиться к группе по ссылке.",
+        "description": "This is the modal content when confirming denying a group request to join",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Meowsy Purrington"
+            }
+        }
+    },
     "PendingInvites--invites": {
         "message": "Приглашения",
         "description": "This is the title list of all invites"
     },
     "PendingInvites--invited-by-you": {
-        "message": "Приглашённые вами",
+        "message": "Приглашенные вами",
         "description": "This is the title for the list of members you have invited"
     },
     "PendingInvites--invited-by-others": {
-        "message": "Приглашённые другими",
+        "message": "Приглашенные другими",
         "description": "This is the title for the list of members who have invited other people"
     },
     "PendingInvites--invited-count": {
@@ -5371,7 +5883,7 @@
     },
     "PendingRequests--info": {
         "message": "Люди в этом списке пытаются присоединиться к «$name$» по ссылке на группу.",
-        "description": "Inforamtion shown below the pending admin approval list",
+        "description": "Information shown below the pending admin approval list",
         "placeholders": {
             "name": {
                 "content": "$1",
@@ -5380,8 +5892,30 @@
         }
     },
     "PendingInvites--info": {
-        "message": "Подробности людей, приглашённых другими участниками группы, не показываются до того, как они присоединятся. Приглашённые увидят сообщения в группе только после того, как присоединятся.",
+        "message": "Подробности людей, приглашенных другими участниками группы, не показываются до того, как они присоединятся. Приглашенные увидят сообщения в группе только после того, как присоединятся.",
         "description": "Information shown below the invite list"
+    },
+    "PendingRequests--block--button": {
+        "message": "Заблокировать запрос",
+        "description": "Shown in timeline if users cancel their request to join a group via a group link"
+    },
+    "PendingRequests--block--title": {
+        "message": "Заблокировать запрос?",
+        "description": "Title of dialog to block a user from requesting to join via the link again"
+    },
+    "PendingRequests--block--contents": {
+        "message": "$name$ не сможет присоединиться или запросить присоединиться к этой группе с помощью ссылки. Этого пользователя всё равно можно будет добавить вручную.",
+        "description": "Details of dialog to block a user from requesting to join via the link again",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Annoying Person"
+            }
+        }
+    },
+    "PendingRequests--block--confirm": {
+        "message": "Заблокировать запрос",
+        "description": "Confirmation button of dialog to block a user from requesting to join via the link again"
     },
     "AvatarInput--no-photo-label--group": {
         "message": "Добавить фото группы",
@@ -5496,16 +6030,34 @@
         "description": "The text of the button to create new groups"
     },
     "selectContact": {
-        "message": "Выбрать контакт",
-        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)"
+        "message": "Выбрать контакта $name$",
+        "description": "The label for contact checkboxes that are non-selected (clicking them should select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "deselectContact": {
-        "message": "Отменить выбор контакта",
-        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)"
+        "message": "Отменить выбор контакта $name$",
+        "description": "The label for contact checkboxes that are selected (clicking them should de-select the contact)",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "cannotSelectContact": {
-        "message": "Невозможно выбрать контакт",
-        "description": "The label for contact checkboxes that are disabled"
+        "message": "Невозможно выбрать контакт $name$",
+        "description": "The label for contact checkboxes that are disabled",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "John"
+            }
+        }
     },
     "alreadyAMember": {
         "message": "Уже является участником",
@@ -5549,6 +6101,14 @@
         "message": "Продолжить",
         "description": "aria-label for the 'next' button in the forward a message modal dialog"
     },
+    "TimelineDateHeader--date-in-last-6-months": {
+        "message": "ddd, D MMM",
+        "description": "Moment.js format for date headers in the message timeline, for dates <6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
+    "TimelineDateHeader--date-older-than-6-months": {
+        "message": "D MMM YYYY",
+        "description": "Moment.js format for date headers in the message timeline, for dates >=6 months old. See https://momentjs.com/docs/#/displaying/format/."
+    },
     "MessageRequestWarning__learn-more": {
         "message": "Узнать больше",
         "description": "Shown on the message request warning. Clicking this button will open a dialog with more information"
@@ -5562,7 +6122,7 @@
         "description": "Shown in the message request warning dialog. Clicking this button will open a page on Signal's support site"
     },
     "ContactSpoofing__same-name": {
-        "message": "Внимательно проверяйте запросы. Signal нашёл другого контакта с тем же именем. $link$",
+        "message": "Внимательно проверяйте запросы. Signal нашел другого контакта с тем же именем. $link$",
         "description": "Shown in the timeline warning when you have a message request from someone with the same name as someone else",
         "placeholders": {
             "link": {
@@ -5622,7 +6182,7 @@
         "description": "Header in the group contact spoofing review dialog. After this header, there will be a list of members"
     },
     "ContactSpoofingReviewDialog__group__name-change-info": {
-        "message": "Недавно изменил(-а) своё имя профиля с $oldName$ на $newName$",
+        "message": "Недавно изменил(-а) свое имя профиля с $oldName$ на $newName$",
         "description": "In the group contact spoofing review dialog, this text is shown when someone has changed their name recently",
         "placeholders": {
             "oldName": {
@@ -5641,6 +6201,16 @@
     },
     "RemoveGroupMemberConfirmation__description": {
         "message": "Удалить «$name$» из группы?",
+        "description": "When confirming the removal of a group member, show this text in the dialog",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Jane Doe"
+            }
+        }
+    },
+    "RemoveGroupMemberConfirmation__description__with-link": {
+        "message": "Удалить «$name$» из группы? Этот пользователь не сможет заново присоединиться к группе по ссылке.",
         "description": "When confirming the removal of a group member, show this text in the dialog",
         "placeholders": {
             "name": {
@@ -5678,12 +6248,12 @@
         "description": "Displayed after successful captcha"
     },
     "verificationFailed": {
-        "message": "Проверка не удалась. Пожалуйста, попробуйте ещё раз позже.",
+        "message": "Проверка не удалась. Пожалуйста, попробуйте еще раз позже.",
         "description": "Displayed after unsuccessful captcha"
     },
     "deleteForEveryoneFailed": {
-        "message": "Не удалось удалить сообщение для всех. Пожалуйста, попробуйте ещё раз позже.",
-        "description": "Displayed when delete-for-everyone has failed to send to all recepients"
+        "message": "Не удалось удалить сообщение для всех. Пожалуйста, попробуйте еще раз позже.",
+        "description": "Displayed when delete-for-everyone has failed to send to all recipients"
     },
     "ChatColorPicker__delete--title": {
         "message": "Удаление цвета",
@@ -5740,7 +6310,7 @@
         "description": "An example message bubble for selecting the chat color"
     },
     "ChatColorPicker__sampleBubble2": {
-        "message": "Ещё одно сообщение.",
+        "message": "Еще одно сообщение.",
         "description": "An example message bubble for selecting the chat color"
     },
     "ChatColorPicker__sampleBubble3": {
@@ -5787,6 +6357,14 @@
         "message": "Пользовательское время",
         "description": "Text for an option in Conversation Details Disappearing Messages setting when user previously selected custom time"
     },
+    "DisappearingTimeDialog__label--value": {
+        "message": "Число",
+        "description": "aria-label for the number select box"
+    },
+    "DisappearingTimeDialog__label--units": {
+        "message": "Единица измерения времени",
+        "description": "aria-label for the units of time select box"
+    },
     "DisappearingTimeDialog__title": {
         "message": "Пользовательское время",
         "description": "Title for the custom disappearing message timeout dialog"
@@ -5825,7 +6403,7 @@
     },
     "settings__DisappearingMessages__timer__label": {
         "message": "Таймер по умолчанию для новых чатов",
-        "description": "Label for the Disapearring Messages default timer setting"
+        "description": "Label for the Disappearing Messages default timer setting"
     },
     "UniversalTimerNotification__text": {
         "message": "Время исчезновения сообщений будет установлено на $timeValue$, когда вы отправите сообщение этому человеку.",
@@ -5905,6 +6483,70 @@
         "message": "Обо мне",
         "description": "Default text for about field"
     },
+    "ProfileEditor--username": {
+        "message": "Имя пользователя",
+        "description": "Default text for username field"
+    },
+    "ProfileEditor--username--placeholder": {
+        "message": "Введите имя пользователя",
+        "description": "Placeholder for the username field"
+    },
+    "ProfileEditor--username--helper": {
+        "message": "Имена пользователей в Signal необязательны. Если вы решите создать имя пользователя, другие пользователи Signal смогут найти вас по этому имени пользователя и связаться с вами, не зная ваш номер телефона.",
+        "description": "Shown on the edit username screen"
+    },
+    "ProfileEditor--username--check-characters": {
+        "message": "Имена пользователей могут содержать только a-z, 0-9 и _",
+        "description": "Shown if user has attempted to use forbidden characters"
+    },
+    "ProfileEditor--username--check-starting-character": {
+        "message": "Имена пользователей не могут начинаться с цифр.",
+        "description": "Shown if user has attempted to begin their username with a number"
+    },
+    "ProfileEditor--username--check-character-min": {
+        "message": "Имя пользователя должно содержать как минимум $min$ символа.",
+        "description": "Shown if user has attempted to enter a username with too few characters - currently min is 3",
+        "placeholders": {
+            "min": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "ProfileEditor--username--check-character-max": {
+        "message": "Имя пользователя не может содержать больше чем $max$ символов.",
+        "description": "Shown if user has attempted to enter a username with too many characters - currently min is 25",
+        "placeholders": {
+            "max": {
+                "content": "$1",
+                "example": "25"
+            }
+        }
+    },
+    "ProfileEditor--username--check-username-taken": {
+        "message": "Это имя пользователя занято.",
+        "description": "Shown if user has attempted to save a username which is not available"
+    },
+    "ProfileEditor--username--general-error": {
+        "message": "Не удалось сохранить имя пользователя. Проверьте ваше подключение к интернету и попробуйте еще раз.",
+        "description": "Shown if something unknown has gone wrong with username save."
+    },
+    "ProfileEditor--username--delete-general-error": {
+        "message": "Не удалось удалить имя пользователя. Проверьте ваше подключение к интернету и попробуйте еще раз.",
+        "description": "Shown if something unknown has gone wrong with username delete."
+    },
+    "ProfileEditor--username--delete-username": {
+        "message": "Удалить имя пользователя",
+        "description": "Shown as aria label for trash icon next to username"
+    },
+    "ProfileEditor--username--confirm-delete-body": {
+        "message": "Это действие удалит ваше имя пользователя, и другие пользователи смогут его использовать. Вы уверены?",
+        "description": "Shown in dialog body if user has saved an empty string to delete their username"
+    },
+    "ProfileEditor--username--confirm-delete-button": {
+        "message": "Удалить",
+        "description": "Shown in dialog button if user has saved an empty string to delete their username"
+    },
     "ProfileEditor--about-placeholder": {
         "message": "Напишите несколько слов о себе…",
         "description": "Placeholder text for about input field"
@@ -5918,7 +6560,7 @@
         "description": "Placeholder text for last name field"
     },
     "ConfirmDiscardDialog--discard": {
-        "message": "Вы хотите сбросить внесённые изменения?",
+        "message": "Вы хотите сбросить внесенные изменения?",
         "description": "ConfirmationDialog text for discarding changes"
     },
     "ProfileEditor--info": {
@@ -5967,8 +6609,16 @@
         "message": "Обо мне",
         "description": "Title for about editing"
     },
+    "ProfileEditorModal--avatar": {
+        "message": "Ваш аватар",
+        "description": "Title for profile avatar editing"
+    },
+    "ProfileEditorModal--username": {
+        "message": "Имя пользователя",
+        "description": "Title for username editing"
+    },
     "ProfileEditorModal--error": {
-        "message": "Не удалось обновить ваш профиль. Пожалуйста, попробуйте ещё раз.",
+        "message": "Не удалось обновить ваш профиль. Пожалуйста, попробуйте еще раз.",
         "description": "Error message when something goes wrong updating your profile."
     },
     "AnnouncementsOnlyGroupBanner--modal": {
@@ -6011,7 +6661,7 @@
     },
     "Preferences__button--chats": {
         "message": "Чаты",
-        "description": "Button to switch the settings view"
+        "description": "Button to switch the settings view (and a title of pane)"
     },
     "Preferences__button--calls": {
         "message": "Звонки",
@@ -6052,7 +6702,7 @@
         "description": "Title for the generate link previews setting"
     },
     "Preferences__link-previews--description": {
-        "message": "Чтобы изменить эту настройку, откройте приложение Signal на своём мобильном устройстве и перейдите в Настройки > Чаты",
+        "message": "Чтобы изменить эту настройку, откройте приложение Signal на своем мобильном устройстве и перейдите в Настройки > Чаты",
         "description": "Description for the generate link previews setting"
     },
     "Preferences--advanced": {
@@ -6092,7 +6742,7 @@
         "description": "Title for the 'who can do X' setting"
     },
     "Preferences__privacy--description": {
-        "message": "Чтобы изменить эти настройки, откройте приложение Signal на своём мобильном устройстве и перейдите в Настройки > Конфиденциальность",
+        "message": "Чтобы изменить эти настройки, откройте приложение Signal на своем мобильном устройстве и перейдите в Настройки > Конфиденциальность",
         "description": "Description for the 'who can do X' setting"
     },
     "Preferences__who-can--everybody": {
@@ -6135,6 +6785,14 @@
         "message": "Автоматически скачивать обновления",
         "description": "Label for checkbox for the auto download updates setting"
     },
+    "Preferences__enable-notifications": {
+        "message": "Включить уведомления",
+        "description": "Label for checkbox for the notifications setting"
+    },
+    "Preferences__devices": {
+        "message": "Устройства",
+        "description": "Label for Device list in call settings pane"
+    },
     "DialogUpdate--version-available": {
         "message": "Доступно обновление до версии $version$",
         "description": "Tooltip for new update available",
@@ -6145,24 +6803,322 @@
             }
         }
     },
-    "WhatsNew__v5.15--1": {
-        "message": "Нет, это не пылинка на экране вашего монитора — теперь на входящих голосовых сообщениях, которые не были прослушаны, показывается точка.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--first-line": {
+        "message": "Не удалось закрыть Signal.",
+        "description": "First line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--2": {
-        "message": "Дизайн лобби звонков был немного обновлён.",
-        "description": "Release notes for v5.15"
+    "NSIS__retry-dialog--second-line": {
+        "message": "Пожалуйста, закройте его вручную и нажмите «Повторить», чтобы продолжить.",
+        "description": "Second line of the dialog displayed when Windows installer can't close application automatically and needs user intervention to complete the installation."
     },
-    "WhatsNew__v5.15--3": {
-        "message": "Новое окно настроек лучше и быстрее. Вы можете изменить масштаб, переключить тему, установить таймер исчезающих сообщений по умолчанию и поменять другие настройки.",
-        "description": "Release notes for v5.15"
+    "NSIS__appRunning": {
+        "message": "Приложение $appName$ запущено.\nНажмите «OK», чтобы закрыть его.\nЕсли оно не закрывается, попробуйте закрыть его вручную.",
+        "description": "The contents of a dialog displayed when Windows installer detect that the application is running and asks user to close it. Note: please keep the line breaks so that the text occupies three separate lines",
+        "placeholders": {
+            "appName": {
+                "content": "$1",
+                "example": "Signal"
+            }
+        }
     },
-    "WhatsNew__v5.15--4": {
-        "message": "Теперь вы можете выбирать, когда скачивать и применять новые обновления Signal. Соответствующие диалоги были также немного переделаны. Вы можете изменить эту настройку в новом окне настроек.",
-        "description": "Release notes for v5.15"
+    "NSIS__decompressionFailed": {
+        "message": "Не удалось разархивировать файлы. Пожалуйста, попробуйте запустить установщик заново.",
+        "description": "Displayed when Windows installer cannot decompress application files"
     },
-    "WhatsNew__v5.15--5": {
-        "message": "Было исправлено много ошибок и сделано несколько улучшений производительности. Спасибо вам всем за отчёты об ошибках!",
-        "description": "Release notes for v5.15"
+    "NSIS__uninstallFailed": {
+        "message": "Не удалось удалить старые файлы приложения. Пожалуйста, попробуйте запустить установщик заново.",
+        "description": "Displayed when Windows installer cannot uninstall the old application"
+    },
+    "CrashReportDialog__title": {
+        "message": "В приложении произошёл сбой",
+        "description": "A title of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__body": {
+        "message": "Signal перезапустился после сбоя. Вы можете отправить журнал сбоя, чтобы помочь Signal исследовать эту проблему.",
+        "description": "The body of the dialog displayed when starting an application after a recent crash"
+    },
+    "CrashReportDialog__submit": {
+        "message": "Отправить",
+        "description": "A button label for submission of the crash reporter data after a recent crash"
+    },
+    "CrashReportDialog__erase": {
+        "message": "Не отправлять",
+        "description": "A button label for erasure of the crash reporter data after a recent crash and continuing to start the app"
+    },
+    "CustomizingPreferredReactions__title": {
+        "message": "Настроить реакции",
+        "description": "Shown in the header of the modal for customizing the preferred reactions. Also shown in the tooltip for the button that opens this modal."
+    },
+    "CustomizingPreferredReactions__subtitle": {
+        "message": "Нажмите, чтобы заменить эмодзи",
+        "description": "Instructions in the modal for customizing the preferred reactions."
+    },
+    "CustomizingPreferredReactions__had-save-error": {
+        "message": "Произошла ошибка при сохранении ваших настроек. Пожалуйста, попробуйте еще раз.",
+        "description": "Shown if there is an error when saving your preferred reaction settings. Should be very rare to see this message."
+    },
+    "MediaEditor__control--draw": {
+        "message": "Нарисовать",
+        "description": "Label for the draw button in the media editor"
+    },
+    "MediaEditor__control--text": {
+        "message": "Добавить текст",
+        "description": "Label for the text button in the media editor"
+    },
+    "MediaEditor__control--sticker": {
+        "message": "Стикеры",
+        "description": "Label for the sticker button in the media editor"
+    },
+    "MediaEditor__control--crop": {
+        "message": "Обрезать и повернуть",
+        "description": "Label for the crop & rotate button in the media editor"
+    },
+    "MediaEditor__control--undo": {
+        "message": "Отменить",
+        "description": "Label for the undo button in the media editor"
+    },
+    "MediaEditor__control--redo": {
+        "message": "Вернуть",
+        "description": "Label for the redo button in the media editor"
+    },
+    "MediaEditor__text--regular": {
+        "message": "Обычный",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--highlight": {
+        "message": "Выделение",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--outline": {
+        "message": "Контур",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__text--underline": {
+        "message": "Подчёркивание",
+        "description": "Describes what attribute the color picker will change on the text"
+    },
+    "MediaEditor__draw--pen": {
+        "message": "Фломастер",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--highlighter": {
+        "message": "Текстовыделитель",
+        "description": "Type of brush to free draw"
+    },
+    "MediaEditor__draw--thin": {
+        "message": "Тонкий",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--regular": {
+        "message": "Обычный",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--medium": {
+        "message": "Средний",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__draw--heavy": {
+        "message": "Толстый",
+        "description": "Tip width of the brush"
+    },
+    "MediaEditor__crop--reset": {
+        "message": "Сбросить",
+        "description": "Reset the crop state"
+    },
+    "MediaEditor__crop--rotate": {
+        "message": "Повернуть",
+        "description": "Rotate the canvas"
+    },
+    "MediaEditor__crop--flip": {
+        "message": "Зеркально отразить",
+        "description": "Flip/mirror the canvas"
+    },
+    "MediaEditor__crop--lock": {
+        "message": "Заблокировать соотношение сторон",
+        "description": "Lock the aspect ratio"
+    },
+    "MediaEditor__crop--crop": {
+        "message": "Обрезать",
+        "description": "Performs the crop"
+    },
+    "MyStories__title": {
+        "message": "Мои истории",
+        "description": "Title for the my stories list"
+    },
+    "MyStories__story": {
+        "message": "Ваша история",
+        "description": "aria-label for each one of your stories"
+    },
+    "MyStories__download": {
+        "message": "Скачать историю",
+        "description": "aria-label for the download button"
+    },
+    "MyStories__more": {
+        "message": "Больше опций",
+        "description": "aria-label for the more button"
+    },
+    "MyStories__views--singular": {
+        "message": "$num$ просмотр",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__views--plural": {
+        "message": "$num$ просмотров",
+        "description": "Number of views your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "16"
+            }
+        }
+    },
+    "MyStories__replies--singular": {
+        "message": "$num$ ответ",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "1"
+            }
+        }
+    },
+    "MyStories__replies--plural": {
+        "message": "$num$ ответов",
+        "description": "Number of replies your story has",
+        "placeholders": {
+            "num": {
+                "content": "$1",
+                "example": "3"
+            }
+        }
+    },
+    "MyStories__delete": {
+        "message": "Удалить эту историю? Она также будет удалена для всех, кто её получил.",
+        "description": "Confirmation dialog description text for deleting a story"
+    },
+    "Stories__title": {
+        "message": "Истории",
+        "description": "Title for the stories list"
+    },
+    "Stories__mine": {
+        "message": "Мои истории",
+        "description": "Label for your stories"
+    },
+    "Stories__add": {
+        "message": "Добавьте историю",
+        "description": "Description hint to add a story"
+    },
+    "Stories__hidden-stories": {
+        "message": "Скрытые истории",
+        "description": "Button label to go to hidden stories pane"
+    },
+    "Stories__list-empty": {
+        "message": "Нет недавних историй",
+        "description": "Description for when there are no stories to show"
+    },
+    "Stories__placeholder--text": {
+        "message": "Нажмите на историю, чтобы просмотреть её",
+        "description": "Placeholder label for the story view"
+    },
+    "Stories__from-to-group": {
+        "message": "$name$ в $group$",
+        "description": "Title for someone sending a story to a group",
+        "placeholders": {
+            "name": {
+                "content": "$1",
+                "example": "Elle"
+            },
+            "group": {
+                "content": "$2",
+                "example": "Family"
+            }
+        }
+    },
+    "StoryViewer__reply": {
+        "message": "Ответить",
+        "description": "Button label to reply to a story"
+    },
+    "StoryViewsNRepliesModal__placeholder": {
+        "message": "Введите ответ…",
+        "description": "Placeholder text for the story reply modal"
+    },
+    "StoryViewsNRepliesModal__tab--views": {
+        "message": "Просмотры",
+        "description": "Title for views tab"
+    },
+    "StoryViewsNRepliesModal__tab--replies": {
+        "message": "Ответы",
+        "description": "Title for replies tab"
+    },
+    "StoryViewsNRepliesModal__react": {
+        "message": "Отреагировать на историю",
+        "description": "aria-label for reaction button"
+    },
+    "StoryViewsNRepliesModal__reacted": {
+        "message": "Отреагировал(-а) на историю",
+        "description": "Description of someone reacting to a story"
+    },
+    "StoryListItem__label": {
+        "message": "История",
+        "description": "aria-label for the story list button"
+    },
+    "StoryListItem__unhide": {
+        "message": "Показывать истории",
+        "description": "Label for menu item to un-hide the story"
+    },
+    "StoryListItem__hide": {
+        "message": "Скрыть историю",
+        "description": "Label for menu item to hide the story"
+    },
+    "StoryListItem__go-to-chat": {
+        "message": "Перейти к чату",
+        "description": "Label for menu item to go to conversation"
+    },
+    "StoryListItem__hide-modal--body": {
+        "message": "Скрыть историю? Новые истории от $name$ и их обновления больше не будут показываться сверху списка историй.",
+        "description": "Body for the confirmation dialog for hiding a story"
+    },
+    "StoryListItem__hide-modal--confirm": {
+        "message": "Скрыть",
+        "description": "Action button for the confirmation dialog to hide a story"
+    },
+    "StoryImage__error": {
+        "message": "Ошибка при показе изображения",
+        "description": "aria-label for image errors"
+    },
+    "TextAttachment__preview__link": {
+        "message": "Посетить ссылку",
+        "description": "Title for the link preview tooltip"
+    },
+    "WhatsNew__modal-title": {
+        "message": "Что нового",
+        "description": "Title for the whats new modal"
+    },
+    "WhatsNew__bugfixes": {
+        "message": "Эта версия содержит несколько небольших изменений и исправлений ошибок.",
+        "description": "Release notes for releases that only include bug fixes"
+    },
+    "WhatsNew__v5.40--1": {
+        "message": "Исправления ошибок, включающие исправление проблемы, из-за которой было иногда сложно нажимать на меню.",
+        "description": "Release notes for v5.40"
+    },
+    "WhatsNew__v5.40--2": {
+        "message": "Благодарим наших разработчиков открытого исходного кода $dsanders11$ и $yusufsahinhamza$ за помощь в этих улучшениях.",
+        "description": "Release notes for v5.40",
+        "placeholders": {
+            "dsanders11": {
+                "content": "$1",
+                "example": "dsanders11"
+            },
+            "yusufsahinhamza": {
+                "content": "$2",
+                "example": "yusufsahinhamza"
+            }
+        }
     }
 }

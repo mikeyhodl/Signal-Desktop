@@ -23,24 +23,27 @@
  *
  */
 
-import { connection as WebSocket, IMessage } from 'websocket';
+import type { connection as WebSocket, IMessage } from 'websocket';
+import Long from 'long';
 
-import EventTarget, { EventHandler } from './EventTarget';
+import type { EventHandler } from './EventTarget';
+import EventTarget from './EventTarget';
 
 import * as durations from '../util/durations';
 import { dropNull } from '../util/dropNull';
 import { isOlderThan } from '../util/timestamp';
 import { strictAssert } from '../util/assert';
-import { normalizeNumber } from '../util/normalizeNumber';
 import * as Errors from '../types/errors';
 import { SignalService as Proto } from '../protobuf';
+import * as log from '../logging/log';
+import * as Timers from '../Timers';
 
 const THIRTY_SECONDS = 30 * durations.SECOND;
 
-const MAX_MESSAGE_SIZE = 64 * 1024;
+const MAX_MESSAGE_SIZE = 256 * 1024;
 
 export class IncomingWebSocketRequest {
-  private readonly id: Long | number;
+  private readonly id: Long;
 
   public readonly verb: string;
 
@@ -102,22 +105,22 @@ export class CloseEvent extends Event {
 }
 
 export default class WebSocketResource extends EventTarget {
-  private outgoingId = 1;
+  private outgoingId = Long.fromNumber(1, true);
 
   private closed = false;
 
   private readonly outgoingMap = new Map<
-    number,
+    string,
     (result: SendRequestResult) => void
   >();
 
   private readonly boundOnMessage: (message: IMessage) => void;
 
-  private activeRequests = new Set<IncomingWebSocketRequest | number>();
+  private activeRequests = new Set<IncomingWebSocketRequest | string>();
 
   private shuttingDown = false;
 
-  private shutdownTimer?: NodeJS.Timeout;
+  private shutdownTimer?: Timers.Timeout;
 
   // Public for tests
   public readonly keepalive?: KeepAlive;
@@ -143,7 +146,7 @@ export default class WebSocketResource extends EventTarget {
       socket.on('message', () => keepalive.reset());
       socket.on('close', () => keepalive.stop());
       socket.on('error', (error: Error) => {
-        window.log.warn(
+        log.warn(
           'WebSocketResource: WebSocket error',
           Errors.toLogFormat(error)
         );
@@ -153,19 +156,19 @@ export default class WebSocketResource extends EventTarget {
     socket.on('close', (code, reason) => {
       this.closed = true;
 
-      window.log.warn('WebSocketResource: Socket closed');
+      log.warn('WebSocketResource: Socket closed');
       this.dispatchEvent(new CloseEvent(code, reason || 'normal'));
     });
 
     this.addEventListener('close', () => this.onClose());
   }
 
-  public addEventListener(
+  public override addEventListener(
     name: 'close',
     handler: (ev: CloseEvent) => void
   ): void;
 
-  public addEventListener(name: string, handler: EventHandler): void {
+  public override addEventListener(name: string, handler: EventHandler): void {
     return super.addEventListener(name, handler);
   }
 
@@ -173,10 +176,11 @@ export default class WebSocketResource extends EventTarget {
     options: SendRequestOptions
   ): Promise<SendRequestResult> {
     const id = this.outgoingId;
-    strictAssert(!this.outgoingMap.has(id), 'Duplicate outgoing request');
+    const idString = id.toString();
+    strictAssert(!this.outgoingMap.has(idString), 'Duplicate outgoing request');
 
-    // eslint-disable-next-line no-bitwise
-    this.outgoingId = Math.max(1, (this.outgoingId + 1) & 0x7fffffff);
+    // Note that this automatically wraps
+    this.outgoingId = this.outgoingId.add(1);
 
     const bytes = Proto.WebSocketMessage.encode({
       type: Proto.WebSocketMessage.Type.REQUEST,
@@ -188,32 +192,32 @@ export default class WebSocketResource extends EventTarget {
         id,
       },
     }).finish();
-
-    strictAssert(!this.shuttingDown, 'Cannot send request, shutting down');
-    this.addActive(id);
-    const promise = new Promise<SendRequestResult>((resolve, reject) => {
-      let timer = options.timeout
-        ? setTimeout(() => {
-            this.removeActive(id);
-            reject(new Error('Request timed out'));
-          }, options.timeout)
-        : undefined;
-
-      this.outgoingMap.set(id, result => {
-        if (timer !== undefined) {
-          clearTimeout(timer);
-          timer = undefined;
-        }
-
-        this.removeActive(id);
-        resolve(result);
-      });
-    });
-
     strictAssert(
       bytes.length <= MAX_MESSAGE_SIZE,
       'WebSocket request byte size exceeded'
     );
+
+    strictAssert(!this.shuttingDown, 'Cannot send request, shutting down');
+    this.addActive(idString);
+    const promise = new Promise<SendRequestResult>((resolve, reject) => {
+      let timer = options.timeout
+        ? Timers.setTimeout(() => {
+            this.removeActive(idString);
+            reject(new Error('Request timed out'));
+          }, options.timeout)
+        : undefined;
+
+      this.outgoingMap.set(idString, result => {
+        if (timer !== undefined) {
+          Timers.clearTimeout(timer);
+          timer = undefined;
+        }
+
+        this.removeActive(idString);
+        resolve(result);
+      });
+    });
+
     this.socket.sendBytes(Buffer.from(bytes));
 
     return promise;
@@ -231,7 +235,7 @@ export default class WebSocketResource extends EventTarget {
       return;
     }
 
-    window.log.info('WebSocketResource.close()');
+    log.info('WebSocketResource.close()');
     if (this.keepalive) {
       this.keepalive.stop();
     }
@@ -243,14 +247,12 @@ export default class WebSocketResource extends EventTarget {
     // On linux the socket can wait a long time to emit its close event if we've
     //   lost the internet connection. On the order of minutes. This speeds that
     //   process up.
-    setTimeout(() => {
+    Timers.setTimeout(() => {
       if (this.closed) {
         return;
       }
 
-      window.log.warn(
-        'WebSocketResource: Dispatching our own socket close event'
-      );
+      log.warn('WebSocketResource: Dispatching our own socket close event');
       this.dispatchEvent(new CloseEvent(code, reason || 'normal'));
     }, 5000);
   }
@@ -261,20 +263,20 @@ export default class WebSocketResource extends EventTarget {
     }
 
     if (this.activeRequests.size === 0) {
-      window.log.info('WebSocketResource: no active requests, closing');
+      log.info('WebSocketResource: no active requests, closing');
       this.close(3000, 'Shutdown');
       return;
     }
 
     this.shuttingDown = true;
 
-    window.log.info('WebSocketResource: shutting down');
-    this.shutdownTimer = setTimeout(() => {
+    log.info('WebSocketResource: shutting down');
+    this.shutdownTimer = Timers.setTimeout(() => {
       if (this.closed) {
         return;
       }
 
-      window.log.warn('WebSocketResource: Failed to shutdown gracefully');
+      log.warn('WebSocketResource: Failed to shutdown gracefully');
       this.close(3000, 'Shutdown');
     }, THIRTY_SECONDS);
   }
@@ -307,7 +309,7 @@ export default class WebSocketResource extends EventTarget {
       );
 
       if (this.shuttingDown) {
-        incomingRequest.respond(500, 'Shutting down');
+        incomingRequest.respond(-1, 'Shutting down');
         return;
       }
 
@@ -320,12 +322,12 @@ export default class WebSocketResource extends EventTarget {
       const { response } = message;
       strictAssert(response.id, 'response without id');
 
-      const responseId = normalizeNumber(response.id);
-      const resolve = this.outgoingMap.get(responseId);
-      this.outgoingMap.delete(responseId);
+      const responseIdString = response.id.toString();
+      const resolve = this.outgoingMap.get(responseIdString);
+      this.outgoingMap.delete(responseIdString);
 
       if (!resolve) {
-        throw new Error(`Received response for unknown request ${responseId}`);
+        throw new Error(`Received response for unknown request ${response.id}`);
       }
 
       resolve({
@@ -343,7 +345,7 @@ export default class WebSocketResource extends EventTarget {
 
     for (const resolve of outgoing.values()) {
       resolve({
-        status: 500,
+        status: -1,
         message: 'Connection closed',
         response: undefined,
         headers: [],
@@ -351,13 +353,13 @@ export default class WebSocketResource extends EventTarget {
     }
   }
 
-  private addActive(request: IncomingWebSocketRequest | number): void {
+  private addActive(request: IncomingWebSocketRequest | string): void {
     this.activeRequests.add(request);
   }
 
-  private removeActive(request: IncomingWebSocketRequest | number): void {
+  private removeActive(request: IncomingWebSocketRequest | string): void {
     if (!this.activeRequests.has(request)) {
-      window.log.warn('WebSocketResource: removing unknown request');
+      log.warn('WebSocketResource: removing unknown request');
       return;
     }
 
@@ -370,11 +372,11 @@ export default class WebSocketResource extends EventTarget {
     }
 
     if (this.shutdownTimer) {
-      clearTimeout(this.shutdownTimer);
+      Timers.clearTimeout(this.shutdownTimer);
       this.shutdownTimer = undefined;
     }
 
-    window.log.info('WebSocketResource: shutdown complete');
+    log.info('WebSocketResource: shutdown complete');
     this.close(3000, 'Shutdown');
   }
 }
@@ -389,9 +391,9 @@ const KEEPALIVE_INTERVAL_MS = 55000; // 55 seconds + 5 seconds for closing the
 const MAX_KEEPALIVE_INTERVAL_MS = 5 * durations.MINUTE;
 
 class KeepAlive {
-  private keepAliveTimer: NodeJS.Timeout | undefined;
+  private keepAliveTimer: Timers.Timeout | undefined;
 
-  private disconnectTimer: NodeJS.Timeout | undefined;
+  private disconnectTimer: Timers.Timeout | undefined;
 
   private path: string;
 
@@ -422,7 +424,7 @@ class KeepAlive {
     this.clearTimers();
 
     if (isOlderThan(this.lastAliveAt, MAX_KEEPALIVE_INTERVAL_MS)) {
-      window.log.info('WebSocketResources: disconnecting due to stale state');
+      log.info('WebSocketResources: disconnecting due to stale state');
       this.wsr.close(
         3001,
         `Last keepalive request was too far in the past: ${this.lastAliveAt}`
@@ -432,8 +434,8 @@ class KeepAlive {
 
     if (this.disconnect) {
       // automatically disconnect if server doesn't ack
-      this.disconnectTimer = setTimeout(() => {
-        window.log.info('WebSocketResources: disconnecting due to no response');
+      this.disconnectTimer = Timers.setTimeout(() => {
+        log.info('WebSocketResources: disconnecting due to no response');
         this.clearTimers();
 
         this.wsr.close(3001, 'No response to keepalive request');
@@ -442,7 +444,7 @@ class KeepAlive {
       this.reset();
     }
 
-    window.log.info('WebSocketResources: Sending a keepalive message');
+    log.info('WebSocketResources: Sending a keepalive message');
     const { status } = await this.wsr.sendRequest({
       verb: 'GET',
       path: this.path,
@@ -458,16 +460,19 @@ class KeepAlive {
 
     this.clearTimers();
 
-    this.keepAliveTimer = setTimeout(() => this.send(), KEEPALIVE_INTERVAL_MS);
+    this.keepAliveTimer = Timers.setTimeout(
+      () => this.send(),
+      KEEPALIVE_INTERVAL_MS
+    );
   }
 
   private clearTimers(): void {
     if (this.keepAliveTimer) {
-      clearTimeout(this.keepAliveTimer);
+      Timers.clearTimeout(this.keepAliveTimer);
       this.keepAliveTimer = undefined;
     }
     if (this.disconnectTimer) {
-      clearTimeout(this.disconnectTimer);
+      Timers.clearTimeout(this.disconnectTimer);
       this.disconnectTimer = undefined;
     }
   }

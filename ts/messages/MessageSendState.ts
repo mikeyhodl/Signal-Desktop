@@ -1,4 +1,4 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { makeEnumParser } from '../util/enum';
@@ -59,6 +59,8 @@ export const isDelivered = (status: SendStatus): boolean =>
   STATUS_NUMBERS[status] >= STATUS_NUMBERS[SendStatus.Delivered];
 export const isSent = (status: SendStatus): boolean =>
   STATUS_NUMBERS[status] >= STATUS_NUMBERS[SendStatus.Sent];
+export const isFailed = (status: SendStatus): boolean =>
+  status === SendStatus.Failed;
 
 /**
  * `SendState` combines `SendStatus` and a timestamp. You can use it to show things to the
@@ -148,10 +150,12 @@ export const someSendStatus = (
 
 export const isMessageJustForMe = (
   sendStateByConversationId: undefined | Readonly<SendStateByConversationId>,
-  ourConversationId: string
+  ourConversationId: string | undefined
 ): boolean => {
   const conversationIds = Object.keys(sendStateByConversationId || {});
-  return (
-    conversationIds.length === 1 && conversationIds[0] === ourConversationId
+  return Boolean(
+    ourConversationId &&
+      conversationIds.length === 1 &&
+      conversationIds[0] === ourConversationId
   );
 };

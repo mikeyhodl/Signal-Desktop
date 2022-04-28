@@ -1,13 +1,12 @@
-// Copyright 2021 Signal Messenger, LLC
+// Copyright 2021-2022 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import React, { useRef, useState, useEffect, FC, ReactElement } from 'react';
+import type { FC, ReactElement } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import classNames from 'classnames';
-import { LocalizerType } from '../types/Util';
-import {
-  GroupCallRemoteParticipantType,
-  VideoFrameSource,
-} from '../types/Calling';
+import type { VideoFrameSource } from 'ringrtc';
+import type { LocalizerType } from '../types/Util';
+import type { GroupCallRemoteParticipantType } from '../types/Calling';
 import { GroupCallRemoteParticipant } from './GroupCallRemoteParticipant';
 
 const OVERFLOW_SCROLLED_TO_EDGE_THRESHOLD = 20;
@@ -17,17 +16,24 @@ const OVERFLOW_SCROLL_BUTTON_RATIO = 0.75;
 export const OVERFLOW_PARTICIPANT_WIDTH = 140;
 
 type PropsType = {
-  getFrameBuffer: () => ArrayBuffer;
+  getFrameBuffer: () => Buffer;
   getGroupCallVideoFrameSource: (demuxId: number) => VideoFrameSource;
   i18n: LocalizerType;
+  onParticipantVisibilityChanged: (
+    demuxId: number,
+    isVisible: boolean
+  ) => unknown;
   overflowedParticipants: ReadonlyArray<GroupCallRemoteParticipantType>;
+  speakingDemuxIds: Set<number>;
 };
 
 export const GroupCallOverflowArea: FC<PropsType> = ({
   getFrameBuffer,
   getGroupCallVideoFrameSource,
   i18n,
+  onParticipantVisibilityChanged,
   overflowedParticipants,
+  speakingDemuxIds,
 }) => {
   const overflowRef = useRef<HTMLDivElement | null>(null);
   const [overflowScrollTop, setOverflowScrollTop] = useState(0);
@@ -110,6 +116,8 @@ export const GroupCallOverflowArea: FC<PropsType> = ({
             getFrameBuffer={getFrameBuffer}
             getGroupCallVideoFrameSource={getGroupCallVideoFrameSource}
             i18n={i18n}
+            isSpeaking={speakingDemuxIds.has(remoteParticipant.demuxId)}
+            onVisibilityChanged={onParticipantVisibilityChanged}
             width={OVERFLOW_PARTICIPANT_WIDTH}
             height={Math.floor(
               OVERFLOW_PARTICIPANT_WIDTH / remoteParticipant.videoAspectRatio

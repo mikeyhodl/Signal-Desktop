@@ -3,26 +3,30 @@
 
 import React from 'react';
 
-import { Image } from './Image';
+import { CurveType, Image } from './Image';
 import { StagedGenericAttachment } from './StagedGenericAttachment';
 import { StagedPlaceholderAttachment } from './StagedPlaceholderAttachment';
-import { LocalizerType } from '../../types/Util';
+import type { LocalizerType } from '../../types/Util';
+import type {
+  AttachmentType,
+  AttachmentDraftType,
+} from '../../types/Attachment';
 import {
   areAllAttachmentsVisual,
-  AttachmentType,
-  getUrl,
+  canDisplayImage,
   isImageAttachment,
   isVideoAttachment,
 } from '../../types/Attachment';
 
-export type Props = {
-  attachments: Array<AttachmentType>;
+export type Props<T extends AttachmentType | AttachmentDraftType> = Readonly<{
+  attachments: ReadonlyArray<T>;
+  canEditImages?: boolean;
   i18n: LocalizerType;
   onAddAttachment?: () => void;
-  onClickAttachment?: (attachment: AttachmentType) => void;
+  onClickAttachment?: (attachment: T) => void;
   onClose?: () => void;
-  onCloseAttachment: (attachment: AttachmentType) => void;
-};
+  onCloseAttachment: (attachment: T) => void;
+}>;
 
 const IMAGE_WIDTH = 120;
 const IMAGE_HEIGHT = 120;
@@ -31,14 +35,29 @@ const IMAGE_HEIGHT = 120;
 const BLANK_VIDEO_THUMBNAIL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQAAAAA3bvkkAAAACklEQVR42mNiAAAABgADm78GJQAAAABJRU5ErkJggg==';
 
-export const AttachmentList = ({
+function getUrl(
+  attachment: AttachmentType | AttachmentDraftType
+): string | undefined {
+  if (attachment.pending) {
+    return undefined;
+  }
+
+  if ('screenshot' in attachment) {
+    return attachment.screenshot?.url || attachment.url;
+  }
+
+  return attachment.url;
+}
+
+export const AttachmentList = <T extends AttachmentType | AttachmentDraftType>({
   attachments,
+  canEditImages,
   i18n,
   onAddAttachment,
   onClickAttachment,
   onCloseAttachment,
   onClose,
-}: Props): JSX.Element | null => {
+}: Props<T>): JSX.Element | null => {
   if (!attachments.length) {
     return null;
   }
@@ -61,39 +80,60 @@ export const AttachmentList = ({
         {(attachments || []).map((attachment, index) => {
           const url = getUrl(attachment);
 
-          const key = url || attachment.fileName || index;
+          const key = url || attachment.path || attachment.fileName || index;
 
           const isImage = isImageAttachment(attachment);
           const isVideo = isVideoAttachment(attachment);
+          const closeAttachment = () => onCloseAttachment(attachment);
 
-          if (isImage || isVideo) {
-            const clickCallback =
-              attachments.length > 1 ? onClickAttachment : undefined;
-
+          if (
+            (isImage && canDisplayImage([attachment])) ||
+            isVideo ||
+            attachment.pending
+          ) {
+            const isDownloaded = !attachment.pending;
             const imageUrl =
-              isVideo && !attachment.screenshot ? BLANK_VIDEO_THUMBNAIL : url;
+              url || (isVideo ? BLANK_VIDEO_THUMBNAIL : undefined);
 
-            return (
+            const clickAttachment = onClickAttachment
+              ? () => onClickAttachment(attachment)
+              : undefined;
+
+            const imgElement = (
               <Image
                 key={key}
                 alt={i18n('stagedImageAttachment', [
                   attachment.fileName || url || index.toString(),
                 ])}
+                className="module-staged-attachment"
                 i18n={i18n}
                 attachment={attachment}
-                softCorners
+                isDownloaded={isDownloaded}
+                curveBottomLeft={CurveType.Tiny}
+                curveBottomRight={CurveType.Tiny}
+                curveTopLeft={CurveType.Tiny}
+                curveTopRight={CurveType.Tiny}
                 playIconOverlay={isVideo}
                 height={IMAGE_HEIGHT}
                 width={IMAGE_WIDTH}
                 url={imageUrl}
                 closeButton
-                onClick={clickCallback}
-                onClickClose={onCloseAttachment}
-                onError={() => {
-                  onCloseAttachment(attachment);
-                }}
+                onClick={clickAttachment}
+                onClickClose={closeAttachment}
+                onError={closeAttachment}
               />
             );
+
+            if (isImage && canEditImages) {
+              return (
+                <div className="module-attachments--editable">
+                  {imgElement}
+                  <div className="module-attachments__edit-icon" />
+                </div>
+              );
+            }
+
+            return imgElement;
           }
 
           return (
@@ -101,7 +141,7 @@ export const AttachmentList = ({
               key={key}
               attachment={attachment}
               i18n={i18n}
-              onClose={onCloseAttachment}
+              onClose={closeAttachment}
             />
           );
         })}

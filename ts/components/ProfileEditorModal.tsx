@@ -4,12 +4,10 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { ConfirmationDialog } from './ConfirmationDialog';
-import {
-  ProfileEditor,
-  PropsType as ProfileEditorPropsType,
-  EditState,
-} from './ProfileEditor';
-import { ProfileDataType } from '../state/ducks/conversations';
+import type { PropsType as ProfileEditorPropsType } from './ProfileEditor';
+import { ProfileEditor, EditState } from './ProfileEditor';
+import type { ProfileDataType } from '../state/ducks/conversations';
+import type { AvatarUpdateType } from '../types/Avatar';
 
 export type PropsDataType = {
   hasError: boolean;
@@ -18,12 +16,12 @@ export type PropsDataType = {
 type PropsType = {
   myProfileChanged: (
     profileData: ProfileDataType,
-    avatarBuffer?: ArrayBuffer
+    avatar: AvatarUpdateType
   ) => unknown;
   toggleProfileEditor: () => unknown;
   toggleProfileEditorHasError: () => unknown;
 } & PropsDataType &
-  ProfileEditorPropsType;
+  Omit<ProfileEditorPropsType, 'onEditStateChanged' | 'onProfileChanged'>;
 
 export const ProfileEditorModal = ({
   hasError,
@@ -34,13 +32,17 @@ export const ProfileEditorModal = ({
   toggleProfileEditorHasError,
   ...restProps
 }: PropsType): JSX.Element => {
-  const ModalTitles = {
-    None: i18n('ProfileEditorModal--profile'),
-    ProfileName: i18n('ProfileEditorModal--name'),
-    Bio: i18n('ProfileEditorModal--about'),
+  const MODAL_TITLES_BY_EDIT_STATE: Record<EditState, string> = {
+    [EditState.BetterAvatar]: i18n('ProfileEditorModal--avatar'),
+    [EditState.Bio]: i18n('ProfileEditorModal--about'),
+    [EditState.None]: i18n('ProfileEditorModal--profile'),
+    [EditState.ProfileName]: i18n('ProfileEditorModal--name'),
+    [EditState.Username]: i18n('ProfileEditorModal--username'),
   };
 
-  const [modalTitle, setModalTitle] = useState(ModalTitles.None);
+  const [modalTitle, setModalTitle] = useState(
+    MODAL_TITLES_BY_EDIT_STATE[EditState.None]
+  );
 
   if (hasError) {
     return (
@@ -67,17 +69,9 @@ export const ProfileEditorModal = ({
           {...restProps}
           i18n={i18n}
           onEditStateChanged={editState => {
-            if (editState === EditState.None) {
-              setModalTitle(ModalTitles.None);
-            } else if (editState === EditState.ProfileName) {
-              setModalTitle(ModalTitles.ProfileName);
-            } else if (editState === EditState.Bio) {
-              setModalTitle(ModalTitles.Bio);
-            }
+            setModalTitle(MODAL_TITLES_BY_EDIT_STATE[editState]);
           }}
-          onProfileChanged={(profileData, avatarBuffer) => {
-            myProfileChanged(profileData, avatarBuffer);
-          }}
+          onProfileChanged={myProfileChanged}
           onSetSkinTone={onSetSkinTone}
         />
       </Modal>

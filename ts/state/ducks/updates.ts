@@ -1,11 +1,11 @@
 // Copyright 2020 Signal Messenger, LLC
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { ThunkAction } from 'redux-thunk';
+import type { ThunkAction } from 'redux-thunk';
 import * as updateIpc from '../../shims/updateIpc';
 import { DialogType } from '../../types/Dialogs';
-import { StateType as RootStateType } from '../reducer';
-import { onTimeout } from '../../services/timers';
+import { DAY } from '../../util/durations';
+import type { StateType as RootStateType } from '../reducer';
 
 // State
 
@@ -32,11 +32,11 @@ export type UpdateDialogOptionsType = {
   version?: string;
 };
 
-type DismissDialogAction = {
+type DismissDialogActionType = {
   type: typeof DISMISS_DIALOG;
 };
 
-export type ShowUpdateDialogAction = {
+export type ShowUpdateDialogActionType = {
   type: typeof SHOW_UPDATE_DIALOG;
   payload: {
     dialogType: DialogType;
@@ -48,7 +48,7 @@ type SnoozeUpdateActionType = {
   type: typeof SNOOZE_UPDATE;
 };
 
-type StartUpdateAction = {
+type StartUpdateActionType = {
   type: typeof START_UPDATE;
 };
 
@@ -58,15 +58,15 @@ type UnsnoozeUpdateActionType = {
 };
 
 export type UpdatesActionType =
-  | DismissDialogAction
-  | ShowUpdateDialogAction
+  | DismissDialogActionType
+  | ShowUpdateDialogActionType
   | SnoozeUpdateActionType
-  | StartUpdateAction
+  | StartUpdateActionType
   | UnsnoozeUpdateActionType;
 
 // Action Creators
 
-function dismissDialog(): DismissDialogAction {
+function dismissDialog(): DismissDialogActionType {
   return {
     type: DISMISS_DIALOG,
   };
@@ -75,7 +75,7 @@ function dismissDialog(): DismissDialogAction {
 function showUpdateDialog(
   dialogType: DialogType,
   updateDialogOptions: UpdateDialogOptionsType = {}
-): ShowUpdateDialogAction {
+): ShowUpdateDialogActionType {
   return {
     type: SHOW_UPDATE_DIALOG,
     payload: {
@@ -85,8 +85,6 @@ function showUpdateDialog(
   };
 }
 
-const ONE_DAY = 24 * 60 * 60 * 1000;
-
 function snoozeUpdate(): ThunkAction<
   void,
   RootStateType,
@@ -95,12 +93,12 @@ function snoozeUpdate(): ThunkAction<
 > {
   return (dispatch, getState) => {
     const { dialogType } = getState().updates;
-    onTimeout(Date.now() + ONE_DAY, () => {
+    setTimeout(() => {
       dispatch({
         type: UNSNOOZE_UPDATE,
         payload: dialogType,
       });
-    });
+    }, DAY);
 
     dispatch({
       type: SNOOZE_UPDATE,
@@ -108,11 +106,28 @@ function snoozeUpdate(): ThunkAction<
   };
 }
 
-function startUpdate(): StartUpdateAction {
-  updateIpc.startUpdate();
+function startUpdate(): ThunkAction<
+  void,
+  RootStateType,
+  unknown,
+  StartUpdateActionType | ShowUpdateDialogActionType
+> {
+  return async dispatch => {
+    dispatch({
+      type: START_UPDATE,
+    });
 
-  return {
-    type: START_UPDATE,
+    try {
+      await updateIpc.startUpdate();
+    } catch (_) {
+      dispatch({
+        type: SHOW_UPDATE_DIALOG,
+        payload: {
+          dialogType: DialogType.Cannot_Update,
+          otherState: {},
+        },
+      });
+    }
   };
 }
 
@@ -125,7 +140,7 @@ export const actions = {
 
 // Reducer
 
-function getEmptyState(): UpdatesStateType {
+export function getEmptyState(): UpdatesStateType {
   return {
     dialogType: DialogType.None,
     didSnooze: false,

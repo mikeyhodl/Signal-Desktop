@@ -5,13 +5,16 @@ import { assert } from 'chai';
 import { sampleSize, times } from 'lodash';
 import { v4 as uuid } from 'uuid';
 
-import {
+import type {
   SendAction,
-  SendActionType,
   SendState,
   SendStateByConversationId,
+} from '../../messages/MessageSendState';
+import {
+  SendActionType,
   SendStatus,
   isDelivered,
+  isFailed,
   isMessageJustForMe,
   isRead,
   isSent,
@@ -103,6 +106,20 @@ describe('message send state utilities', () => {
     it('returns false for non-sent statuses', () => {
       assert.isFalse(isSent(SendStatus.Pending));
       assert.isFalse(isSent(SendStatus.Failed));
+    });
+  });
+
+  describe('isFailed', () => {
+    it('returns true for failed statuses', () => {
+      assert.isTrue(isFailed(SendStatus.Failed));
+    });
+
+    it('returns false for non-failed statuses', () => {
+      assert.isFalse(isFailed(SendStatus.Viewed));
+      assert.isFalse(isFailed(SendStatus.Read));
+      assert.isFalse(isFailed(SendStatus.Delivered));
+      assert.isFalse(isFailed(SendStatus.Sent));
+      assert.isFalse(isFailed(SendStatus.Pending));
     });
   });
 
@@ -202,6 +219,20 @@ describe('message send state utilities', () => {
             },
           },
           ourConversationId
+        )
+      );
+    });
+
+    it('returns false if the message is for you but we have no conversationId', () => {
+      assert.isFalse(
+        isMessageJustForMe(
+          {
+            [ourConversationId]: {
+              status: SendStatus.Sent,
+              updatedAt: 123,
+            },
+          },
+          undefined
         )
       );
     });
