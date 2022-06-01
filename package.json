@@ -158,7 +158,7 @@
     "sanitize-filename": "1.6.3",
     "sanitize.css": "11.0.0",
     "semver": "5.4.1",
-    "sharp": "0.28.1",
+    "sharp": "0.30.5",
     "testcheck": "1.0.0-rc.2",
     "tmp": "0.0.33",
     "typeface-inter": "3.10.0",
